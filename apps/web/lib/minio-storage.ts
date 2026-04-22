@@ -57,10 +57,13 @@ function getMinioConfig() {
   const region = requireEnv("MINIO_REGION", DEFAULT_REGION)
   const protocol = useSsl ? "https" : "http"
   const baseUrl = `${protocol}://${endpoint}${port ? `:${port}` : ""}`
+  // Public URL override — use when MinIO is behind a reverse proxy
+  const publicBaseUrl = process.env.MINIO_PUBLIC_URL ?? baseUrl
 
   return {
     accessKey,
     baseUrl,
+    publicBaseUrl,
     bucket,
     region,
     secretKey,
@@ -246,7 +249,7 @@ async function uploadToMinio(
   objectKey: string,
   contentType: string
 ): Promise<string> {
-  const { baseUrl, bucket } = getMinioConfig()
+  const { baseUrl, publicBaseUrl, bucket } = getMinioConfig()
   const objectUrl = new URL(`/${bucket}/${objectKey}`, baseUrl)
   const response = await signedFetch(objectUrl, "PUT", {
     body: buffer as unknown as BodyInit,
@@ -258,7 +261,8 @@ async function uploadToMinio(
     throw new Error(`Gagal mengunggah file ke MinIO: ${message}`)
   }
 
-  return objectUrl.toString()
+  // Return public-facing URL (may differ from internal upload URL)
+  return new URL(`/${bucket}/${objectKey}`, publicBaseUrl).toString()
 }
 
 // ── Presigned GET URL ─────────────────────────────────────────────────────────
