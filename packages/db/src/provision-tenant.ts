@@ -520,10 +520,6 @@ async function provisionTenantSchema() {
     await sql.unsafe(`ALTER TABLE "${schemaName}".invoices ADD COLUMN IF NOT EXISTS recipient_email text`);
     await sql.unsafe(`ALTER TABLE "${schemaName}".invoices ADD COLUMN IF NOT EXISTS public_token uuid DEFAULT gen_random_uuid()`);
     await sql.unsafe(`ALTER TABLE "${schemaName}".invoices ADD COLUMN IF NOT EXISTS proof_of_transfer_url text`);
-    await sql.unsafe(`ALTER TABLE "${schemaName}".invoice_payments ADD COLUMN IF NOT EXISTS sender_name text`);
-    await sql.unsafe(`ALTER TABLE "${schemaName}".invoice_payments ADD COLUMN IF NOT EXISTS proof_asset_id uuid`);
-    // Drop legacy proof_url column after media_assets migration
-    await sql.unsafe(`ALTER TABLE "${schemaName}".invoice_payments DROP COLUMN IF EXISTS proof_url`);
 
     await sql.unsafe(
       `CREATE UNIQUE INDEX IF NOT EXISTS invoices_public_token_unique ON "${schemaName}".invoices (public_token)`
@@ -562,6 +558,9 @@ async function provisionTenantSchema() {
         updated_at timestamp DEFAULT now()
       )
     `);
+    await sql.unsafe(`ALTER TABLE "${schemaName}".invoice_payments ADD COLUMN IF NOT EXISTS sender_name text`);
+    await sql.unsafe(`ALTER TABLE "${schemaName}".invoice_payments ADD COLUMN IF NOT EXISTS proof_asset_id uuid`);
+    await sql.unsafe(`ALTER TABLE "${schemaName}".invoice_payments DROP COLUMN IF EXISTS proof_url`);
 
     await sql.unsafe(`
       CREATE TABLE IF NOT EXISTS cashflow_ledger (
