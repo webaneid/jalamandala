@@ -1,0 +1,39 @@
+{
+  "name": "@repo/db",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    ".": "./src/client.ts",
+    "./schema/public": "./src/schema/public/index.ts",
+    "./schema/tenant": "./src/schema/tenant/index.ts",
+    "./migrate": "./src/migrate.ts"
+  },
+  "scripts": {
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "bun run src/migrate.ts",
+    "db:push": "drizzle-kit push",
+    "db:provision:public": "bun run src/provision-public.ts",
+    "db:seed:regions": "bun run src/seed-regions.ts",
+    "db:import:forbis-members": "bun run src/import-forbis-members.ts",
+    "db:seed:event-settings": "bun run src/seed-event-settings.ts",
+    "db:provision:tenant": "bun run src/provision-tenant.ts",
+    "db:seed:booths": "bun run src/seed-booths.ts",
+    "db:seed:wa-templates": "bun run src/seed-wa-templates.ts",
+    "db:seed:super-admin": "bun run src/seed-super-admin.ts",
+    "generate:forbis-template": "bun run src/generate-forbis-template.ts",
+    "db:studio": "drizzle-kit studio",
+    "clean": "rm -rf .turbo node_modules"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "drizzle-orm": "^0.33.0",
+    "postgres": "^3.4.4"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^22.0.0",
+    "drizzle-kit": "^0.24.2",
+    "typescript": "5.9.2",
+    "xlsx": "^0.18.5"
+  }
+}
