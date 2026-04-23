@@ -44,11 +44,11 @@ function CountdownDisplay({ startDate, eventName }: { startDate: string; eventNa
 
   return (
     <div>
-      <p className="text-xl font-extrabold leading-tight tracking-tight text-white">
+      <p className="text-base font-extrabold leading-tight tracking-tight text-white sm:text-xl">
         {parts.join(" ")}
       </p>
       <p className="mt-0.5 text-[11px] font-medium text-white/50">
-        Menuju {eventName}
+        Menuju {eventName.split(" ").slice(0, 3).join(" ")}
       </p>
     </div>
   );
@@ -182,9 +182,20 @@ export function PublicEventHeader({
   startDate,
   participant,
 }: PublicEventHeaderProps) {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    function onScroll() { setScrolled(window.scrollY > 20); }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
-    <header className="sticky top-0 z-50">
-      <div className="mx-auto flex h-14 max-w-[720px] items-center justify-between px-5 pt-0 sm:h-20 sm:pt-4">
+    <header
+      className="sticky top-0 z-50 transition-all duration-300"
+      style={scrolled ? { background: "linear-gradient(180deg, rgba(4,16,31,0.93) 0%, transparent 100%)" } : undefined}
+    >
+      <div className="mx-auto flex h-14 max-w-[720px] items-center justify-between px-5 pb-2 sm:h-20 sm:pb-0 sm:pt-4">
 
           {/* LEFT — Countdown */}
           <div className="flex-1">

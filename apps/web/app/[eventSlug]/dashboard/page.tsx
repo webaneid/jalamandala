@@ -95,8 +95,19 @@ export default async function DashboardHomePage({
             <h1 className="mt-0.5 text-2xl font-bold text-white">{firstName} 👋</h1>
             <p className="mt-0.5 text-xs text-blue-300">{participant?.organizationGroupName ?? ""}</p>
           </div>
-          <div className="size-11 rounded-full bg-[#00adee] flex items-center justify-center shadow-lg border-2 border-white/30">
-            <span className="text-sm font-bold text-white">{initials}</span>
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/${eventSlug}#tenant`}
+              className="flex size-9 items-center justify-center rounded-full border-2 border-white/30 bg-white/10 transition hover:bg-white/20"
+              aria-label="Lihat Tenant"
+            >
+              <svg className="size-5 text-white" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 9.5 5.5 3h13L21 9.5M3 9.5h18M3 9.5V20a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V9.5M9 21V12h6v9" />
+              </svg>
+            </Link>
+            <div className="size-11 rounded-full bg-[#00adee] flex items-center justify-center shadow-lg border-2 border-white/30">
+              <span className="text-sm font-bold text-white">{initials}</span>
+            </div>
           </div>
         </div>
       </div>
