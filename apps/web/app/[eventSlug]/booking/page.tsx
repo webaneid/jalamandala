@@ -312,10 +312,8 @@ export default async function PublicBookingPage({
                 booth={selectedBooth}
                 boothChangeHref={boothChangeHref}
                 businessId={selectedBusinessId}
-                eventId={termsPage?.eventId ?? ""}
                 eventSlug={eventSlug}
                 participantId={session.participantId}
-                termsChecksum={termsPage?.checksum ?? null}
                 zone={zoneData}
               />
             </div>

@@ -128,15 +128,15 @@ function VipLayout({ zone, selected, onSelect }: { zone: PublicZoneData; selecte
 
 function PremiumBlock({ left, right, selected, onSelect }: { left: PublicBooth[]; right: PublicBooth[]; selected: PublicBooth | null; onSelect: (b: PublicBooth) => void }) {
   return (
-    <div className="grid grid-cols-[92px_80px_92px] items-start justify-center gap-0">
+    <div className="flex items-stretch justify-center">
       <div className="grid gap-0">
-        {left.map((b) => <BoothCell key={b.id} booth={b} isSelected={selected?.id === b.id} onSelect={onSelect} sizeClass="min-h-[72px] min-w-[92px]" className="first:rounded-t-[20px] last:rounded-b-[20px]" />)}
+        {left.map((b) => <BoothCell key={b.id} booth={b} isSelected={selected?.id === b.id} onSelect={onSelect} sizeClass="min-h-[64px] min-w-[80px]" className="first:rounded-t-[16px] last:rounded-b-[16px]" />)}
       </div>
-      <div className="flex h-full min-h-[600px] items-center justify-center border-y border-dashed border-slate-300 bg-white/60">
-        <p className="rotate-180 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400 [writing-mode:vertical-rl]">Gangway</p>
+      <div className="flex w-14 flex-col items-center justify-center border-x border-dashed border-slate-300 bg-white/60">
+        <p className="rotate-180 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400 [writing-mode:vertical-rl]">Gangway</p>
       </div>
       <div className="grid gap-0">
-        {right.map((b) => <BoothCell key={b.id} booth={b} isSelected={selected?.id === b.id} onSelect={onSelect} sizeClass="min-h-[72px] min-w-[92px]" className="first:rounded-t-[20px] last:rounded-b-[20px]" />)}
+        {right.map((b) => <BoothCell key={b.id} booth={b} isSelected={selected?.id === b.id} onSelect={onSelect} sizeClass="min-h-[64px] min-w-[80px]" className="first:rounded-t-[16px] last:rounded-b-[16px]" />)}
       </div>
     </div>
   )
@@ -144,18 +144,25 @@ function PremiumBlock({ left, right, selected, onSelect }: { left: PublicBooth[]
 
 function PremiumLayout({ zone, selected, onSelect }: { zone: PublicZoneData; selected: PublicBooth | null; onSelect: (b: PublicBooth) => void }) {
   const sorted = [...zone.booths].sort((a, b) => extract(a.code) - extract(b.code))
+  const chunkSize = 18
+  const blocks = Array.from({ length: Math.ceil(sorted.length / chunkSize) }, (_, i) =>
+    sorted.slice(i * chunkSize, i * chunkSize + chunkSize)
+  )
   return (
-    <div className="rounded-[30px] bg-slate-50 p-5 ring-1 ring-slate-200/90">
-      <div className="mx-auto max-h-[560px] overflow-y-auto rounded-[24px]">
-        <div className="grid min-w-[600px] gap-6">
-          <div className="grid grid-cols-2 gap-6">
-            <PremiumBlock left={sorted.slice(0, 9)} right={sorted.slice(9, 18)} selected={selected} onSelect={onSelect} />
-            <PremiumBlock left={sorted.slice(18, 27)} right={sorted.slice(27, 36)} selected={selected} onSelect={onSelect} />
-          </div>
-          <div className="flex justify-center pb-2">
-            <div className="flex h-20 w-56 items-center justify-center rounded-[24px] border border-dashed border-slate-300 bg-white/75 text-center">
-              <p className="text-sm font-semibold tracking-[0.04em] text-slate-500">Stage</p>
-            </div>
+    <div className="rounded-[30px] bg-slate-50 p-4 ring-1 ring-slate-200/90">
+      <div className="space-y-4 overflow-y-auto">
+        {blocks.map((block, bi) => (
+          <PremiumBlock
+            key={bi}
+            left={block.slice(0, 9)}
+            right={block.slice(9, 18)}
+            selected={selected}
+            onSelect={onSelect}
+          />
+        ))}
+        <div className="flex justify-center py-1">
+          <div className="flex h-12 w-44 items-center justify-center rounded-[16px] border border-dashed border-slate-300 bg-white/75">
+            <p className="text-sm font-semibold text-slate-500">Stage</p>
           </div>
         </div>
       </div>

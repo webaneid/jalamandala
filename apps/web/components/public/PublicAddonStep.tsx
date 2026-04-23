@@ -2,8 +2,6 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { createPublicBoothBooking } from "@/actions/public-booking"
-import { hasActiveTermsApproval } from "@/actions/terms-approval"
 import type { PublicAddon, PublicZoneData, PublicBooth } from "@/lib/public-booth-data"
 
 const fmt = (n: number) =>
@@ -14,10 +12,8 @@ type Props = {
   booth: PublicBooth
   boothChangeHref: string
   businessId: string
-  eventId: string
   eventSlug: string
   participantId: string
-  termsChecksum: string | null
   zone: PublicZoneData
 }
 
@@ -26,19 +22,14 @@ export function PublicAddonStep({
   booth,
   boothChangeHref,
   businessId,
-  eventId,
   eventSlug,
   participantId,
-  termsChecksum,
   zone,
 }: Props) {
   const router = useRouter()
   const [quantities, setQuantities] = React.useState<Record<string, number>>(() =>
     Object.fromEntries(addons.map((a) => [a.id, 0]))
   )
-  const [isSubmitting, setIsSubmitting] = React.useState(false)
-  const [error, setError] = React.useState("")
-
   function adjust(id: string, delta: number) {
     setQuantities((prev) => ({ ...prev, [id]: Math.max(0, (prev[id] ?? 0) + delta) }))
   }
@@ -54,42 +45,16 @@ export function PublicAddonStep({
     return items.map((a) => `${a.addonId}:${a.quantity}`).join(",")
   }
 
-  async function submit(withAddons: boolean) {
-    setError("")
-    setIsSubmitting(true)
-
+  function submit(withAddons: boolean) {
     const addonsForInvoice = withAddons ? selectedAddons : []
-
-    // Check if terms approval already exists — if not, redirect to terms step
-    if (termsChecksum) {
-      const approved = await hasActiveTermsApproval(participantId, eventId, termsChecksum)
-      if (!approved) {
-        const addonsParam = buildAddonsParam(addonsForInvoice)
-        const url = new URL(`/${eventSlug}/booking`, "http://x")
-        url.searchParams.set("zone", zone.slug)
-        url.searchParams.set("businessId", businessId)
-        url.searchParams.set("boothId", booth.id)
-        url.searchParams.set("termsStep", "1")
-        if (addonsParam) url.searchParams.set("addons", addonsParam)
-        router.push(url.pathname + url.search)
-        return
-      }
-    }
-
-    // Terms already approved — create invoice directly
-    const result = await createPublicBoothBooking({
-      addons: addonsForInvoice,
-      boothId: booth.id,
-      businessId,
-      participantId,
-    })
-
-    if (!result.success) {
-      setError(result.error ?? "Gagal membuat invoice.")
-      setIsSubmitting(false)
-      return
-    }
-    router.push(`/invoice/${result.publicToken}`)
+    const addonsParam = buildAddonsParam(addonsForInvoice)
+    const url = new URL(`/${eventSlug}/booking`, "http://x")
+    url.searchParams.set("zone", zone.slug)
+    url.searchParams.set("businessId", businessId)
+    url.searchParams.set("boothId", booth.id)
+    url.searchParams.set("termsStep", "1")
+    if (addonsParam) url.searchParams.set("addons", addonsParam)
+    router.push(url.pathname + url.search)
   }
 
   return (
@@ -133,7 +98,7 @@ export function PublicAddonStep({
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     className="flex size-8 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 disabled:opacity-40 transition"
-                    disabled={qty === 0 || isSubmitting}
+                    disabled={qty === 0}
                     onClick={() => adjust(addon.id, -1)}
                     type="button"
                   >
@@ -143,8 +108,7 @@ export function PublicAddonStep({
                   </button>
                   <span className="w-8 text-center text-sm font-semibold text-slate-900">{qty}</span>
                   <button
-                    className="flex size-8 items-center justify-center rounded-full border border-primary-200 bg-primary-50 text-primary-700 hover:bg-primary-100 transition disabled:opacity-40"
-                    disabled={isSubmitting}
+                    className="flex size-8 items-center justify-center rounded-full border border-primary-200 bg-primary-50 text-primary-700 hover:bg-primary-100 transition"
                     onClick={() => adjust(addon.id, 1)}
                     type="button"
                   >
@@ -179,30 +143,22 @@ export function PublicAddonStep({
         </div>
       )}
 
-      {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
-
       {/* Action buttons */}
       <div className="flex flex-col gap-3 sm:flex-row">
         <button
-          className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60 transition"
-          disabled={isSubmitting}
+          className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
           onClick={() => submit(false)}
           type="button"
         >
-          {isSubmitting ? "Memproses..." : "Lewati Add-on →"}
+          Lewati Add-on →
         </button>
         {selectedAddons.length > 0 && (
           <button
-            className="flex-1 rounded-2xl bg-secondary py-3 text-sm font-semibold text-white hover:bg-secondary/90 disabled:opacity-60 transition"
-            disabled={isSubmitting}
+            className="flex-1 rounded-2xl bg-secondary py-3 text-sm font-semibold text-white hover:bg-secondary/90 transition"
             onClick={() => submit(true)}
             type="button"
           >
-            {isSubmitting ? "Memproses..." : "Tambah Add-on →"}
+            Tambah Add-on →
           </button>
         )}
       </div>
