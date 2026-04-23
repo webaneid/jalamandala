@@ -34,7 +34,7 @@ export default async function PublicBookingPage({
   searchParams?: Promise<{
     zone?: string
     businessId?: string
-    boothId?: string
+    boothIds?: string
     termsStep?: string
     addons?: string
   }>
@@ -43,7 +43,7 @@ export default async function PublicBookingPage({
   const sp = await searchParams
   const zoneSlug = sp?.zone ?? ""
   const selectedBusinessId = sp?.businessId ?? ""
-  const selectedBoothId = sp?.boothId ?? ""
+  const selectedBoothIds = sp?.boothIds?.split(",").filter(Boolean) ?? []
   const showTermsStep = sp?.termsStep === "1"
   const selectedAddons = parseAddonsParam(sp?.addons)
 
@@ -94,17 +94,18 @@ export default async function PublicBookingPage({
         )
       : null
 
-  const selectedBooth = selectedBoothId && zoneData
-    ? zoneData.booths.find((b) => b.id === selectedBoothId) ?? null
-    : null
+  const selectedBooths = zoneData
+    ? zoneData.booths.filter((b) => selectedBoothIds.includes(b.id))
+    : []
 
-  const addons = selectedBooth && !showTermsStep ? await getPublicAddons() : []
+  const addons = selectedBooths.length > 0 && !showTermsStep ? await getPublicAddons() : []
 
   const boothChangeHref = `/${eventSlug}/booking?zone=${encodeURIComponent(zoneSlug)}&businessId=${selectedBusinessId}`
+  const boothIdsParam = selectedBoothIds.length > 0 ? `&boothIds=${selectedBoothIds.join(",")}` : ""
 
   // Determine current step (1-based)
   const currentStep = showTermsStep ? 5
-    : selectedBoothId && zoneSlug && selectedBusinessId ? 4
+    : selectedBoothIds.length > 0 && zoneSlug && selectedBusinessId ? 4
     : zoneSlug && selectedBusinessId ? 3
     : selectedBusinessId ? 2
     : 1
@@ -115,12 +116,12 @@ export default async function PublicBookingPage({
     : currentStep === 2 ? `/${eventSlug}/booking`
     : currentStep === 3 ? `/${eventSlug}/booking?businessId=${selectedBusinessId}`
     : currentStep === 4 ? `/${eventSlug}/booking?zone=${encodeURIComponent(zoneSlug)}&businessId=${selectedBusinessId}`
-    : `/${eventSlug}/booking?zone=${encodeURIComponent(zoneSlug)}&businessId=${selectedBusinessId}&boothId=${selectedBoothId}`
+    : `/${eventSlug}/booking?zone=${encodeURIComponent(zoneSlug)}&businessId=${selectedBusinessId}${boothIdsParam}`
 
   const stepTitle = currentStep === 1 ? "Pilih Usaha"
     : currentStep === 2 ? "Pilih Zona"
     : currentStep === 3 ? `Pilih Booth${zoneData ? ` · Zona ${zoneData.name}` : ""}`
-    : currentStep === 4 ? "Tambah Add-on"
+    : currentStep === 4 ? `Add-on${selectedBooths.length > 1 ? ` · ${selectedBooths.length} Booth` : ""}`
     : "Syarat & Ketentuan"
 
   return (
@@ -293,23 +294,25 @@ export default async function PublicBookingPage({
         )}
 
         {/* STEP 4 — Add-on */}
-        {currentStep === 4 && activeBusiness && selectedBooth && zoneData && !showTermsStep && (
+        {currentStep === 4 && activeBusiness && selectedBooths.length > 0 && zoneData && !showTermsStep && (
           <div className="space-y-3">
-            {/* Recap */}
-            <div className="rounded-2xl bg-white border border-slate-100 px-4 py-3 flex items-center gap-3 shadow-sm">
-              <svg className="size-4 text-emerald-500 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                <path d="M3 9l9-7 9 7v11a1 1 0 01-1 1H4a1 1 0 01-1-1z" strokeLinecap="round" />
-              </svg>
-              <div className="flex-1">
+            {/* Recap booths */}
+            <div className="rounded-2xl bg-white border border-slate-100 px-4 py-3 shadow-sm">
+              <div className="flex items-center gap-2 mb-1">
+                <svg className="size-4 text-emerald-500 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <path d="M3 9l9-7 9 7v11a1 1 0 01-1 1H4a1 1 0 01-1-1z" strokeLinecap="round" />
+                </svg>
                 <p className="text-xs text-slate-400">Booth dipilih</p>
-                <p className="font-semibold text-slate-800">Zona {zoneData.name} · Booth {selectedBooth.code}</p>
+                <Link href={boothChangeHref} className="ml-auto text-xs font-medium text-primary">Ganti</Link>
               </div>
-              <Link href={boothChangeHref} className="text-xs font-medium text-primary shrink-0">Ganti</Link>
+              <p className="font-semibold text-slate-800">
+                Zona {zoneData.name} · {selectedBooths.map((b) => b.code).join(", ")}
+              </p>
             </div>
             <div className="rounded-2xl bg-white border border-slate-100 shadow-sm p-4">
               <PublicAddonStep
                 addons={addons}
-                booth={selectedBooth}
+                boothIds={selectedBoothIds}
                 boothChangeHref={boothChangeHref}
                 businessId={selectedBusinessId}
                 eventSlug={eventSlug}
@@ -321,7 +324,7 @@ export default async function PublicBookingPage({
         )}
 
         {/* STEP 5 — S&K */}
-        {currentStep === 5 && activeBusiness && selectedBooth && zoneData && (
+        {currentStep === 5 && activeBusiness && selectedBooths.length > 0 && zoneData && (
           <div className="space-y-3">
             {/* Recap */}
             <div className="rounded-2xl bg-white border border-slate-100 px-4 py-3 flex items-center gap-3 shadow-sm">
@@ -329,7 +332,7 @@ export default async function PublicBookingPage({
                 <path d="M3 9l9-7 9 7v11a1 1 0 01-1 1H4a1 1 0 01-1-1z" strokeLinecap="round" />
               </svg>
               <p className="text-sm font-semibold text-slate-800 flex-1">
-                {activeBusiness.companyName} · Zona {zoneData.name} · Booth {selectedBooth.code}
+                {activeBusiness.companyName} · Zona {zoneData.name} · {selectedBooths.map((b) => b.code).join(", ")}
               </p>
             </div>
 
@@ -337,7 +340,7 @@ export default async function PublicBookingPage({
               <div className="rounded-2xl bg-white border border-slate-100 shadow-sm p-4">
                 <PublicTermsStep
                   addons={selectedAddons}
-                  booth={selectedBooth}
+                  booths={selectedBooths}
                   businessId={selectedBusinessId}
                   eventSlug={eventSlug}
                   participantId={session.participantId}

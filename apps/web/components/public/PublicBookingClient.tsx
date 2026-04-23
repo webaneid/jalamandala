@@ -14,9 +14,10 @@ type Props = {
 export function PublicBookingClient({ businessId, eventSlug, zone }: Props) {
   const router = useRouter()
 
-  function handleConfirm(booth: PublicBooth) {
+  function handleConfirm(booths: PublicBooth[]) {
+    const ids = booths.map((b) => b.id).join(",")
     router.push(
-      `/${eventSlug}/booking?zone=${encodeURIComponent(zone.slug)}&businessId=${businessId}&boothId=${booth.id}`
+      `/${eventSlug}/booking?zone=${encodeURIComponent(zone.slug)}&businessId=${businessId}&boothIds=${ids}`
     )
   }
 

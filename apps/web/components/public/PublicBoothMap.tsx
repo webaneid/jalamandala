@@ -5,7 +5,7 @@ import type { PublicBooth, PublicZoneData } from "@/lib/public-booth-data"
 
 type Props = {
   zone: PublicZoneData
-  onConfirm: (booth: PublicBooth) => void
+  onConfirm: (booths: PublicBooth[]) => void
 }
 
 const fmt = (n: number) =>
@@ -79,7 +79,9 @@ function extract(code: string) {
   return Number(code.match(/\d+/)?.[0] ?? 0)
 }
 
-function VvipLayout({ zone, selected, onSelect }: { zone: PublicZoneData; selected: PublicBooth | null; onSelect: (b: PublicBooth) => void }) {
+type LayoutProps = { zone: PublicZoneData; selected: Set<string>; onSelect: (b: PublicBooth) => void }
+
+function VvipLayout({ zone, selected, onSelect }: LayoutProps) {
   const sorted = [...zone.booths].sort((a, b) => extract(a.code) - extract(b.code))
   const left = sorted.slice(0, 4)
   const right = sorted.slice(4, 8)
@@ -87,21 +89,21 @@ function VvipLayout({ zone, selected, onSelect }: { zone: PublicZoneData; select
     <div className="overflow-x-auto rounded-[30px] bg-slate-50 p-5 ring-1 ring-slate-200/90">
       <div className="grid min-w-[900px] grid-cols-[1fr_96px_1fr] items-stretch gap-4">
         <div className="grid grid-cols-4 gap-0">
-          {left.map((b) => <BoothCell key={b.id} booth={b} isSelected={selected?.id === b.id} onSelect={onSelect} className="first:rounded-l-[20px] last:rounded-r-[20px]" />)}
+          {left.map((b) => <BoothCell key={b.id} booth={b} isSelected={selected.has(b.id)} onSelect={onSelect} className="first:rounded-l-[20px] last:rounded-r-[20px]" />)}
         </div>
         <div className="flex flex-col items-center justify-center rounded-[26px] border border-dashed border-slate-300/90 bg-white/60 text-center">
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">Gangway</p>
           <div className="mt-3 h-16 w-px bg-slate-300" />
         </div>
         <div className="grid grid-cols-4 gap-0">
-          {right.map((b) => <BoothCell key={b.id} booth={b} isSelected={selected?.id === b.id} onSelect={onSelect} className="first:rounded-l-[20px] last:rounded-r-[20px]" />)}
+          {right.map((b) => <BoothCell key={b.id} booth={b} isSelected={selected.has(b.id)} onSelect={onSelect} className="first:rounded-l-[20px] last:rounded-r-[20px]" />)}
         </div>
       </div>
     </div>
   )
 }
 
-function VipLayout({ zone, selected, onSelect }: { zone: PublicZoneData; selected: PublicBooth | null; onSelect: (b: PublicBooth) => void }) {
+function VipLayout({ zone, selected, onSelect }: LayoutProps) {
   const sorted = [...zone.booths].sort((a, b) => extract(a.code) - extract(b.code))
   const rows = [sorted.slice(0, 8), sorted.slice(8, 16)]
   return (
@@ -110,14 +112,14 @@ function VipLayout({ zone, selected, onSelect }: { zone: PublicZoneData; selecte
         {rows.map((row, ri) => (
           <div className="grid grid-cols-[1fr_96px_1fr] items-stretch gap-4" key={ri}>
             <div className="grid grid-cols-4 gap-0">
-              {row.slice(0, 4).map((b) => <BoothCell key={b.id} booth={b} isSelected={selected?.id === b.id} onSelect={onSelect} className="first:rounded-l-[20px] last:rounded-r-[20px]" />)}
+              {row.slice(0, 4).map((b) => <BoothCell key={b.id} booth={b} isSelected={selected.has(b.id)} onSelect={onSelect} className="first:rounded-l-[20px] last:rounded-r-[20px]" />)}
             </div>
             <div className="flex flex-col items-center justify-center rounded-[26px] border border-dashed border-slate-300/90 bg-white/60 text-center">
               <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">Gangway</p>
               <div className="mt-3 h-16 w-px bg-slate-300" />
             </div>
             <div className="grid grid-cols-4 gap-0">
-              {row.slice(4, 8).map((b) => <BoothCell key={b.id} booth={b} isSelected={selected?.id === b.id} onSelect={onSelect} className="first:rounded-l-[20px] last:rounded-r-[20px]" />)}
+              {row.slice(4, 8).map((b) => <BoothCell key={b.id} booth={b} isSelected={selected.has(b.id)} onSelect={onSelect} className="first:rounded-l-[20px] last:rounded-r-[20px]" />)}
             </div>
           </div>
         ))}
@@ -126,23 +128,23 @@ function VipLayout({ zone, selected, onSelect }: { zone: PublicZoneData; selecte
   )
 }
 
-function PremiumBlock({ left, right, selected, onSelect }: { left: PublicBooth[]; right: PublicBooth[]; selected: PublicBooth | null; onSelect: (b: PublicBooth) => void }) {
+function PremiumBlock({ left, right, selected, onSelect }: { left: PublicBooth[]; right: PublicBooth[]; selected: Set<string>; onSelect: (b: PublicBooth) => void }) {
   return (
     <div className="flex items-stretch justify-center">
       <div className="grid gap-0">
-        {left.map((b) => <BoothCell key={b.id} booth={b} isSelected={selected?.id === b.id} onSelect={onSelect} sizeClass="min-h-[64px] min-w-[80px]" className="first:rounded-t-[16px] last:rounded-b-[16px]" />)}
+        {left.map((b) => <BoothCell key={b.id} booth={b} isSelected={selected.has(b.id)} onSelect={onSelect} sizeClass="min-h-[64px] min-w-[80px]" className="first:rounded-t-[16px] last:rounded-b-[16px]" />)}
       </div>
       <div className="flex w-14 flex-col items-center justify-center border-x border-dashed border-slate-300 bg-white/60">
         <p className="rotate-180 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400 [writing-mode:vertical-rl]">Gangway</p>
       </div>
       <div className="grid gap-0">
-        {right.map((b) => <BoothCell key={b.id} booth={b} isSelected={selected?.id === b.id} onSelect={onSelect} sizeClass="min-h-[64px] min-w-[80px]" className="first:rounded-t-[16px] last:rounded-b-[16px]" />)}
+        {right.map((b) => <BoothCell key={b.id} booth={b} isSelected={selected.has(b.id)} onSelect={onSelect} sizeClass="min-h-[64px] min-w-[80px]" className="first:rounded-t-[16px] last:rounded-b-[16px]" />)}
       </div>
     </div>
   )
 }
 
-function PremiumLayout({ zone, selected, onSelect }: { zone: PublicZoneData; selected: PublicBooth | null; onSelect: (b: PublicBooth) => void }) {
+function PremiumLayout({ zone, selected, onSelect }: LayoutProps) {
   const sorted = [...zone.booths].sort((a, b) => extract(a.code) - extract(b.code))
   const chunkSize = 18
   const blocks = Array.from({ length: Math.ceil(sorted.length / chunkSize) }, (_, i) =>
@@ -170,7 +172,7 @@ function PremiumLayout({ zone, selected, onSelect }: { zone: PublicZoneData; sel
   )
 }
 
-function FestivalWestLayout({ zone, selected, onSelect }: { zone: PublicZoneData; selected: PublicBooth | null; onSelect: (b: PublicBooth) => void }) {
+function FestivalWestLayout({ zone, selected, onSelect }: LayoutProps) {
   const sorted = [...zone.booths].sort((a, b) => extract(a.code) - extract(b.code))
   const blocks = Array.from({ length: Math.ceil(sorted.length / 5) }, (_, i) => sorted.slice(i * 5, i * 5 + 5))
   return (
@@ -179,7 +181,7 @@ function FestivalWestLayout({ zone, selected, onSelect }: { zone: PublicZoneData
         <div className="grid justify-center gap-5">
           {blocks.map((block, bi) => (
             <div className="grid gap-0" key={bi}>
-              {block.map((b) => <BoothCell key={b.id} booth={b} isSelected={selected?.id === b.id} onSelect={onSelect} sizeClass="min-h-[72px] min-w-[72px]" className="first:rounded-t-[20px] last:rounded-b-[20px]" />)}
+              {block.map((b) => <BoothCell key={b.id} booth={b} isSelected={selected.has(b.id)} onSelect={onSelect} sizeClass="min-h-[72px] min-w-[72px]" className="first:rounded-t-[20px] last:rounded-b-[20px]" />)}
             </div>
           ))}
         </div>
@@ -188,7 +190,7 @@ function FestivalWestLayout({ zone, selected, onSelect }: { zone: PublicZoneData
   )
 }
 
-function FestivalNorthLayout({ zone, selected, onSelect }: { zone: PublicZoneData; selected: PublicBooth | null; onSelect: (b: PublicBooth) => void }) {
+function FestivalNorthLayout({ zone, selected, onSelect }: LayoutProps) {
   const sorted = [...zone.booths].sort((a, b) => extract(a.code) - extract(b.code))
   const blocks = Array.from({ length: Math.ceil(sorted.length / 5) }, (_, i) => sorted.slice(i * 5, i * 5 + 5))
   return (
@@ -197,7 +199,7 @@ function FestivalNorthLayout({ zone, selected, onSelect }: { zone: PublicZoneDat
         <div className="flex w-max gap-5">
           {blocks.map((block, bi) => (
             <div className="flex gap-0" key={bi}>
-              {block.map((b) => <BoothCell key={b.id} booth={b} isSelected={selected?.id === b.id} onSelect={onSelect} sizeClass="min-h-[72px] min-w-[72px]" className="first:rounded-l-[20px] last:rounded-r-[20px]" />)}
+              {block.map((b) => <BoothCell key={b.id} booth={b} isSelected={selected.has(b.id)} onSelect={onSelect} sizeClass="min-h-[72px] min-w-[72px]" className="first:rounded-l-[20px] last:rounded-r-[20px]" />)}
             </div>
           ))}
         </div>
@@ -206,7 +208,7 @@ function FestivalNorthLayout({ zone, selected, onSelect }: { zone: PublicZoneDat
   )
 }
 
-function ZoneMap({ zone, selected, onSelect }: { zone: PublicZoneData; selected: PublicBooth | null; onSelect: (b: PublicBooth) => void }) {
+function ZoneMap({ zone, selected, onSelect }: LayoutProps) {
   switch (zone.slug) {
     case "vvip": return <VvipLayout zone={zone} selected={selected} onSelect={onSelect} />
     case "vip": return <VipLayout zone={zone} selected={selected} onSelect={onSelect} />
@@ -220,31 +222,34 @@ function ZoneMap({ zone, selected, onSelect }: { zone: PublicZoneData; selected:
 // ─── Confirmation toast ────────────────────────────────────────────────────────
 
 function ConfirmationBar({
-  booth,
+  booths,
   zone,
   onClear,
   onConfirm,
   isSubmitting,
 }: {
-  booth: PublicBooth
+  booths: PublicBooth[]
   zone: PublicZoneData
   onClear: () => void
-  onConfirm: (b: PublicBooth) => void
+  onConfirm: (bs: PublicBooth[]) => void
   isSubmitting: boolean
 }) {
+  const total = zone.price * booths.length
   return (
     <div className="fixed inset-x-0 bottom-0 z-50 px-4 pb-4 sm:px-6">
       <div className="mx-auto max-w-2xl overflow-hidden rounded-2xl border border-primary-200 bg-white shadow-2xl shadow-primary-900/10 ring-1 ring-primary-100">
         <div className="flex items-start justify-between gap-4 bg-primary-50 px-5 py-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-primary-600">Stand Dipilih</p>
-            <p className="mt-1 font-semibold text-slate-900">
-              Zona {zone.name} · Booth {booth.code}
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary-600">
+              {booths.length} Booth Dipilih
             </p>
-            <p className="mt-0.5 text-xl font-bold text-primary-700">{fmt(zone.price)}</p>
+            <p className="mt-1 font-semibold text-slate-900">
+              {booths.map((b) => b.code).join(", ")}
+            </p>
+            <p className="mt-0.5 text-xl font-bold text-primary-700">{fmt(total)}</p>
             {zone.pricePhase !== "free" && (
               <p className="text-xs text-slate-500">
-                Harga {PHASE_LABEL[zone.pricePhase] ?? zone.pricePhase}
+                {fmt(zone.price)} × {booths.length} booth · Harga {PHASE_LABEL[zone.pricePhase] ?? zone.pricePhase}
               </p>
             )}
           </div>
@@ -261,15 +266,15 @@ function ConfirmationBar({
             onClick={onClear}
             type="button"
           >
-            Pilih Booth Lain
+            Hapus Pilihan
           </button>
           <button
             className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-60"
             disabled={isSubmitting}
-            onClick={() => onConfirm(booth)}
+            onClick={() => onConfirm(booths)}
             type="button"
           >
-            {isSubmitting ? "Memproses..." : "Simpan & Lanjutkan →"}
+            {isSubmitting ? "Memproses..." : `Lanjutkan ${booths.length > 1 ? `(${booths.length})` : ""} →`}
           </button>
         </div>
       </div>
@@ -280,14 +285,24 @@ function ConfirmationBar({
 // ─── Main component ────────────────────────────────────────────────────────────
 
 export function PublicBoothMap({ zone, onConfirm }: Props) {
-  const [selected, setSelected] = React.useState<PublicBooth | null>(null)
+  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set())
   const [isSubmitting, setIsSubmitting] = React.useState(false)
 
   const openCount = zone.booths.filter((b) => b.isAvailable && b.isEligible).length
+  const selectedBooths = zone.booths.filter((b) => selectedIds.has(b.id))
 
-  function handleConfirm(booth: PublicBooth) {
+  function handleSelect(booth: PublicBooth) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(booth.id)) next.delete(booth.id)
+      else next.add(booth.id)
+      return next
+    })
+  }
+
+  function handleConfirm(booths: PublicBooth[]) {
     setIsSubmitting(true)
-    onConfirm(booth)
+    onConfirm(booths)
   }
 
   const image = zone.imageAssetId ? (
@@ -348,15 +363,15 @@ export function PublicBoothMap({ zone, onConfirm }: Props) {
 
           {/* Map */}
           <div>
-            <ZoneMap zone={zone} selected={selected} onSelect={setSelected} />
+            <ZoneMap zone={zone} selected={selectedIds} onSelect={handleSelect} />
           </div>
         </div>
 
-        {selected && (
+        {selectedBooths.length > 0 && (
           <ConfirmationBar
-            booth={selected}
+            booths={selectedBooths}
             zone={zone}
-            onClear={() => setSelected(null)}
+            onClear={() => setSelectedIds(new Set())}
             onConfirm={handleConfirm}
             isSubmitting={isSubmitting}
           />
@@ -371,7 +386,7 @@ export function PublicBoothMap({ zone, onConfirm }: Props) {
       <div className="aspect-[21/6] overflow-hidden rounded-2xl sm:aspect-[21/5]">{image}</div>
 
       {/* Booth map */}
-      <ZoneMap zone={zone} selected={selected} onSelect={setSelected} />
+      <ZoneMap zone={zone} selected={selectedIds} onSelect={handleSelect} />
 
       {/* Price + facilities below */}
       <div className="flex flex-col gap-4 rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
@@ -384,11 +399,11 @@ export function PublicBoothMap({ zone, onConfirm }: Props) {
         )}
       </div>
 
-      {selected && (
+      {selectedBooths.length > 0 && (
         <ConfirmationBar
-          booth={selected}
+          booths={selectedBooths}
           zone={zone}
-          onClear={() => setSelected(null)}
+          onClear={() => setSelectedIds(new Set())}
           onConfirm={handleConfirm}
           isSubmitting={isSubmitting}
         />

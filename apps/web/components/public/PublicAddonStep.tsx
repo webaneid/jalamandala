@@ -9,7 +9,7 @@ const fmt = (n: number) =>
 
 type Props = {
   addons: PublicAddon[]
-  booth: PublicBooth
+  boothIds: string[]
   boothChangeHref: string
   businessId: string
   eventSlug: string
@@ -19,7 +19,7 @@ type Props = {
 
 export function PublicAddonStep({
   addons,
-  booth,
+  boothIds,
   boothChangeHref,
   businessId,
   eventSlug,
@@ -51,7 +51,7 @@ export function PublicAddonStep({
     const url = new URL(`/${eventSlug}/booking`, "http://x")
     url.searchParams.set("zone", zone.slug)
     url.searchParams.set("businessId", businessId)
-    url.searchParams.set("boothId", booth.id)
+    url.searchParams.set("boothIds", boothIds.join(","))
     url.searchParams.set("termsStep", "1")
     if (addonsParam) url.searchParams.set("addons", addonsParam)
     router.push(url.pathname + url.search)
@@ -62,11 +62,11 @@ export function PublicAddonStep({
       {/* Selected booth summary */}
       <div className="flex items-center justify-between rounded-2xl border border-primary-100 bg-primary-50 px-5 py-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-primary-600">Stand Dipilih</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-primary-600">{boothIds.length} Stand Dipilih</p>
           <p className="mt-0.5 font-semibold text-slate-900">
-            Zona {zone.name} · Booth {booth.code}
+            Zona {zone.name}
           </p>
-          <p className="text-sm font-medium text-primary-700">{fmt(zone.price)}</p>
+          <p className="text-sm font-medium text-primary-700">{fmt(zone.price * boothIds.length)}</p>
         </div>
         <a
           href={boothChangeHref}

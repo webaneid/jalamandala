@@ -8,13 +8,17 @@ import { participantBusinesses } from "@repo/db/schema/public"
 
 export async function createPublicBoothBooking(payload: {
   addons?: Array<{ addonId: string; quantity: number }>
-  boothId: string
+  boothIds: string[]
   businessId: string
   participantId: string
 }): Promise<{ success: boolean; publicToken?: string; error?: string }> {
   const session = await getCurrentParticipantSession()
   if (!session || session.participantId !== payload.participantId) {
     return { success: false, error: "Sesi tidak valid. Silakan login kembali." }
+  }
+
+  if (!payload.boothIds.length) {
+    return { success: false, error: "Pilih minimal satu booth." }
   }
 
   // Verify businessId belongs to this participant
@@ -30,7 +34,7 @@ export async function createPublicBoothBooking(payload: {
     businessId: payload.businessId,
     participantId: payload.participantId,
     selectedAddons: (payload.addons ?? []).filter((a) => a.quantity > 0),
-    selectedBoothIds: [payload.boothId],
+    selectedBoothIds: payload.boothIds,
   })
 
   if (!result.success) {

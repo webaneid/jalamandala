@@ -16,7 +16,7 @@ function HomeIcon({ active }: { active: boolean }) {
     </svg>
   )
 }
-function UsahaIcon({ active }: { active: boolean }) {
+function BoothIcon({ active }: { active: boolean }) {
   return (
     <svg className="size-6" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth={active ? 0 : 1.8} viewBox="0 0 24 24">
       <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" strokeLinecap="round" strokeLinejoin="round" />
@@ -50,9 +50,9 @@ export function DashboardBottomNav({ eventSlug }: { eventSlug: string }) {
       icon: (a) => <HomeIcon active={a} />,
     },
     {
-      href: `/${eventSlug}/dashboard/usaha`,
-      label: "Usaha",
-      icon: (a) => <UsahaIcon active={a} />,
+      href: `/${eventSlug}/dashboard/booth`,
+      label: "Booth",
+      icon: (a) => <BoothIcon active={a} />,
     },
     {
       href: `/${eventSlug}/dashboard/invoice`,

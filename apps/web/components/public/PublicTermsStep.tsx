@@ -12,7 +12,7 @@ const fmt = (n: number) =>
 
 type Props = {
   addons: Array<{ addonId: string; quantity: number }>
-  booth: PublicBooth
+  booths: PublicBooth[]
   businessId: string
   eventSlug: string
   participantId: string
@@ -22,7 +22,7 @@ type Props = {
 
 export function PublicTermsStep({
   addons,
-  booth,
+  booths,
   businessId,
   eventSlug,
   participantId,
@@ -74,7 +74,7 @@ export function PublicTermsStep({
 
     const invoiceRes = await createPublicBoothBooking({
       addons,
-      boothId: booth.id,
+      boothIds: booths.map((b) => b.id),
       businessId,
       participantId,
     })
@@ -122,11 +122,12 @@ export function PublicTermsStep({
       <div className="rounded-2xl border border-primary-100 bg-primary-50 px-5 py-4">
         <p className="text-xs font-semibold uppercase tracking-widest text-primary-600">Ringkasan Booking</p>
         <p className="mt-1 font-semibold text-slate-900">
-          Zona {zone.name} · Booth {booth.code}
+          Zona {zone.name} · {booths.map((b) => b.code).join(", ")}
         </p>
-        <p className="text-sm text-primary-700">{fmt(zone.price)}</p>
+        <p className="text-sm text-primary-700">{fmt(zone.price * booths.length)}</p>
+        <p className="text-xs text-slate-500 mt-0.5">{booths.length} booth × {fmt(zone.price)}</p>
         {hasAddons && (
-          <p className="text-xs text-slate-500 mt-0.5">{addonsTotal} unit add-on dipilih</p>
+          <p className="text-xs text-slate-500">{addonsTotal} unit add-on dipilih</p>
         )}
       </div>
 

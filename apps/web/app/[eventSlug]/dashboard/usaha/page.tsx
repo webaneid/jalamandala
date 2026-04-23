@@ -2,10 +2,13 @@ import Link from "next/link"
 import { eq } from "drizzle-orm"
 import { db, createTenantDb } from "@repo/db"
 import { participantBusinesses } from "@repo/db/schema/public"
-import { boothBookings, invoices } from "@repo/db/schema/tenant"
+import { boothBookings, invoices, invoiceItems } from "@repo/db/schema/tenant"
 import { getCurrentParticipantSession } from "@/lib/participant-session"
 
 const TENANT_SCHEMA = process.env.TENANT_SCHEMA ?? "expo_forbis2026"
+
+const fmt = (n: number) =>
+  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n)
 
 export default async function DashboardUsahaPage({
   params,
@@ -21,18 +24,28 @@ export default async function DashboardUsahaPage({
 
   const tenantDb = await createTenantDb(TENANT_SCHEMA)
 
-  // Get booking + invoice per business
   const businessData = await Promise.all(
     businesses.map(async (biz) => {
       const [booking, invoice] = await Promise.all([
         tenantDb.query.boothBookings.findFirst({
           where: eq(boothBookings.businessId, biz.id),
           columns: { bookingStatus: true },
-          with: { booth: { columns: { code: true }, with: { zone: { columns: { name: true, colorCode: true } } } } },
+          with: {
+            booth: {
+              columns: { code: true, description: true },
+              with: {
+                zone: { columns: { name: true, colorCode: true, description: true } },
+                facilities: {
+                  with: { facility: { columns: { name: true } } },
+                },
+              },
+            },
+          },
         }),
         tenantDb.query.invoices.findFirst({
           where: eq(invoices.businessId, biz.id),
-          columns: { status: true, grandTotal: true, publicToken: true },
+          columns: { id: true, status: true, grandTotal: true, publicToken: true },
+          with: { items: { columns: { title: true, quantity: true, unitPrice: true, subtotal: true, itemType: true } } },
           orderBy: (t, { desc }) => [desc(t.createdAt)],
         }),
       ])
@@ -68,6 +81,10 @@ export default async function DashboardUsahaPage({
         ) : (
           businessData.map(({ biz, booking, invoice }) => {
             const isComplete = !!biz.companyDescription && !!biz.companyAddress
+            const addonItems = invoice?.items?.filter((i) => i.itemType === "addon") ?? []
+            const boothItem = invoice?.items?.find((i) => i.itemType === "booth")
+            const facilities = booking?.booth?.facilities ?? []
+
             return (
               <div
                 key={biz.id}
@@ -104,14 +121,66 @@ export default async function DashboardUsahaPage({
 
                 {/* Booth info */}
                 {booking?.booth ? (
-                  <div className="mx-4 mb-3 flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-100 px-3 py-2">
-                    {booking.booth.zone?.colorCode && (
-                      <span className="size-2 rounded-full shrink-0" style={{ backgroundColor: booking.booth.zone.colorCode }} />
+                  <div className="mx-4 mb-3 rounded-xl border border-slate-100 bg-slate-50 overflow-hidden">
+                    {/* Lokasi */}
+                    <div className="flex items-center gap-2 px-3 py-2.5 border-b border-slate-100">
+                      <svg className="size-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <div className="flex flex-1 items-center gap-2 min-w-0">
+                        {booking.booth.zone?.colorCode && (
+                          <span className="size-2 rounded-full shrink-0" style={{ backgroundColor: booking.booth.zone.colorCode }} />
+                        )}
+                        <span className="text-sm font-semibold text-slate-800 truncate">
+                          Zona {booking.booth.zone?.name ?? "—"} · Booth {booking.booth.code}
+                        </span>
+                      </div>
+                      <InvoiceStatusBadge status={invoice?.status ?? null} />
+                    </div>
+
+                    {/* Harga booth */}
+                    {boothItem && (
+                      <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100">
+                        <span className="text-xs text-slate-500">Harga booth</span>
+                        <span className="text-xs font-semibold text-slate-700">{fmt(boothItem.subtotal)}</span>
+                      </div>
                     )}
-                    <span className="text-sm font-medium text-emerald-800">
-                      Zona {booking.booth.zone?.name ?? "—"} · Booth {booking.booth.code}
-                    </span>
-                    <InvoiceStatusBadge status={invoice?.status ?? null} />
+
+                    {/* Fasilitas */}
+                    {facilities.length > 0 && (
+                      <div className="px-3 py-2.5 border-b border-slate-100">
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">Fasilitas Booth</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {facilities.map((f, i) => (
+                            <span
+                              key={i}
+                              className="inline-flex items-center rounded-full bg-white border border-slate-200 px-2.5 py-1 text-[11px] font-medium text-slate-600"
+                            >
+                              {f.facility?.name ?? "Fasilitas"}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Add-ons */}
+                    {addonItems.length > 0 && (
+                      <div className="px-3 py-2.5">
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">Add-on Dibeli</p>
+                        <div className="space-y-1.5">
+                          {addonItems.map((item, i) => (
+                            <div key={i} className="flex items-center justify-between">
+                              <span className="text-xs text-slate-600">
+                                {item.quantity > 1 && <span className="font-semibold">{item.quantity}× </span>}
+                                {item.title}
+                              </span>
+                              <span className="text-xs font-semibold text-slate-700">{fmt(item.subtotal)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="mx-4 mb-3 rounded-xl bg-amber-50 border border-amber-100 px-3 py-2">
@@ -193,12 +262,13 @@ function InvoiceStatusBadge({ status }: { status: string | null }) {
   const map: Record<string, { label: string; class: string }> = {
     paid: { label: "Lunas", class: "bg-emerald-100 text-emerald-700" },
     waiting_for_payment: { label: "Belum Bayar", class: "bg-amber-100 text-amber-700" },
+    waiting_confirmation: { label: "Menunggu Konfirmasi", class: "bg-blue-100 text-blue-700" },
     expired: { label: "Kedaluwarsa", class: "bg-slate-100 text-slate-500" },
     cancelled: { label: "Dibatalkan", class: "bg-red-100 text-red-600" },
   }
   const s = map[status] ?? { label: status, class: "bg-slate-100 text-slate-500" }
   return (
-    <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-semibold ${s.class}`}>
+    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${s.class}`}>
       {s.label}
     </span>
   )

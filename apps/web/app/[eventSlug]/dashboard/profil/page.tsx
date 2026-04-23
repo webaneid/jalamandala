@@ -103,6 +103,12 @@ export default async function DashboardProfilPage({
           )}
         </section>
 
+        {/* Usaha Saya */}
+        <section className="rounded-2xl bg-white border border-slate-100 overflow-hidden shadow-sm">
+          <p className="px-4 pt-4 pb-2 text-xs font-semibold uppercase tracking-widest text-slate-400">Usaha</p>
+          <MenuRow href={`/${eventSlug}/dashboard/usaha`} icon="🏪" label="Usaha Saya" />
+        </section>
+
         {/* Menu lainnya */}
         <section className="rounded-2xl bg-white border border-slate-100 overflow-hidden shadow-sm">
           <p className="px-4 pt-4 pb-2 text-xs font-semibold uppercase tracking-widest text-slate-400">Lainnya</p>
