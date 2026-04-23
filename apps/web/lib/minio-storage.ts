@@ -268,8 +268,8 @@ async function uploadToMinio(
 // ── Presigned GET URL ─────────────────────────────────────────────────────────
 
 export function generatePresignedGetUrl(objectKey: string, expiresInSeconds = 3600): string {
-  const { accessKey, baseUrl, bucket, region, secretKey } = getMinioConfig()
-  const url = new URL(`/${bucket}/${objectKey}`, baseUrl)
+  const { accessKey, publicBaseUrl, bucket, region, secretKey } = getMinioConfig()
+  const url = new URL(`/${bucket}/${objectKey}`, publicBaseUrl)
   const host = url.host
 
   const now = new Date()
