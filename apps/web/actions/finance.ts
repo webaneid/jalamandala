@@ -1362,9 +1362,11 @@ export async function getInvoiceByToken(token: string) {
       })),
       event: {
         name: event.name,
+        slug: event.slug,
         logoAssetId: event.logoAssetId,
         venue: event.venue,
       },
+      businessId: invoice.businessId ?? null,
       paymentChannels: activeChannels.map((ch) => ({
         id: ch.id,
         type: ch.type,

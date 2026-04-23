@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 
 import { uploadParticipantBusinessLogo } from "@/lib/minio-storage"
+import { updateBusiness, type BusinessPayload } from "@/actions/participants"
 
 const TENANT_SCHEMA = process.env.TENANT_SCHEMA ?? "expo_forbis2026"
 
@@ -87,4 +88,30 @@ export async function createQuickBusiness(
     console.error("[createQuickBusiness]", error)
     return { success: false, error: "Gagal menyimpan data usaha." }
   }
+}
+
+export async function updatePublicBusiness(
+  businessId: string,
+  eventSlug: string,
+  data: BusinessPayload
+): Promise<{ success: boolean; error?: string }> {
+  const session = await import("@/lib/participant-session").then(m => m.getCurrentParticipantSession())
+  if (!session) {
+    return { success: false, error: "Sesi tidak valid. Silakan login kembali." }
+  }
+
+  const business = await db.query.participantBusinesses.findFirst({
+    where: eq(participantBusinesses.id, businessId),
+    columns: { participantId: true },
+  })
+  if (!business || business.participantId !== session.participantId) {
+    return { success: false, error: "Usaha tidak ditemukan atau bukan milik Anda." }
+  }
+
+  const result = await updateBusiness(businessId, data)
+  if (!result.success) return { success: false, error: result.error }
+
+  revalidatePath(`/${eventSlug}/usaha`)
+  revalidatePath(`/${eventSlug}/dashboard`)
+  return { success: true }
 }

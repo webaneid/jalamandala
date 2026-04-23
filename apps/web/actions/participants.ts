@@ -29,7 +29,7 @@ type LogoUploadPayload = {
   fileName: string;
 }
 
-type BusinessPayload = {
+export type BusinessPayload = {
   brandName: string;
   boothName: string;
   businessCategory: string;

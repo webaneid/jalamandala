@@ -197,7 +197,7 @@ export function PublicAddonStep({
         </button>
         {selectedAddons.length > 0 && (
           <button
-            className="flex-1 rounded-2xl bg-primary py-3 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-60 transition"
+            className="flex-1 rounded-2xl bg-secondary py-3 text-sm font-semibold text-white hover:bg-secondary/90 disabled:opacity-60 transition"
             disabled={isSubmitting}
             onClick={() => submit(true)}
             type="button"

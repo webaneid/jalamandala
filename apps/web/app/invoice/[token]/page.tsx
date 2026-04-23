@@ -42,7 +42,7 @@ export default async function PublicInvoicePage({
 
   if (!data) notFound();
 
-  const { invoice, participant, business, items, payments, event, paymentChannels, qrisConfig, qrisDynamic, whatsappSenderId } = data;
+  const { invoice, participant, business, businessId, items, payments, event, paymentChannels, qrisConfig, qrisDynamic, whatsappSenderId } = data;
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(amount);
@@ -339,6 +339,8 @@ export default async function PublicInvoicePage({
 
                     {/* Masukan pembayaran */}
                     <PaymentConfirmationTrigger
+                      businessId={businessId}
+                      eventSlug={event.slug}
                       grandTotal={invoice.grandTotal}
                       invoiceNumber={invoice.invoiceNumber}
                       paymentOptions={paymentOptions}

@@ -10,6 +10,8 @@ type PaymentOption = {
 };
 
 type Props = {
+  businessId: string | null;
+  eventSlug: string;
   grandTotal: number;
   invoiceNumber: string;
   paymentOptions: PaymentOption[];
@@ -46,6 +48,8 @@ function formatCurrency(amount: number) {
 }
 
 export function PaymentConfirmationDialog({
+  businessId,
+  eventSlug,
   grandTotal,
   invoiceNumber,
   paymentOptions,
@@ -161,18 +165,24 @@ export function PaymentConfirmationDialog({
         {/* Body */}
         <div className="p-6">
           {success ? (
-            <div className="rounded-xl bg-green-50 border border-green-200 p-6 text-center space-y-2">
-              <p className="font-semibold text-green-800">Konfirmasi berhasil dikirim!</p>
-              <p className="text-sm text-green-700">
-                Pembayaran Anda sedang diverifikasi oleh panitia. Halaman ini akan diperbarui setelah dikonfirmasi.
-              </p>
-              <button
-                onClick={onClose}
-                className="mt-3 rounded-xl bg-green-600 px-5 py-2 text-sm font-medium text-white hover:bg-green-700"
-                type="button"
+            <div className="rounded-xl bg-green-50 border border-green-200 p-6 text-center space-y-4">
+              <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-green-100">
+                <svg className="size-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <div className="space-y-1.5">
+                <p className="font-semibold text-green-800">Terimakasih telah melakukan konfirmasi pembayaran</p>
+                <p className="text-sm text-green-700">
+                  Kami akan segera memberitahu Anda setelah team finance kami memverifikasi pembayaran.
+                </p>
+              </div>
+              <a
+                href={businessId ? `/${eventSlug}/usaha/${businessId}/lengkapi` : `/${eventSlug}/dashboard`}
+                className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
               >
-                Tutup
-              </button>
+                Lanjutkan
+              </a>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">

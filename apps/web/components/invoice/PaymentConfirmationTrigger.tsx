@@ -5,6 +5,8 @@ import { CreditCard } from "lucide-react";
 import { PaymentConfirmationDialog } from "./PaymentConfirmationDialog";
 
 type Props = {
+  businessId: string | null;
+  eventSlug: string;
   grandTotal: number;
   invoiceNumber: string;
   paymentOptions: Array<{ key: string; label: string }>;
@@ -12,6 +14,8 @@ type Props = {
 };
 
 export function PaymentConfirmationTrigger({
+  businessId,
+  eventSlug,
   grandTotal,
   invoiceNumber,
   paymentOptions,
@@ -32,6 +36,8 @@ export function PaymentConfirmationTrigger({
 
       {open && (
         <PaymentConfirmationDialog
+          businessId={businessId}
+          eventSlug={eventSlug}
           grandTotal={grandTotal}
           invoiceNumber={invoiceNumber}
           paymentOptions={paymentOptions}
