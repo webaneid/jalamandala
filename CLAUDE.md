@@ -96,6 +96,10 @@ Business logic lives in `apps/web/actions/`. These are Next.js server actions (`
 
 MinIO integration is in `apps/web/lib/minio-storage.ts`. Files are uploaded with AWS4 presigned URLs. Path format: `participant-logos/{uuid}.{ext}`. Max 5MB per upload.
 
+**Penting:** Di production MinIO berada di belakang reverse proxy (`storage.forbis.id`). Selalu set `MINIO_PUBLIC_URL=https://storage.forbis.id` di env production. Fungsi `generatePresignedGetUrl` menggunakan `publicBaseUrl` (dari `MINIO_PUBLIC_URL`) — jangan kembalikan ke `baseUrl` (localhost) karena presigned URL akan gagal di sisi client.
+
+**Media API auth bypass:** `/api/media/[assetId]` mendukung query `?publicToken=<invoicePublicToken>` untuk asset private milik participant — dipakai di halaman invoice publik agar gambar bukti transfer bisa ditampilkan tanpa login admin.
+
 ### PDF Generation
 
 Gotenberg microservice handles PDF rendering (not Next.js). Point `GOTENBERG_URL` to the running instance.
@@ -105,14 +109,44 @@ Gotenberg microservice handles PDF rendering (not Next.js). Point `GOTENBERG_URL
 ```
 DATABASE_URL          # postgresql://jalamandala:secret@localhost:6432/jalamandala
 TENANT_SCHEMA         # e.g. expo_forbis2026
-MINIO_ENDPOINT        # localhost
+MINIO_ENDPOINT        # localhost (internal, untuk upload server-side)
 MINIO_PORT            # 9000
 MINIO_ACCESS_KEY      # admin
 MINIO_SECRET_KEY      # password123
 MINIO_BUCKET          # participant-assets
+MINIO_PUBLIC_URL      # https://storage.forbis.id (WAJIB di production, untuk presigned URL ke client)
 REDIS_URL             # redis://localhost:6379
 GOTENBERG_URL         # http://localhost:3001
 ```
+
+## Deployment (Production)
+
+Server berjalan di `/var/www/jalamandala`, dikelola dengan PM2.
+
+```bash
+cd /var/www/jalamandala && git pull && bun install && bun run build && pm2 reload jalamandala
+```
+
+- Gunakan `pm2 reload` (bukan `restart`) untuk zero-downtime.
+- `bun install` wajib dijalankan setelah pull jika ada perubahan `bun.lock`.
+
+## Invoice & Payment Flow
+
+Status invoice: `waiting_for_payment` → `waiting_confirmation` (user submit bukti) → `paid` (admin verifikasi) / `expired` / `cancelled`
+
+Status payment: `pending_verification` → `paid` (verified) / `rejected`
+
+Aturan penting:
+- Satu invoice hanya boleh punya **satu** `pending_verification` payment sekaligus — blokir submit baru jika sudah ada.
+- Saat user submit bukti transfer, status invoice otomatis berubah ke `waiting_confirmation`.
+- Admin verifikasi melalui `verifyPaymentConfirmation()` di `actions/finance.ts`.
+- `getInvoiceByToken` di `actions/finance.ts` adalah fungsi utama untuk halaman invoice publik — returns invoice, participant, business, items (enriched), payments (dengan `proofAssetId`), event, paymentChannels, qrisConfig.
+
+## Dashboard Participant
+
+Dashboard berada di `apps/web/app/[eventSlug]/dashboard/` dengan layout `fixed inset-0 z-30` (full-screen overlay di atas public layout). Bottom navigation 4 tab: Beranda, Usaha, Invoice, Profil.
+
+Alur post-payment: Konfirmasi Pembayaran → Lengkapi Data Usaha (`/usaha/[businessId]/lengkapi`) → E-Pass Booth (`/usaha/[businessId]/epass`) → Dashboard.
 
 ## Conventions
 
