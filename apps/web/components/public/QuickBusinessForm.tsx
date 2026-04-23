@@ -8,6 +8,7 @@ import { createQuickBusiness } from "@/actions/public-businesses"
 import { FieldShell } from "@/components/public/ui/FieldShell"
 import { PublicButton } from "@/components/public/ui/PublicButton"
 import { Input } from "@/components/ui/input"
+import type { BusinessFormValues } from "@/lib/validations/tambah_peserta"
 
 const MAX_LOGO_BYTES = 5 * 1024 * 1024
 
@@ -19,6 +20,7 @@ export type BoothCategoryOption = {
 
 type Props = {
   boothCategories: BoothCategoryOption[]
+  defaultValues?: Partial<BusinessFormValues>
   eventSlug: string
   nextUrl?: string
   participantId: string
@@ -31,15 +33,17 @@ type LogoState = {
   previewUrl: string
 }
 
-export function QuickBusinessForm({ boothCategories, eventSlug, nextUrl, participantId }: Props) {
+export function QuickBusinessForm({ boothCategories, defaultValues, eventSlug, nextUrl, participantId }: Props) {
   const router = useRouter()
   const [error, setError] = React.useState("")
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [logo, setLogo] = React.useState<LogoState | null>(null)
-  const [companyName, setCompanyName] = React.useState("")
-  const [sameBoothName, setSameBoothName] = React.useState(true)
-  const [boothName, setBoothName] = React.useState("")
-  const [categorySlug, setCategorySlug] = React.useState("")
+  const [companyName, setCompanyName] = React.useState(defaultValues?.companyName ?? "")
+  const initBoothName = defaultValues?.boothName ?? ""
+  const initSame = !initBoothName || initBoothName === (defaultValues?.companyName ?? "")
+  const [sameBoothName, setSameBoothName] = React.useState(defaultValues ? initSame : true)
+  const [boothName, setBoothName] = React.useState(initSame ? "" : initBoothName)
+  const [categorySlug, setCategorySlug] = React.useState(defaultValues?.requestedBoothCategorySlug ?? "")
   const fileRef = React.useRef<HTMLInputElement>(null)
 
   function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
