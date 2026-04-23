@@ -17,7 +17,7 @@ export default async function DashboardLayout({ children, params }: Props) {
 
   return (
     // Full-screen overlay — covers public header/footer for app-like feel
-    <div className="fixed inset-0 z-30 flex flex-col bg-slate-50 overflow-hidden">
+    <div className="fixed inset-0 z-[60] flex flex-col bg-slate-50 overflow-hidden">
       {/* Scrollable content area */}
       <div className="flex-1 overflow-y-auto pb-20">
         <div className="mx-auto max-w-lg">

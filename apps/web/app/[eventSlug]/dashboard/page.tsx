@@ -86,7 +86,7 @@ export default async function DashboardHomePage({
   return (
     <div className="min-h-full">
       {/* Top greeting bar */}
-      <div className="bg-[#134397] px-5 pt-12 pb-16 relative overflow-hidden">
+      <div className="bg-[#134397] px-5 pt-12 pb-10 relative overflow-hidden">
         <div className="absolute -top-8 -right-8 size-40 rounded-full bg-white/5" />
         <div className="absolute top-6 -left-10 size-28 rounded-full bg-white/5" />
         <div className="relative flex items-start justify-between">
@@ -101,7 +101,7 @@ export default async function DashboardHomePage({
         </div>
       </div>
 
-      <div className="px-4 -mt-8 space-y-4">
+      <div className="relative z-10 px-4 -mt-6 space-y-4">
         {/* Progress stepper card */}
         <div className="rounded-2xl bg-white p-5 shadow-sm border border-slate-100">
           <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-4">Progress Pendaftaran</p>
@@ -178,12 +178,27 @@ export default async function DashboardHomePage({
         {/* Quick access grid */}
         <p className="pt-2 text-xs font-semibold uppercase tracking-widest text-slate-400">Akses Cepat</p>
         <div className="grid grid-cols-2 gap-3 pb-4">
-          {latestBooking?.businessId && (
+          <QuickCard
+            href={`/${eventSlug}/booking`}
+            icon="🏪"
+            label="Booking Booth"
+            sub="Pesan booth baru"
+            color="bg-primary/5 border-primary/20"
+          />
+          {latestBooking?.businessId ? (
             <QuickCard
               href={`/${eventSlug}/usaha/${latestBooking.businessId}/epass`}
               icon="🎫"
               label="E-Pass Booth"
               sub="Kartu peserta digital"
+              color="bg-blue-50 border-blue-100"
+            />
+          ) : (
+            <QuickCard
+              href={`/${eventSlug}/dashboard/usaha`}
+              icon="🏢"
+              label="Usaha Saya"
+              sub="Kelola data usaha"
               color="bg-blue-50 border-blue-100"
             />
           )}
@@ -200,13 +215,6 @@ export default async function DashboardHomePage({
             label="Agenda"
             sub="Jadwal acara"
             color="bg-violet-50 border-violet-100"
-          />
-          <QuickCard
-            href={`/${eventSlug}/syarat-ketentuan`}
-            icon="📄"
-            label="Syarat & Ketentuan"
-            sub="Dokumen yang ditandatangani"
-            color="bg-slate-50 border-slate-200"
           />
         </div>
       </div>
