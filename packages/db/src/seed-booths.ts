@@ -64,24 +64,24 @@ const zoneSeeds = [
   {
     name: 'VVIP',
     slug: 'vvip',
-    description: 'Zona strategis depan New BPPM untuk tenant prioritas VVIP.',
-    location: 'Depan New BPPM',
+    description: 'Zona strategis untuk tenant prioritas VVIP.',
+    location: 'Area Aligard, bagian depan gedung Aligard',
     colorCode: '#FACC15',
     sortOrder: 1,
   },
   {
     name: 'VIP',
     slug: 'vip',
-    description: 'Zona utama depan New BPPM untuk tenant VIP.',
-    location: 'Depan New BPPM',
+    description: 'Zona utama untuk tenant VIP.',
+    location: 'Area Aligard, bagian depan gedung Aligard',
     colorCode: '#7C3AED',
     sortOrder: 2,
   },
   {
     name: 'Premium',
     slug: 'premium',
-    description: 'Zona Premium Aligarh dengan dua blok besar dan akses panggung.',
-    location: 'Aligarh',
+    description: 'Zona Premium dengan dua blok besar dan akses panggung.',
+    location: 'Area Aligard, bagian tengah gedung Aligard',
     colorCode: '#0EA5E9',
     sortOrder: 3,
   },
@@ -262,23 +262,24 @@ const boothCategorySeeds = [
 ];
 
 function buildVvipSeeds() {
+  // Layout: 3 kiri + gangway + 3 kanan = 6 booth
   const leftX = 40;
   const rightX = 480;
   const y = 40;
   const seeds: BoothSeed[] = [];
 
-  for (let i = 1; i <= 4; i++) {
+  for (let i = 1; i <= 3; i++) {
     seeds.push(
       createBoothSeed('vvip', `VVIP${i}`, i, leftX + (i - 1) * BOOTH_WIDTH, y, {
-        description: 'Booth VVIP di depan New BPPM.',
+        description: 'Booth VVIP di Area Aligard.',
       })
     );
   }
 
-  for (let i = 5; i <= 8; i++) {
+  for (let i = 4; i <= 6; i++) {
     seeds.push(
-      createBoothSeed('vvip', `VVIP${i}`, i, rightX + (i - 5) * BOOTH_WIDTH, y, {
-        description: 'Booth VVIP di depan New BPPM.',
+      createBoothSeed('vvip', `VVIP${i}`, i, rightX + (i - 4) * BOOTH_WIDTH, y, {
+        description: 'Booth VVIP di Area Aligard.',
       })
     );
   }
@@ -287,6 +288,7 @@ function buildVvipSeeds() {
 }
 
 function buildVipSeeds() {
+  // Layout: 2 baris, tiap baris 3 kiri + gangway + 3 kanan = 12 booth total
   const leftX = 40;
   const rightX = 480;
   const startY = 102;
@@ -294,33 +296,26 @@ function buildVipSeeds() {
   const seeds: BoothSeed[] = [];
 
   const rows = [
-    ['VIP1', 'VIP2', 'VIP3', 'VIP4', 'VIP5', 'VIP6', 'VIP7', 'VIP8'],
-    ['VIP9', 'VIP10', 'VIP11', 'VIP12', 'VIP13', 'VIP14', 'VIP15', 'VIP16'],
+    ['VIP1', 'VIP2', 'VIP3', 'VIP4', 'VIP5', 'VIP6'],
+    ['VIP7', 'VIP8', 'VIP9', 'VIP10', 'VIP11', 'VIP12'],
   ];
 
   rows.forEach((codes, rowIndex) => {
     const y = startY + rowIndex * rowHeight;
 
-    codes.slice(0, 4).forEach((code, index) => {
+    codes.slice(0, 3).forEach((code, index) => {
       seeds.push(
-        createBoothSeed('vip', code, rowIndex * 8 + index + 1, leftX + index * BOOTH_WIDTH, y, {
-          description: 'Booth VIP di depan New BPPM.',
+        createBoothSeed('vip', code, rowIndex * 6 + index + 1, leftX + index * BOOTH_WIDTH, y, {
+          description: 'Booth VIP di Area Aligard.',
         })
       );
     });
 
-    codes.slice(4).forEach((code, index) => {
+    codes.slice(3).forEach((code, index) => {
       seeds.push(
-        createBoothSeed(
-          'vip',
-          code,
-          rowIndex * 8 + index + 5,
-          rightX + index * BOOTH_WIDTH,
-          y,
-          {
-            description: 'Booth VIP di depan New BPPM.',
-          }
-        )
+        createBoothSeed('vip', code, rowIndex * 6 + index + 4, rightX + index * BOOTH_WIDTH, y, {
+          description: 'Booth VIP di Area Aligard.',
+        })
       );
     });
   });
@@ -329,67 +324,27 @@ function buildVipSeeds() {
 }
 
 function buildPremiumSeeds() {
+  // Layout: 4 strip kolom × 7 booth = 28 booth total
+  // Tiap strip: 3 atas + gangway kecil + 4 bawah
+  // Pasangan kiri: col1 (P1-P7) + gangway + col2 (P8-P14)
+  // Pasangan kanan: col3 (P15-P21) + gangway + col4 (P22-P28)
   const seeds: BoothSeed[] = [];
-  const blockLeftX = 60;
-  const blockRightX = 620;
-  const startY = 48;
   const cellHeight = 38;
+  const startY = 48;
   const gangwayWidth = 86;
-  const columnGap = 0;
+  const colXPositions = [60, 60 + BOOTH_WIDTH + gangwayWidth, 620, 620 + BOOTH_WIDTH + gangwayWidth];
 
-  for (let i = 1; i <= 9; i++) {
-    const y = startY + (i - 1) * cellHeight;
-    seeds.push(
-      createBoothSeed('premium', `P${i}`, i, blockLeftX, y, {
-        description: 'Booth Premium blok kiri Aligarh.',
-        height: cellHeight,
-        notes: i === 1 ? 'Dekat gangway kiri.' : undefined,
-      })
-    );
-  }
-
-  for (let i = 10; i <= 18; i++) {
-    const y = startY + (i - 10) * cellHeight;
-    seeds.push(
-      createBoothSeed(
-        'premium',
-        `P${i}`,
-        i,
-        blockLeftX + BOOTH_WIDTH + gangwayWidth + columnGap,
-        y,
-        {
-          description: 'Booth Premium blok kiri Aligarh sisi dalam.',
+  let counter = 1;
+  for (const colX of colXPositions) {
+    for (let row = 0; row < 7; row++) {
+      seeds.push(
+        createBoothSeed('premium', `P${counter}`, counter, colX, startY + row * cellHeight, {
+          description: 'Booth Premium di Area Aligard.',
           height: cellHeight,
-        }
-      )
-    );
-  }
-
-  for (let i = 19; i <= 27; i++) {
-    const y = startY + (i - 19) * cellHeight;
-    seeds.push(
-      createBoothSeed('premium', `P${i}`, i, blockRightX, y, {
-        description: 'Booth Premium blok kanan Aligarh sisi dalam.',
-        height: cellHeight,
-      })
-    );
-  }
-
-  for (let i = 28; i <= 36; i++) {
-    const y = startY + (i - 28) * cellHeight;
-    seeds.push(
-      createBoothSeed(
-        'premium',
-        `P${i}`,
-        i,
-        blockRightX + BOOTH_WIDTH + gangwayWidth + columnGap,
-        y,
-        {
-          description: 'Booth Premium blok kanan Aligarh.',
-          height: cellHeight,
-        }
-      )
-    );
+        })
+      );
+      counter++;
+    }
   }
 
   return seeds;
@@ -454,11 +409,11 @@ function buildHorizontalFestivalSeeds(
 }
 
 const boothSeeds: BoothSeed[] = [
-  ...buildVvipSeeds(),
-  ...buildVipSeeds(),
-  ...buildPremiumSeeds(),
-  ...buildVerticalFestivalSeeds('festival-west', 'FW', 30, {}),
-  ...buildHorizontalFestivalSeeds('festival-north', 'FN', 30, {}),
+  ...buildVvipSeeds(),          // VVIP1–VVIP6   (6 booth)
+  ...buildVipSeeds(),            // VIP1–VIP12    (12 booth)
+  ...buildPremiumSeeds(),        // P1–P28        (28 booth)
+  ...buildVerticalFestivalSeeds('festival-west', 'FW', 27, {}),   // FW1–FW27  (27 booth)
+  ...buildHorizontalFestivalSeeds('festival-north', 'FN', 27, {}), // FN1–FN27  (27 booth)
 ];
 
 async function resolveTenantSchemaName() {

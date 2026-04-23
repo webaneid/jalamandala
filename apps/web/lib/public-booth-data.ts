@@ -167,6 +167,49 @@ export async function getPublicZoneForBooking(
   }
 }
 
+export type PublicZoneSummary = {
+  colorCode: string | null
+  id: string
+  imageAssetId: string | null
+  location: string | null
+  name: string
+  slug: string
+}
+
+export async function getEligibleZonesForBooking(
+  participant: { organizationGroupSlug: string | null },
+  business: { requestedBoothCategorySlug: string | null }
+): Promise<PublicZoneSummary[]> {
+  const tenantDb = await createTenantDb(TENANT_SCHEMA)
+
+  const allZones = await tenantDb.query.zones.findMany({
+    where: (t, { eq }) => eq(t.isActive, true),
+    orderBy: (t, { asc }) => [asc(t.sortOrder)],
+    columns: { id: true, name: true, slug: true, colorCode: true, location: true, imageAssetId: true },
+    with: {
+      booths: {
+        columns: { status: true },
+        with: {
+          boothGroup: { columns: { slug: true } },
+          boothCategory: { columns: { slug: true } },
+        },
+      },
+    },
+  })
+
+  return allZones.filter((zone) =>
+    zone.booths.some(
+      (booth) =>
+        booth.status === "open" &&
+        isBoothEligible({
+          booth: { boothCategorySlug: booth.boothCategory.slug, boothGroupSlug: booth.boothGroup.slug },
+          business: { requestedBoothCategorySlug: business.requestedBoothCategorySlug },
+          participant: { organizationGroupSlug: participant.organizationGroupSlug },
+        })
+    )
+  )
+}
+
 export type PublicAddon = {
   description: string | null
   id: string

@@ -172,6 +172,11 @@ State machine berbasis URL params — tidak ada client state, browser back berfu
 
 **Multi-booth**: Step 3 menggunakan multi-select (`Set<string>`). URL param `boothIds` = comma-separated IDs (bukan `boothId` tunggal). Satu invoice mencakup semua booth yang dipilih.
 
+**Zona filtering di Step 2**: Daftar zona (step 2) hanya menampilkan zona yang punya **minimal 1 booth open yang eligible** untuk peserta tersebut. Fungsi: `getEligibleZonesForBooking(participant, business)` di `lib/public-booth-data.ts`. Logika eligibility per booth ada di `lib/booth-eligibility.ts`:
+- `BOOTH_GROUP_ACCESS` memetakan `organizationGroupSlug` peserta → `boothGroup.slug` yang boleh dipesan (contoh: `formaqin` → hanya booth group `formaqin`; `forbis` → `general` + `forbis`)
+- `isBoothCategoryAllowed` memeriksa kesesuaian kategori produk usaha dengan `boothCategory.slug` booth (contoh: `fnb_kitchen` hanya bisa pesan booth `fnb_kitchen`; `fnb_dry_food` bisa ke `fnb_dry_food` atau `fnb_kitchen`)
+- Zona yang tidak punya satu pun booth eligible untuk peserta tersebut **tidak ditampilkan sama sekali** di step 2.
+
 **Add-on param**: `addons=addonId1:qty,addonId2:qty` — di-carry dari step 4 ke step 5 via URL.
 
 **Syarat & Ketentuan wajib per order** — tombol "Lewati Add-on" dan "Tambah Add-on" di `PublicAddonStep` selalu redirect ke step S&K, tidak pernah langsung buat invoice. Pengecekan `hasActiveTermsApproval` sudah dihapus — tidak ada bypass meskipun peserta sudah pernah setuju sebelumnya.
@@ -211,17 +216,25 @@ Layout visual booth di admin (`ClickableBoothMap.tsx`) dan frontend (`PublicBoot
 
 | Zone slug | Layout | Konfigurasi saat ini |
 |-----------|--------|----------------------|
-| `vvip` | 2 kolom + gangway tengah, 1 baris | 3 kiri + 3 kanan = **6 booth** |
-| `vip` | 2 kolom + gangway tengah, 2 baris | 3 kiri + 3 kanan per baris = **12 booth** |
-| `premium` | 2 kolom vertikal + gangway, scrollable | ~36 booth, chunk 18 |
-| `festival-west` | Kolom tunggal vertikal, scrollable | 5 booth per blok |
-| `festival-north` | Baris tunggal horizontal, scrollable | 5 booth per blok |
+| `vvip` | 2 kolom + gangway tengah, 1 baris | VVIP1–VVIP6 = **6 booth** (3 kiri + 3 kanan) |
+| `vip` | 2 kolom + gangway tengah, 2 baris | VIP1–VIP12 = **12 booth** (3+3 per baris × 2 baris) |
+| `premium` | 4 strip kolom (2 pasang), tiap strip 3 atas + gangway kecil + 4 bawah | P1–P28 = **28 booth** (col1: P1-7, col2: P8-14, col3: P15-21, col4: P22-28) |
+| `festival-west` | Kolom kiri (4 blok: 5+5+6+6) + kolom kanan atas (5) | FW1–FW27 = **27 booth** (FW1-5 kanan atas, FW6-27 kiri turun) |
+| `festival-north` | Baris horizontal scrollable, dinamis (blok 5) | FN1–FN27 = **27 booth** — tidak perlu ubah kode saat jumlah berubah |
+
+Total keseluruhan: **100 booth** (6+12+28+27+27). Seed: `bun run db:seed:booths` di `packages/db`.
 
 Kalau jumlah booth berubah, update `slice()` dan `grid-cols-N` di **dua tempat sekaligus**:
 1. `apps/web/components/admin/booth/ClickableBoothMap.tsx`
 2. `apps/web/components/public/PublicBoothMap.tsx`
 
 Jangan lupa sesuaikan `min-w-[Npx]` di wrapper jika lebar total grid berubah signifikan.
+
+**Halaman lain yang tidak perlu diubah saat jumlah booth berubah:**
+- `/admin/keuangan/tambah-tagihan` → `ManualInvoiceBuilder` sepenuhnya dinamis dari DB (`booths.findMany`), tidak ada hardcoded layout atau slice.
+- `/admin/booth` (booth management) → data dari DB, hanya layout visual yang hardcoded di `ClickableBoothMap`.
+
+Perubahan jumlah booth cukup: (1) update data di DB via admin booth management, (2) update slice/grid di dua file layout di atas.
 
 ### Skema Database Terkait
 

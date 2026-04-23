@@ -218,6 +218,19 @@ export async function updateZoneImage(zoneId: string, imageAssetId: string | nul
   }
 }
 
+export async function updateZoneLocation(zoneId: string, location: string | null) {
+  try {
+    const tenantDb = await createTenantDb(TENANT_SCHEMA);
+    await tenantDb.update(zones).set({ location, updatedAt: new Date() }).where(eq(zones.id, zoneId));
+    revalidatePath("/admin/booth");
+    const activeEvents = await db.query.expoEvents.findMany({ columns: { slug: true }, where: eq(expoEvents.isActive, true) });
+    for (const event of activeEvents) revalidatePath(`/${event.slug}`);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Gagal memperbarui lokasi zona." };
+  }
+}
+
 export async function updateBoothConfiguration(payload: {
   boothId: string;
   boothCategoryId: string;

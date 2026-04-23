@@ -1,16 +1,15 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { eq, asc } from "drizzle-orm"
+import { eq } from "drizzle-orm"
 
 import { PublicBookingClient } from "@/components/public/PublicBookingClient"
 import { PublicAddonStep } from "@/components/public/PublicAddonStep"
 import { PublicTermsStep } from "@/components/public/PublicTermsStep"
 import { getCurrentParticipantSession } from "@/lib/participant-session"
-import { getPublicZoneForBooking, getPublicAddons } from "@/lib/public-booth-data"
+import { getPublicZoneForBooking, getPublicAddons, getEligibleZonesForBooking } from "@/lib/public-booth-data"
 import { getActiveTermsPage } from "@/actions/terms-approval"
-import { db, createTenantDb } from "@repo/db"
+import { db } from "@repo/db"
 import { participants, participantBusinesses } from "@repo/db/schema/public"
-import { zones } from "@repo/db/schema/tenant"
 
 const TENANT_SCHEMA = process.env.TENANT_SCHEMA ?? "expo_forbis2026"
 
@@ -53,8 +52,7 @@ export default async function PublicBookingPage({
     redirect(`/${eventSlug}/login?next=${encodeURIComponent(next)}`)
   }
 
-  // Load participant + businesses in parallel with zones
-  const [participantData, businesses, tenantDb] = await Promise.all([
+  const [participantData, businesses] = await Promise.all([
     db.query.participants.findFirst({
       where: eq(participants.id, session.participantId),
       columns: { id: true, organizationGroupSlug: true },
@@ -63,7 +61,6 @@ export default async function PublicBookingPage({
       where: eq(participantBusinesses.participantId, session.participantId),
       columns: { id: true, companyName: true, boothName: true, productTags: true, requestedBoothCategorySlug: true },
     }),
-    createTenantDb(TENANT_SCHEMA),
   ])
 
   if (businesses.length === 0) {
@@ -74,13 +71,11 @@ export default async function PublicBookingPage({
   const activeBusiness = businesses.find((b) => b.id === selectedBusinessId) ?? null
   const bookingBase = `/${eventSlug}/booking${zoneSlug ? `?zone=${encodeURIComponent(zoneSlug)}` : ""}`
 
-  // Load zones + terms page in parallel
   const [allZones, termsPage] = await Promise.all([
-    tenantDb.query.zones.findMany({
-      where: eq(zones.isActive, true),
-      orderBy: [asc(zones.sortOrder)],
-      columns: { id: true, name: true, slug: true, colorCode: true },
-    }),
+    getEligibleZonesForBooking(
+      { organizationGroupSlug: participantData?.organizationGroupSlug ?? null },
+      { requestedBoothCategorySlug: activeBusiness?.requestedBoothCategorySlug ?? null }
+    ),
     getActiveTermsPage(eventSlug),
   ])
 
@@ -245,16 +240,42 @@ export default async function PublicBookingPage({
                   <Link
                     key={z.id}
                     href={href}
-                    className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm active:scale-[.99] transition"
+                    className="block overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm active:scale-[.99] transition"
                   >
-                    <span
-                      className="size-4 shrink-0 rounded-full"
-                      style={{ backgroundColor: z.colorCode ?? "#94a3b8" }}
-                    />
-                    <p className="flex-1 font-semibold text-slate-800">{z.name}</p>
-                    <svg className="size-4 text-slate-300 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                      <path d="M9 6l6 6-6 6" strokeLinecap="round" />
-                    </svg>
+                    {z.imageAssetId ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <div className="aspect-video w-full overflow-hidden">
+                        <img
+                          src={`/api/media/${z.imageAssetId}`}
+                          alt={z.name}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div
+                        className="aspect-video w-full flex items-center justify-center"
+                        style={{ backgroundColor: `${z.colorCode ?? "#94a3b8"}22` }}
+                      >
+                        <span className="text-2xl font-bold tracking-tight" style={{ color: z.colorCode ?? "#94a3b8" }}>
+                          {z.name}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-3 px-5 py-3">
+                      <span
+                        className="size-3 shrink-0 rounded-full"
+                        style={{ backgroundColor: z.colorCode ?? "#94a3b8" }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-slate-800">{z.name}</p>
+                        {z.location && (
+                          <p className="text-xs text-slate-400 mt-0.5">{z.location}</p>
+                        )}
+                      </div>
+                      <svg className="size-4 text-slate-300 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                        <path d="M9 6l6 6-6 6" strokeLinecap="round" />
+                      </svg>
+                    </div>
                   </Link>
                 )
               })}
@@ -282,7 +303,9 @@ export default async function PublicBookingPage({
                 Ganti
               </Link>
             </div>
-            <p className="text-xs text-slate-500 pt-1">Tap booth yang tersedia pada peta di bawah.</p>
+            {zoneData.location && (
+              <p className="text-xs text-slate-500 pt-1">{zoneData.location}</p>
+            )}
             <div className="rounded-2xl bg-white border border-slate-100 shadow-sm overflow-hidden p-4">
               <PublicBookingClient
                 businessId={selectedBusinessId}

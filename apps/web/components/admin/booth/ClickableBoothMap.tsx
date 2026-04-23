@@ -8,6 +8,7 @@ import {
   updateBoothConfiguration,
   updateZoneFacilities,
   updateZoneImage,
+  updateZoneLocation,
   updateZonePrices,
 } from "@/actions/booths";
 import { MediaPicker, type MediaPickerValue } from "@/components/admin/media/MediaPicker";
@@ -115,6 +116,11 @@ type ZoneEditorState =
       mode: "image";
       zone: BoothMapZone;
     }
+  | {
+      location: string;
+      mode: "location";
+      zone: BoothMapZone;
+    }
   | null;
 
 export function ClickableBoothMap({
@@ -181,6 +187,11 @@ export function ClickableBoothMap({
     });
   }
 
+  function openLocationEditor(zone: BoothMapZone) {
+    setEditorError("");
+    setZoneEditor({ mode: "location", location: zone.location ?? "", zone });
+  }
+
   function openImageEditor(zone: BoothMapZone) {
     setEditorError("");
     setZoneEditor({
@@ -223,7 +234,9 @@ export function ClickableBoothMap({
                 pricePhase: row.pricePhase,
               }))
             )
-            : await updateZoneImage(zoneEditor.zone.id, zoneEditor.image?.id ?? null);
+            : zoneEditor.mode === "location"
+              ? await updateZoneLocation(zoneEditor.zone.id, zoneEditor.location.trim() || null)
+              : await updateZoneImage(zoneEditor.zone.id, zoneEditor.image?.id ?? null);
 
       if (!result.success) {
         setEditorError(result.error ?? "Gagal menyimpan perubahan.");
@@ -293,12 +306,21 @@ export function ClickableBoothMap({
                     {zone.description ? (
                       <CardDescription>{zone.description}</CardDescription>
                     ) : null}
-                    {zone.location ? (
-                      <div className="flex items-center gap-2 pt-2 text-sm text-muted-foreground">
-                        <MapPin className="size-4 text-primary-700" />
+                    <div className="flex items-center gap-2 pt-2 text-sm text-muted-foreground">
+                      <MapPin className="size-4 text-primary-700" />
+                      {zone.location ? (
                         <span>{zone.location}</span>
-                      </div>
-                    ) : null}
+                      ) : (
+                        <span className="italic text-muted-foreground/50">Lokasi belum diisi</span>
+                      )}
+                      <button
+                        className="inline-flex size-6 items-center justify-center rounded-lg border border-border/70 bg-white text-muted-foreground transition hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700"
+                        onClick={() => openLocationEditor(zone)}
+                        type="button"
+                      >
+                        <Pencil className="size-3" />
+                      </button>
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-3 text-sm text-muted-foreground">
@@ -591,7 +613,9 @@ export function ClickableBoothMap({
                     ? "Edit fasilitas untuk semua booth di zona ini."
                     : zoneEditor.mode === "prices"
                       ? "Edit harga untuk semua booth di zona ini."
-                      : "Upload atau pilih feature image untuk zona ini."}
+                      : zoneEditor.mode === "location"
+                        ? "Edit lokasi/area zona ini."
+                        : "Upload atau pilih feature image untuk zona ini."}
                 </p>
               </div>
               <button
@@ -604,7 +628,26 @@ export function ClickableBoothMap({
             </div>
 
             <div className="space-y-5 p-6">
-              {zoneEditor.mode === "facilities" ? (
+              {zoneEditor.mode === "location" ? (
+                <div>
+                  <label className="text-sm font-medium text-foreground" htmlFor="location-editor">
+                    Lokasi / Area
+                  </label>
+                  <input
+                    className="mt-2 h-11 w-full rounded-2xl border border-input bg-white px-3 text-sm outline-none focus:border-primary-600 focus:ring-3 focus:ring-primary-100"
+                    id="location-editor"
+                    onChange={(event) =>
+                      setZoneEditor((current) =>
+                        current?.mode === "location"
+                          ? { ...current, location: event.target.value }
+                          : current
+                      )
+                    }
+                    placeholder="Contoh: Area Aligard, bagian depan gedung Aligard"
+                    value={zoneEditor.location}
+                  />
+                </div>
+              ) : zoneEditor.mode === "facilities" ? (
                 <div>
                   <label className="text-sm font-medium text-foreground" htmlFor="facilities-editor">
                     Fasilitas
@@ -888,84 +931,77 @@ function PremiumZoneLayout({
   const sortedBooths = [...zone.booths].sort(
     (first, second) => extractBoothNumber(first.code) - extractBoothNumber(second.code)
   );
-  const leftOuter = sortedBooths.slice(0, 9);
-  const leftInner = sortedBooths.slice(9, 18);
-  const rightInner = sortedBooths.slice(18, 27);
-  const rightOuter = sortedBooths.slice(27, 36);
+  const col1 = sortedBooths.slice(0, 7);
+  const col2 = sortedBooths.slice(7, 14);
+  const col3 = sortedBooths.slice(14, 21);
+  const col4 = sortedBooths.slice(21, 28);
 
   return (
-    <div className="rounded-[30px] bg-slate-50 p-5 ring-1 ring-slate-200/90">
-      <div className="mx-auto max-h-[620px] overflow-y-auto rounded-[24px]">
-        <div className="grid min-w-[980px] gap-8">
-          <div className="grid grid-cols-[1fr_1fr] gap-8">
-            <PremiumBlock
-              leftBooths={leftOuter}
-              onBoothClick={onBoothClick}
-              rightBooths={leftInner}
-            />
-            <PremiumBlock
-              leftBooths={rightInner}
-              onBoothClick={onBoothClick}
-              rightBooths={rightOuter}
-            />
-          </div>
-
-          <div className="flex justify-center pb-2">
-            <div className="flex h-28 w-72 items-center justify-center rounded-[28px] border border-dashed border-slate-300 bg-white/75 text-center">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                  Akses
-                </p>
-                <p className="mt-2 text-sm font-semibold tracking-[0.04em] text-slate-600">
-                  Stage
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+    <div className="overflow-x-auto rounded-[30px] bg-slate-50 p-5 ring-1 ring-slate-200/90">
+      <div className="flex min-w-[640px] justify-center gap-10">
+        <PremiumSection colA={col1} colB={col2} onBoothClick={onBoothClick} />
+        <PremiumSection colA={col3} colB={col4} onBoothClick={onBoothClick} />
       </div>
     </div>
   );
 }
 
-function PremiumBlock({
-  leftBooths,
+function PremiumColumnStrip({
+  booths,
   onBoothClick,
-  rightBooths,
 }: {
-  leftBooths: BoothMapBooth[];
+  booths: BoothMapBooth[];
   onBoothClick: (booth: BoothMapBooth) => void;
-  rightBooths: BoothMapBooth[];
 }) {
+  const top = booths.slice(0, 3);
+  const bottom = booths.slice(3, 7);
   return (
-    <div className="grid grid-cols-[92px_104px_92px] items-start justify-center gap-0">
+    <div className="flex flex-col">
       <div className="grid gap-0">
-        {leftBooths.map((booth) => (
+        {top.map((booth) => (
           <VipBoothCard
-            className="first:rounded-t-[20px] last:rounded-b-[20px]"
+            className="first:rounded-t-[20px]"
             key={booth.id}
             booth={booth}
             onClick={() => onBoothClick(booth)}
           />
         ))}
       </div>
+      <div className="flex h-7 items-center px-2">
+        <div className="w-full border-b border-dashed border-slate-300" />
+      </div>
+      <div className="grid gap-0">
+        {bottom.map((booth) => (
+          <VipBoothCard
+            className="last:rounded-b-[20px]"
+            key={booth.id}
+            booth={booth}
+            onClick={() => onBoothClick(booth)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
-      <div className="flex h-full min-h-[828px] items-center justify-center border-y border-dashed border-slate-300 bg-white/60">
+function PremiumSection({
+  colA,
+  colB,
+  onBoothClick,
+}: {
+  colA: BoothMapBooth[];
+  colB: BoothMapBooth[];
+  onBoothClick: (booth: BoothMapBooth) => void;
+}) {
+  return (
+    <div className="flex items-stretch">
+      <PremiumColumnStrip booths={colA} onBoothClick={onBoothClick} />
+      <div className="flex w-12 items-center justify-center border-x border-dashed border-slate-300 bg-white/60">
         <p className="rotate-180 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400 [writing-mode:vertical-rl]">
           Gangway
         </p>
       </div>
-
-      <div className="grid gap-0">
-        {rightBooths.map((booth) => (
-          <VipBoothCard
-            className="first:rounded-t-[20px] last:rounded-b-[20px]"
-            key={booth.id}
-            booth={booth}
-            onClick={() => onBoothClick(booth)}
-          />
-        ))}
-      </div>
+      <PremiumColumnStrip booths={colB} onBoothClick={onBoothClick} />
     </div>
   );
 }
@@ -980,27 +1016,58 @@ function FestivalWestZoneLayout({
   const sortedBooths = [...zone.booths].sort(
     (first, second) => extractBoothNumber(first.code) - extractBoothNumber(second.code)
   );
-  const blocks = Array.from({ length: Math.ceil(sortedBooths.length / 5) }, (_, blockIndex) =>
-    sortedBooths.slice(blockIndex * 5, blockIndex * 5 + 5)
+  const rightTop = sortedBooths.slice(0, 5);
+  const block1 = sortedBooths.slice(5, 10);
+  const block2 = sortedBooths.slice(10, 15);
+  const block3 = sortedBooths.slice(15, 21);
+  const block4 = sortedBooths.slice(21, 27);
+
+  const gangway = (
+    <div className="flex h-7 items-center px-2">
+      <div className="w-full border-b border-dashed border-slate-300" />
+    </div>
   );
+
+  function BoothBlock({ booths }: { booths: BoothMapBooth[] }) {
+    return (
+      <div className="grid gap-0">
+        {booths.map((booth) => (
+          <VipBoothCard
+            className="first:rounded-t-[20px] last:rounded-b-[20px]"
+            key={booth.id}
+            booth={booth}
+            onClick={() => onBoothClick(booth)}
+            sizeClassName="min-h-[72px] min-w-[82px]"
+          />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-[30px] bg-slate-50 p-5 ring-1 ring-slate-200/90">
-      <div className="mx-auto max-h-[620px] w-full max-w-[164px] overflow-y-auto rounded-[24px]">
-        <div className="grid justify-center gap-6">
-          {blocks.map((block, blockIndex) => (
-            <div className="grid gap-0" key={`festival-west-block-${blockIndex + 1}`}>
-              {block.map((booth) => (
-                <VipBoothCard
-                  className="first:rounded-t-[20px] last:rounded-b-[20px]"
-                  key={booth.id}
-                  booth={booth}
-                  onClick={() => onBoothClick(booth)}
-                  sizeClassName="min-h-[82px] min-w-[82px]"
-                />
-              ))}
-            </div>
-          ))}
+      <div className="mx-auto max-h-[700px] w-[178px] overflow-y-auto rounded-[24px]">
+        <div className="flex w-[178px] flex-col">
+          <div className="self-end grid gap-0">
+            {rightTop.map((booth) => (
+              <VipBoothCard
+                className="first:rounded-t-[20px] last:rounded-b-[20px]"
+                key={booth.id}
+                booth={booth}
+                onClick={() => onBoothClick(booth)}
+                sizeClassName="min-h-[72px] min-w-[82px]"
+              />
+            ))}
+          </div>
+          <div className="self-start">
+            <BoothBlock booths={block1} />
+            {gangway}
+            <BoothBlock booths={block2} />
+            {gangway}
+            <BoothBlock booths={block3} />
+            <div className="h-8" />
+            <BoothBlock booths={block4} />
+          </div>
         </div>
       </div>
     </div>
@@ -1021,9 +1088,29 @@ function FestivalNorthZoneLayout({
     sortedBooths.slice(blockIndex * 5, blockIndex * 5 + 5)
   );
 
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const drag = React.useRef({ active: false, startX: 0, scrollLeft: 0 });
+
+  function onMouseDown(e: React.MouseEvent) {
+    drag.current = { active: true, startX: e.pageX, scrollLeft: scrollRef.current?.scrollLeft ?? 0 };
+  }
+  function onMouseMove(e: React.MouseEvent) {
+    if (!drag.current.active || !scrollRef.current) return;
+    e.preventDefault();
+    scrollRef.current.scrollLeft = drag.current.scrollLeft - (e.pageX - drag.current.startX);
+  }
+  function onDragEnd() { drag.current.active = false; }
+
   return (
     <div className="rounded-[30px] bg-slate-50 p-5 ring-1 ring-slate-200/90">
-      <div className="mx-auto h-[172px] w-full max-w-[980px] overflow-x-auto overflow-y-hidden rounded-[24px]">
+      <div
+        ref={scrollRef}
+        className="mx-auto h-[172px] w-full max-w-[980px] cursor-grab overflow-x-auto overflow-y-hidden rounded-[24px] select-none active:cursor-grabbing"
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onDragEnd}
+        onMouseLeave={onDragEnd}
+      >
         <div className="flex w-max gap-6">
           {blocks.map((block, blockIndex) => (
             <div className="flex gap-0" key={`festival-north-block-${blockIndex + 1}`}>
