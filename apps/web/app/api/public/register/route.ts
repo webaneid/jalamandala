@@ -121,13 +121,20 @@ export async function POST(request: NextRequest) {
       where: email
         ? or(eq(participants.email, email), eq(participants.phone, phone), eq(participants.whatsapp, whatsapp))
         : or(eq(participants.phone, phone), eq(participants.whatsapp, whatsapp)),
-      columns: { email: true, name: true, phone: true, whatsapp: true },
+      columns: { email: true, phone: true, whatsapp: true },
     });
 
     if (duplicate) {
+      const conflicts: string[] = [];
+      if (email && duplicate.email === email) conflicts.push("email");
+      if (duplicate.phone === phone || duplicate.whatsapp === phone) conflicts.push("nomor telepon");
+      if (duplicate.whatsapp === whatsapp || duplicate.phone === whatsapp) {
+        if (!conflicts.includes("nomor telepon")) conflicts.push("WhatsApp");
+      }
+      const field = conflicts.length > 0 ? conflicts.join(", ") : "data";
       return NextResponse.json({
         success: false,
-        error: "Email, nomor telepon, atau WhatsApp sudah terdaftar. Silakan login.",
+        error: `${field.charAt(0).toUpperCase() + field.slice(1)} sudah terdaftar. Silakan login atau gunakan data lain.`,
       }, { status: 409 });
     }
 
