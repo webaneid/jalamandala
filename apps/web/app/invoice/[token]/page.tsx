@@ -457,7 +457,7 @@ export default async function PublicInvoicePage({
                         </td>
                         <td className="px-5 py-3.5 text-center">
                           {p.proofAssetId ? (
-                            <ProofImageLightbox assetId={p.proofAssetId} />
+                            <ProofImageLightbox assetId={p.proofAssetId} publicToken={invoice.publicToken} />
                           ) : (
                             <ImageIcon className="w-4 h-4 text-slate-200 mx-auto" />
                           )}
@@ -494,7 +494,7 @@ export default async function PublicInvoicePage({
                         <p className="text-xs text-slate-400 mt-0.5">{fmtDate(p.paidAt)}</p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        {p.proofAssetId && <ProofImageLightbox assetId={p.proofAssetId} />}
+                        {p.proofAssetId && <ProofImageLightbox assetId={p.proofAssetId} publicToken={invoice.publicToken} />}
                         {psCfg ? (
                           <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold border ${psCfg.cls}`}>
                             {psCfg.label}

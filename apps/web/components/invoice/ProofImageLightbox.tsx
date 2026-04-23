@@ -3,9 +3,11 @@
 import { useState } from "react"
 import { X, ZoomIn } from "lucide-react"
 
-export function ProofImageLightbox({ assetId }: { assetId: string }) {
+export function ProofImageLightbox({ assetId, publicToken }: { assetId: string; publicToken?: string }) {
   const [open, setOpen] = useState(false)
-  const src = `/api/media/${assetId}`
+  const src = publicToken
+    ? `/api/media/${assetId}?publicToken=${publicToken}`
+    : `/api/media/${assetId}`
 
   return (
     <>
