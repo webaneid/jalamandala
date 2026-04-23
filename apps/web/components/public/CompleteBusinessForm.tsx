@@ -338,7 +338,7 @@ export function CompleteBusinessForm({ boothCategories, businessId, defaultValue
         return
       }
 
-      router.push(`/${eventSlug}/usaha`)
+      router.push(`/${eventSlug}/usaha/${businessId}/epass`)
     } catch {
       setError("Terjadi kesalahan. Coba lagi.")
     } finally {
