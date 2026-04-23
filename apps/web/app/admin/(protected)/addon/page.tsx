@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { createTenantDb } from "@repo/db";
 import { inArray } from "drizzle-orm";
 

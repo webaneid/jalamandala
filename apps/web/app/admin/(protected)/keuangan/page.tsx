@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 import Link from "next/link";
 import { Clock3, ReceiptText, Wallet, Waypoints } from "lucide-react";

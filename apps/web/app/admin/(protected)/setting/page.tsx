@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { createTenantDb, db } from "@repo/db";
 import { expoEvents } from "@repo/db/schema/public";
 import { zonePriceRules } from "@repo/db/schema/tenant";

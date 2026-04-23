@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { asc, eq } from "drizzle-orm";
 
 import { createTenantDb, db } from "@repo/db";

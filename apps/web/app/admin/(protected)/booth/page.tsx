@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { Layers3, MapIcon, MoveRight } from "lucide-react";
 
 import { createTenantDb, db } from "@repo/db";
