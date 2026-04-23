@@ -7,6 +7,11 @@ import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { BusinessForm } from "@/components/forms/BusinessForm";
 import { getBoothFormOptions } from "@/lib/booth-form-options";
 
+
+export const metadata = {
+  title: "Edit Usaha Peserta",
+};
+
 export default async function ParticipantBusinessEditPage({
   params,
 }: {

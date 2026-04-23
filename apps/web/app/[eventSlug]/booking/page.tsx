@@ -25,6 +25,11 @@ function parseAddonsParam(raw: string | undefined): Array<{ addonId: string; qua
     .filter((x): x is { addonId: string; quantity: number } => x !== null)
 }
 
+
+export const metadata = {
+  title: "Booking Booth",
+};
+
 export default async function PublicBookingPage({
   params,
   searchParams,

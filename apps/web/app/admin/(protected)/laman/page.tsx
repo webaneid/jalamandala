@@ -68,6 +68,11 @@ function SummaryCard({ label, value }: { label: string; value: string }) {
   );
 }
 
+
+export const metadata = {
+  title: "Manajemen Laman",
+};
+
 export default async function LamanPage() {
   const data = await getPagesData();
 

@@ -23,12 +23,15 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl)
   }
   
-  if (isExpo && url.pathname.startsWith('/vendor') && !url.pathname.startsWith('/expo/vendor')) {
-    const rewrittenPath = `/expo${url.pathname}`;
-    const rewrittenUrl = new URL(rewrittenPath, request.url);
+  if (isExpo && url.pathname.startsWith('/vendor')) {
+    const rewrittenUrl = new URL(`/expo${url.pathname}`, request.url);
     return NextResponse.rewrite(rewrittenUrl);
   }
-  
+
+  if (isExpo) {
+    return NextResponse.redirect(new URL('/vendor/login', request.url));
+  }
+
   if (isApi && !url.pathname.startsWith('/api')) {
     return NextResponse.rewrite(new URL(`/api${url.pathname}`, request.url))
   }

@@ -6,6 +6,11 @@ import { ParticipantForm } from "@/components/forms/ParticipantForm";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { getBoothFormOptions } from "@/lib/booth-form-options";
 
+
+export const metadata = {
+  title: "Edit Peserta",
+};
+
 export default async function ParticipantEditPage({ params }: { params: { id: string } }) {
   const { id } = await params;
   

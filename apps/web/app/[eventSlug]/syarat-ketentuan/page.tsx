@@ -4,6 +4,11 @@ import { generateHTML } from "@tiptap/html";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 
+
+export const metadata = {
+  title: "Syarat & Ketentuan",
+};
+
 export default async function SyaratKetentuanPage({
   params,
 }: {

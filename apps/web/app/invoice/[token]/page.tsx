@@ -29,6 +29,11 @@ type DisplayInvoiceItem = {
   unitPrice: number;
 };
 
+
+export const metadata = {
+  title: "Invoice Pembayaran",
+};
+
 export default async function PublicInvoicePage({
   params,
 }: {

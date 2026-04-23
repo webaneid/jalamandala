@@ -14,6 +14,11 @@ import { AddBusinessButton } from "@/components/admin/peserta/AddBusinessButton"
 import { BusinessItemActions } from "@/components/admin/peserta/BusinessItemActions";
 import { getBoothFormOptions } from "@/lib/booth-form-options";
 
+
+export const metadata = {
+  title: "Detail Peserta",
+};
+
 export default async function ParticipantViewPage({ params }: { params: { id: string } }) {
   const { id } = await params;
   

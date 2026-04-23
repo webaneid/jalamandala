@@ -2,67 +2,86 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { eq } from 'drizzle-orm';
 import Link from 'next/link';
-import { ArrowRight, Map, Package } from 'lucide-react';
+import { Map, Package, Banknote, ArrowRight } from 'lucide-react';
 
 import { auth } from '@/lib/auth';
 import { db } from '@repo/db';
 import { vendors } from '@repo/db/schema/public';
 import { getVendorDashboardStats } from '@/actions/vendors';
 
+export const metadata = {
+  title: "Dashboard",
+};
+
 export default async function VendorDashboardPage() {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect('/expo/vendor/login');
+  if (!session) redirect('/vendor/login');
 
   const vendor = await db.query.vendors.findFirst({
     where: eq(vendors.userId, session.user.id),
   });
-  if (!vendor) redirect('/expo/vendor/login');
+  if (!vendor) redirect('/vendor/login');
 
   const stats = await getVendorDashboardStats(vendor.id);
   const isBoothVendor = vendor.vendorType === 'booth';
 
+  const initials = vendor.name.trim().split(/\s+/).slice(0, 2).map((w: string) => w[0]).join('').toUpperCase();
+
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="rounded-2xl border border-border/80 bg-white p-6 shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-widest text-primary">Selamat datang</p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">{vendor.name}</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          {isBoothVendor ? 'Vendor Booth' : 'Vendor Add-on'} · FORBIS National Economic Summit 2026
-        </p>
-        {vendor.notes && (
-          <p className="mt-3 rounded-xl bg-neutral-50 px-4 py-2.5 text-sm text-muted-foreground border border-border/60">
-            {vendor.notes}
-          </p>
-        )}
+    <div className="space-y-4">
+      {/* Greeting */}
+      <div
+        className="relative overflow-hidden rounded-3xl px-5 pt-10 pb-8"
+        style={{ background: 'linear-gradient(135deg, #134397 0%, #0a2a6e 100%)' }}
+      >
+        <div className="absolute -top-6 -right-6 size-32 rounded-full bg-white/5" />
+        <div className="absolute top-4 -left-8 size-24 rounded-full bg-white/5" />
+        <div className="relative flex items-start justify-between">
+          <div>
+            <p className="text-xs text-blue-200">Selamat datang,</p>
+            <h1 className="mt-0.5 text-xl font-bold text-white">{vendor.name}</h1>
+            <p className="mt-0.5 text-xs text-blue-300">
+              {isBoothVendor ? 'Vendor Booth' : 'Vendor Add-on'} · FORBIS 2026
+            </p>
+            {vendor.notes && (
+              <p className="mt-3 rounded-xl bg-white/10 px-3 py-2 text-xs text-white/70">{vendor.notes}</p>
+            )}
+          </div>
+          <div className="flex size-11 items-center justify-center rounded-full border-2 border-white/30 bg-[#00adee] shadow-lg">
+            <span className="text-sm font-bold text-white">{initials}</span>
+          </div>
+        </div>
       </div>
 
       {/* Stats */}
       {stats && isBoothVendor && stats.type === 'booth' && (
         <>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-            <StatCard label="Zona Ditugaskan" value={String(stats.zones.length)} />
-            <StatCard label="Booth Terisi" value={String(stats.totalBooted)} />
-            <StatCard label="Total Booth" value={String(stats.totalBooths)} className="col-span-2 sm:col-span-1" />
+          <div className="grid grid-cols-3 gap-3">
+            <DarkStatCard label="Zona" value={String(stats.zones.length)} />
+            <DarkStatCard label="Terisi" value={String(stats.totalBooted)} accent />
+            <DarkStatCard label="Total" value={String(stats.totalBooths)} />
           </div>
 
           {stats.zones.length > 0 && (
-            <div className="rounded-2xl border border-border/80 bg-white shadow-sm overflow-hidden">
-              <div className="border-b border-border/60 px-5 py-4">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Ringkasan per Zona</p>
-              </div>
-              <div className="divide-y divide-border/40">
+            <div
+              className="overflow-hidden rounded-2xl"
+              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+            >
+              <p className="border-b border-white/8 px-5 py-3 text-[10px] font-semibold uppercase tracking-widest text-white/40">
+                Ringkasan per Zona
+              </p>
+              <div className="divide-y divide-white/5">
                 {stats.zones.map((z) => (
                   <div key={z.slug} className="flex items-center justify-between px-5 py-3.5">
                     <div className="flex items-center gap-3">
-                      <div className="inline-flex size-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                        <Map className="size-4" />
+                      <div className="flex size-8 items-center justify-center rounded-lg bg-[#00adee]/15">
+                        <Map className="size-4 text-[#00adee]" />
                       </div>
-                      <span className="font-medium text-sm">{z.name}</span>
+                      <span className="text-sm font-medium text-white">{z.name}</span>
                     </div>
-                    <div className="flex items-center gap-3 text-sm">
-                      <span className="tabular-nums text-muted-foreground">{z.total} booth</span>
-                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${z.booked > 0 ? 'bg-green-50 text-green-700' : 'bg-neutral-100 text-neutral-500'}`}>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-white/40 tabular-nums">{z.total} booth</span>
+                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${z.booked > 0 ? 'bg-emerald-400/15 text-emerald-400' : 'bg-white/8 text-white/30'}`}>
                         {z.booked} terisi
                       </span>
                     </div>
@@ -72,34 +91,37 @@ export default async function VendorDashboardPage() {
             </div>
           )}
 
-          <ActionCard href="/expo/vendor/booths" icon={Map} color="blue" title="Lihat Data Booth" description="Daftar tenant lengkap di zona Anda" />
+          <DarkActionCard href="/vendor/booths" icon={Map} label="Lihat Data Booth" sub="Daftar tenant di zona Anda" />
         </>
       )}
 
       {stats && !isBoothVendor && stats.type === 'addon' && (
         <>
-          <div className="grid grid-cols-2 gap-4">
-            <StatCard label="Add-on Ditugaskan" value={String(stats.addons.length)} />
-            <StatCard label="Total Pesanan" value={String(stats.totalOrders)} />
+          <div className="grid grid-cols-2 gap-3">
+            <DarkStatCard label="Add-on" value={String(stats.addons.length)} />
+            <DarkStatCard label="Pesanan" value={String(stats.totalOrders)} accent />
           </div>
 
           {stats.addons.length > 0 && (
-            <div className="rounded-2xl border border-border/80 bg-white shadow-sm overflow-hidden">
-              <div className="border-b border-border/60 px-5 py-4">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Ringkasan per Add-on</p>
-              </div>
-              <div className="divide-y divide-border/40">
+            <div
+              className="overflow-hidden rounded-2xl"
+              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+            >
+              <p className="border-b border-white/8 px-5 py-3 text-[10px] font-semibold uppercase tracking-widest text-white/40">
+                Ringkasan per Add-on
+              </p>
+              <div className="divide-y divide-white/5">
                 {stats.addons.map((a) => (
                   <div key={a.id} className="flex items-center justify-between px-5 py-3.5">
                     <div className="flex items-center gap-3">
-                      <div className="inline-flex size-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
-                        <Package className="size-4" />
+                      <div className="flex size-8 items-center justify-center rounded-lg bg-[#00adee]/15">
+                        <Package className="size-4 text-[#00adee]" />
                       </div>
-                      <span className="font-medium text-sm">{a.name}</span>
+                      <span className="text-sm font-medium text-white">{a.name}</span>
                     </div>
-                    <div className="flex items-center gap-3 text-sm">
-                      <span className="tabular-nums text-muted-foreground">{a.orderCount} pesanan</span>
-                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${a.totalQty > 0 ? 'bg-amber-50 text-amber-700' : 'bg-neutral-100 text-neutral-500'}`}>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-white/40 tabular-nums">{a.orderCount} pesanan</span>
+                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${a.totalQty > 0 ? 'bg-[#00adee]/15 text-[#00adee]' : 'bg-white/8 text-white/30'}`}>
                         {a.totalQty} unit
                       </span>
                     </div>
@@ -109,42 +131,49 @@ export default async function VendorDashboardPage() {
             </div>
           )}
 
-          <ActionCard href="/expo/vendor/addons" icon={Package} color="amber" title="Lihat Detail Pesanan" description="Rincian order add-on per booth" />
+          <DarkActionCard href="/vendor/addons" icon={Package} label="Lihat Detail Pesanan" sub="Rincian order per booth" />
         </>
       )}
+
+      <DarkActionCard href="/vendor/pencairan" icon={Banknote} label="Pencairan Dana" sub="Ajukan dan cek riwayat pencairan" />
     </div>
   );
 }
 
-function StatCard({ label, value, className = '' }: { label: string; value: string; className?: string }) {
+function DarkStatCard({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
-    <div className={`rounded-2xl border border-border/80 bg-white p-5 shadow-sm ${className}`}>
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className="mt-1 text-3xl font-bold tracking-tight text-foreground">{value}</p>
+    <div
+      className="rounded-2xl p-4"
+      style={{
+        background: accent ? 'rgba(0,173,238,0.12)' : 'rgba(255,255,255,0.05)',
+        border: accent ? '1px solid rgba(0,173,238,0.25)' : '1px solid rgba(255,255,255,0.08)',
+      }}
+    >
+      <p className={`text-xs font-medium ${accent ? 'text-[#00adee]/80' : 'text-white/40'}`}>{label}</p>
+      <p className={`mt-1 text-3xl font-bold tracking-tight ${accent ? 'text-[#00adee]' : 'text-white'}`}>{value}</p>
     </div>
   );
 }
 
-function ActionCard({ href, icon: Icon, color, title, description }: {
-  href: string; icon: React.ElementType; color: 'blue' | 'amber'; title: string; description: string;
+function DarkActionCard({ href, icon: Icon, label, sub }: {
+  href: string; icon: React.ElementType; label: string; sub: string;
 }) {
-  const cls = {
-    blue: { wrap: 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100', icon: 'bg-blue-100 text-blue-600' },
-    amber: { wrap: 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100', icon: 'bg-amber-100 text-amber-600' },
-  }[color];
-
   return (
-    <Link href={href} className={`flex items-center justify-between rounded-2xl border p-5 transition ${cls.wrap}`}>
+    <Link
+      href={href}
+      className="flex items-center justify-between rounded-2xl px-5 py-4 transition hover:opacity-80 active:scale-[.98]"
+      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+    >
       <div className="flex items-center gap-4">
-        <div className={`inline-flex size-11 items-center justify-center rounded-xl ${cls.icon}`}>
-          <Icon className="size-5" />
+        <div className="flex size-10 items-center justify-center rounded-xl bg-[#134397]/60">
+          <Icon className="size-5 text-[#00adee]" />
         </div>
         <div>
-          <p className="font-semibold">{title}</p>
-          <p className="text-xs opacity-70">{description}</p>
+          <p className="text-sm font-semibold text-white">{label}</p>
+          <p className="text-xs text-white/40">{sub}</p>
         </div>
       </div>
-      <ArrowRight className="size-4 opacity-60" />
+      <ArrowRight className="size-4 text-white/30" />
     </Link>
   );
 }

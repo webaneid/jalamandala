@@ -11,6 +11,11 @@ interface Props {
   searchParams?: Promise<{ next?: string; zone?: string }>
 }
 
+
+export const metadata = {
+  title: "Daftar Usaha",
+};
+
 export default async function UsahaBaruPage({ params, searchParams }: Props) {
   const { eventSlug } = await params
   const sp = await searchParams

@@ -15,6 +15,11 @@ interface Props {
   searchParams: Promise<{ q?: string }>;
 }
 
+
+export const metadata = {
+  title: "Anggota FORBIS",
+};
+
 export default async function AnggotaForbisPage({ searchParams }: Props) {
   const { q } = await searchParams;
   const query = q?.trim() ?? "";

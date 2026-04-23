@@ -146,6 +146,11 @@ function resolveStartingPrice(
   );
 }
 
+
+export const metadata = {
+  title: "Manajemen Booth",
+};
+
 export default async function BoothPage() {
   const [{ boothCategories, boothGroups, zones }, companies] = await Promise.all([
     getBoothMapData(),

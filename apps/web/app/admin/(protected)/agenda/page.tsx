@@ -86,6 +86,11 @@ function SummaryCard({ label, value }: { label: string; value: string }) {
   );
 }
 
+
+export const metadata = {
+  title: "Agenda",
+};
+
 export default async function AgendaPage() {
   const data = await getAgendaPageData();
 

@@ -11,6 +11,11 @@ import { userRoles } from "@repo/db/schema/public";
 
 const ADMIN_MEDIA_ROLES = new Set(["super_admin", "admin", "finance", "event_crew"]);
 
+
+export const metadata = {
+  title: "Media",
+};
+
 export default async function MediaLibraryPage() {
   const session = await auth.api.getSession({ headers: await headers() });
 

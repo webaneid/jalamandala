@@ -9,6 +9,11 @@ import { buttonVariants } from "@/components/ui/button";
 import { PesertaTable } from "@/components/admin/peserta/PesertaTable";
 import { getParticipants } from "@/actions/participants";
 
+
+export const metadata = {
+  title: "Peserta",
+};
+
 export default async function PesertaPage() {
   const participants = await getParticipants();
   const needBusinessCount = participants.filter(

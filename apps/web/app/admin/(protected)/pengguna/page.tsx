@@ -17,6 +17,11 @@ const ROLE_COLORS: Record<UserRole, string> = {
   participant: "bg-slate-50 text-slate-600 border-slate-200",
 };
 
+
+export const metadata = {
+  title: "Pengguna",
+};
+
 export default async function PenggunaPage() {
   const users = await getUsers();
 

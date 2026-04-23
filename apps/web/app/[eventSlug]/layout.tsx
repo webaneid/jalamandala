@@ -1,9 +1,26 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { getEventContextBySlug, getPublishedEventMenus } from "@/actions/public-pages";
 import { getCurrentParticipantSession } from "@/lib/participant-session";
 import { PublicEventHeader } from "@/components/public/PublicEventHeader";
 import { PublicBottomNav } from "@/components/public/PublicBottomNav";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ eventSlug: string }>;
+}): Promise<Metadata> {
+  const { eventSlug } = await params;
+  const event = await getEventContextBySlug(eventSlug);
+  if (!event) return {};
+  return {
+    title: {
+      template: `%s — ${event.name}`,
+      default: event.name,
+    },
+  };
+}
 
 export default async function PublicEventLayout({
   children,

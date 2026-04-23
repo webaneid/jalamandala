@@ -8,6 +8,11 @@ import { getDisbursement, getPaymentChannelsForDisbursement } from '@/actions/di
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { DisbursementDetail } from '@/components/admin/finance/DisbursementDetail';
 
+
+export const metadata = {
+  title: "Detail Pencairan",
+};
+
 export default async function DisbursementDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = await auth.api.getSession({ headers: await headers() });

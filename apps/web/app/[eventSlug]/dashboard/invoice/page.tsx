@@ -21,6 +21,11 @@ const STATUS_MAP: Record<string, { label: string; color: string; dot: string }> 
   cancelled: { label: "Dibatalkan", color: "bg-red-50 border-red-200 text-red-600", dot: "bg-red-400" },
 }
 
+
+export const metadata = {
+  title: "Invoice Saya",
+};
+
 export default async function DashboardInvoicePage({
   params,
 }: {

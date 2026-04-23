@@ -13,6 +13,11 @@ interface Props {
   params: Promise<{ eventSlug: string; businessId: string }>
 }
 
+
+export const metadata = {
+  title: "E-Pass Booth",
+};
+
 export default async function EPassBoothPage({ params }: Props) {
   const { eventSlug, businessId } = await params
   const session = await getCurrentParticipantSession()

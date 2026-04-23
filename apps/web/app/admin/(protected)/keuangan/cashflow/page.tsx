@@ -25,6 +25,11 @@ function formatDate(date: Date) {
   }).format(new Date(date));
 }
 
+
+export const metadata = {
+  title: "Cashflow",
+};
+
 export default async function CashflowPage() {
   const result = await getCashflowLedger();
   const entries = result.success ? result.data! : [];

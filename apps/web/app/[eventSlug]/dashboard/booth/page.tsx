@@ -18,6 +18,11 @@ const STATUS_MAP: Record<string, { label: string; class: string }> = {
   cancelled: { label: "Dibatalkan", class: "bg-red-100 text-red-600" },
 }
 
+
+export const metadata = {
+  title: "Booth Saya",
+};
+
 export default async function DashboardBoothPage({
   params,
 }: {

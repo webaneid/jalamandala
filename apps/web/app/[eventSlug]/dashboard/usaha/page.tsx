@@ -10,6 +10,11 @@ const TENANT_SCHEMA = process.env.TENANT_SCHEMA ?? "expo_forbis2026"
 const fmt = (n: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n)
 
+
+export const metadata = {
+  title: "Usaha Saya",
+};
+
 export default async function DashboardUsahaPage({
   params,
 }: {

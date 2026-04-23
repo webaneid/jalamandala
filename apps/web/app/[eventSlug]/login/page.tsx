@@ -7,7 +7,7 @@ import { PublicParticipantAuthForm } from '@/components/public/PublicParticipant
 import { PublicContainer } from '@/components/public/ui/PublicContainer'
 
 export const metadata = {
-  title: 'Masuk — Peserta Expo',
+  title: 'Masuk',
 }
 
 const TENANT_SCHEMA = process.env.TENANT_SCHEMA ?? 'expo_forbis2026'

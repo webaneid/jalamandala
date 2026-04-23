@@ -31,6 +31,11 @@ async function getZonesAndAddons() {
   return { zones: zoneRows, addons: addonRows };
 }
 
+
+export const metadata = {
+  title: "Vendor",
+};
+
 export default async function VendorPage() {
   const eventId = await getActiveEventId();
   const { zones: zoneOptions, addons: addonOptions } = await getZonesAndAddons();

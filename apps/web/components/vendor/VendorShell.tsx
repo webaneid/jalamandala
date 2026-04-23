@@ -21,62 +21,107 @@ export function VendorShell({ children, vendorName, vendorType, userName }: Prop
 
   async function handleLogout() {
     await authClient.signOut();
-    router.push('/expo/vendor/login');
+    router.push('/vendor/login');
   }
 
   const navItems = [
-    { href: '/expo/vendor/dashboard', label: 'Dashboard', icon: LayoutGrid },
+    { href: '/vendor/dashboard', label: 'Dashboard', icon: LayoutGrid },
     ...(vendorType === 'booth'
-      ? [{ href: '/expo/vendor/booths', label: 'Data Booth', icon: Map }]
-      : [{ href: '/expo/vendor/addons', label: 'Order Add-on', icon: Package }]),
-    { href: '/expo/vendor/pencairan', label: 'Pencairan Dana', icon: Banknote },
+      ? [{ href: '/vendor/booths', label: 'Data Booth', icon: Map }]
+      : [{ href: '/vendor/addons', label: 'Add-on', icon: Package }]),
+    { href: '/vendor/pencairan', label: 'Pencairan', icon: Banknote },
   ];
 
+  const initials = vendorName.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="sticky top-0 z-30 border-b border-border/80 bg-white/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-3">
+    <div
+      className="relative min-h-screen text-white"
+      style={{
+        background: 'linear-gradient(135deg, #050e1f 0%, #0a1f48 30%, #071630 55%, #040c1a 100%)',
+      }}
+    >
+      {/* Ambient glow */}
+      <div
+        className="pointer-events-none fixed inset-0 z-0"
+        style={{
+          background:
+            'radial-gradient(ellipse 100% 50% at 50% 0%, rgba(19,67,151,0.28) 0%, transparent 55%), radial-gradient(ellipse 70% 40% at 50% 45%, rgba(0,173,238,0.07) 0%, transparent 60%)',
+        }}
+      />
+
+      {/* Header */}
+      <header
+        className="sticky top-0 z-50"
+        style={{ background: 'linear-gradient(180deg, rgba(4,16,31,0.93) 0%, transparent 100%)' }}
+      >
+        <div className="mx-auto flex h-14 max-w-[720px] items-center justify-between px-5">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-primary">
-              Vendor Portal
-            </p>
-            <p className="text-sm font-semibold text-foreground">{vendorName}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#00adee]">Vendor Portal</p>
+            <p className="text-sm font-semibold text-white leading-tight">{vendorName}</p>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="hidden text-xs text-muted-foreground sm:block">{userName}</span>
-            <button
-              onClick={handleLogout}
-              className="inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-600 hover:bg-red-50 hover:text-red-600"
-              type="button"
-            >
-              <LogOut className="size-3" />
-              Keluar
-            </button>
-          </div>
+          <button
+            onClick={handleLogout}
+            type="button"
+            className="flex items-center gap-1.5 rounded-full border border-white/15 bg-white/8 px-3 py-1.5 text-xs font-medium text-white/70 transition hover:bg-red-500/20 hover:border-red-400/30 hover:text-red-300"
+          >
+            <LogOut className="size-3" />
+            Keluar
+          </button>
         </div>
-        <nav className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-5 pb-2">
-          {navItems.map((item) => {
-            const active = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  'flex shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition',
-                  active
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-muted-foreground hover:bg-neutral-100 hover:text-foreground'
-                )}
-              >
-                <item.icon className="size-4" />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
       </header>
 
-      <main className="mx-auto max-w-5xl px-5 py-6">{children}</main>
+      {/* Content */}
+      <main className="relative z-10 mx-auto max-w-[720px] px-4 pb-32 pt-4">
+        {children}
+      </main>
+
+      {/* Bottom nav */}
+      <nav
+        className="fixed bottom-0 inset-x-0 z-50"
+        style={{
+          background: 'linear-gradient(180deg, transparent 0%, rgba(4,16,31,0.6) 20%)',
+        }}
+      >
+        <div className="mx-auto max-w-[720px] px-4 pb-6 pt-2">
+          <div
+            className="flex items-center justify-around rounded-[2rem] px-2 py-3"
+            style={{
+              background: 'rgba(13,28,60,0.82)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              backdropFilter: 'blur(20px)',
+              boxShadow: '0 8px 40px rgba(0,0,0,0.40)',
+            }}
+          >
+            {navItems.map((item) => {
+              const active = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    'flex flex-col items-center gap-1 transition',
+                    active ? 'opacity-100' : 'opacity-40 hover:opacity-70'
+                  )}
+                  aria-label={item.label}
+                >
+                  {active ? (
+                    <span
+                      className="flex items-center gap-2 rounded-full px-4 py-2"
+                      style={{ background: 'linear-gradient(135deg, #134397, #00adee)' }}
+                    >
+                      <item.icon className="size-4 text-white" />
+                      <span className="text-xs font-semibold text-white">{item.label}</span>
+                    </span>
+                  ) : (
+                    <item.icon className="size-6 text-white" />
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </nav>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { eq } from 'drizzle-orm';
@@ -8,11 +9,18 @@ import { db } from '@repo/db';
 import { userRoles, vendors } from '@repo/db/schema/public';
 import { VendorShell } from '@/components/vendor/VendorShell';
 
+export const metadata: Metadata = {
+  title: {
+    template: "%s — Vendor Portal",
+    default: "Vendor Portal",
+  },
+};
+
 export default async function VendorProtectedLayout({ children }: { children: ReactNode }) {
   const session = await auth.api.getSession({ headers: await headers() });
 
   if (!session) {
-    redirect('/expo/vendor/login');
+    redirect('/vendor/login');
   }
 
   const role = await db
@@ -22,7 +30,7 @@ export default async function VendorProtectedLayout({ children }: { children: Re
     .limit(1);
 
   if (!role.some((r) => r.role === 'vendor')) {
-    redirect('/expo/vendor/login');
+    redirect('/vendor/login');
   }
 
   const vendor = await db.query.vendors.findFirst({
@@ -34,7 +42,7 @@ export default async function VendorProtectedLayout({ children }: { children: Re
   });
 
   if (!vendor || !vendor.isActive) {
-    redirect('/expo/vendor/login');
+    redirect('/vendor/login');
   }
 
   return (

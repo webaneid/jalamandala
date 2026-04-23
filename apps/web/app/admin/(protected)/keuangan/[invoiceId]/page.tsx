@@ -387,6 +387,11 @@ function dedupeDisplayValues(values: string[]) {
   return result;
 }
 
+
+export const metadata = {
+  title: "Detail Invoice",
+};
+
 export default async function InvoiceDetailPage({
   params,
 }: {

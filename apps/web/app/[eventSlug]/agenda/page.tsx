@@ -51,6 +51,11 @@ function groupAgendasByDay(agendas: any[]) {
   return Array.from(groups.values());
 }
 
+
+export const metadata = {
+  title: "Agenda",
+};
+
 export default async function PublicAgendaPage({
   params,
 }: {

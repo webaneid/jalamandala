@@ -86,6 +86,11 @@ async function getMarginReport() {
     });
 }
 
+
+export const metadata = {
+  title: "Add-on",
+};
+
 export default async function AddonPage() {
   const [{ addons, units }, marginReport] = await Promise.all([
     getAddonConfiguration(),

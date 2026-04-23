@@ -9,14 +9,19 @@ import { getVendorDisbursements } from '@/actions/disbursements';
 import { getVendorClaimableAmount } from '@/actions/vendors';
 import { VendorPencairanPage } from '@/components/vendor/VendorPencairanPage';
 
+
+export const metadata = {
+  title: "Pencairan Dana",
+};
+
 export default async function PencairanPage() {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect('/expo/vendor/login');
+  if (!session) redirect('/vendor/login');
 
   const vendor = await db.query.vendors.findFirst({
     where: eq(vendors.userId, session.user.id),
   });
-  if (!vendor) redirect('/expo/vendor/login');
+  if (!vendor) redirect('/vendor/login');
 
   const [{ data: disbursements }, claimable] = await Promise.all([
     getVendorDisbursements(vendor.id),

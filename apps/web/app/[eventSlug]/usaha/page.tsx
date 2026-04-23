@@ -9,6 +9,11 @@ interface Props {
   params: Promise<{ eventSlug: string }>
 }
 
+
+export const metadata = {
+  title: "Usaha Saya",
+};
+
 export default async function UsahaPage({ params }: Props) {
   const { eventSlug } = await params
   const session = await getCurrentParticipantSession()

@@ -6,6 +6,11 @@ import { getVendorsForDisbursement } from '@/actions/disbursements';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { DisbursementForm } from '@/components/admin/finance/DisbursementForm';
 
+
+export const metadata = {
+  title: "Tambah Pencairan",
+};
+
 export default async function TambahPencairanPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect('/admin/login');

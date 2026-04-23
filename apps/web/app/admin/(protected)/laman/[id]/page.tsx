@@ -6,6 +6,11 @@ import { getEventPageDetail } from "@/actions/pages";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { PageEditor } from "@/components/admin/pages/PageEditor";
 
+
+export const metadata = {
+  title: "Edit Laman",
+};
+
 export default async function EditLamanPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
   const pageData = await getEventPageDetail(resolvedParams.id);

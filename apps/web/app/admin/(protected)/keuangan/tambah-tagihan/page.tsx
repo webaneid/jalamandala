@@ -94,6 +94,11 @@ async function getManualInvoiceBuilderData() {
   };
 }
 
+
+export const metadata = {
+  title: "Tambah Tagihan",
+};
+
 export default async function TambahTagihanPage() {
   const data = await getManualInvoiceBuilderData();
 

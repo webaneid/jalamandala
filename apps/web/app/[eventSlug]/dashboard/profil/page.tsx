@@ -9,6 +9,11 @@ import { LogoutButton } from "@/components/public/LogoutButton"
 const fmtDate = (d: Date | null | undefined) =>
   d ? new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "long", year: "numeric" }).format(d) : "—"
 
+
+export const metadata = {
+  title: "Profil",
+};
+
 export default async function DashboardProfilPage({
   params,
 }: {

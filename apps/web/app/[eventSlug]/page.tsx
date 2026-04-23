@@ -1,9 +1,32 @@
+import type { Metadata } from "next";
 import { getPublishedEventHomepage } from "@/actions/public-pages";
 import { LandingRenderer } from "@/components/public/blocks/LandingRenderer";
 import { generateHTML } from "@tiptap/html";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import { PublicContainer } from "@/components/public/ui/PublicContainer";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ eventSlug: string }>;
+}): Promise<Metadata> {
+  const { eventSlug } = await params;
+  const page = await getPublishedEventHomepage(eventSlug);
+  if (!page) return {};
+  const title = (page as any).seoTitle ?? page.title;
+  const description = (page as any).seoDescription ?? (page as any).excerpt ?? undefined;
+  const imageId = (page as any).featuredImageAssetId;
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      ...(imageId ? { images: [`/api/media/${imageId}`] } : {}),
+    },
+  };
+}
 
 export default async function EventHomePage({
   params,

@@ -212,6 +212,11 @@ async function getFinancePageData() {
   };
 }
 
+
+export const metadata = {
+  title: "Keuangan",
+};
+
 export default async function KeuanganPage() {
   const data = await getFinancePageData();
 

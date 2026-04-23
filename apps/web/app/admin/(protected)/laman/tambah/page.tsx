@@ -8,6 +8,11 @@ import { expoEvents } from "@repo/db/schema/public";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { PageEditor } from "@/components/admin/pages/PageEditor";
 
+
+export const metadata = {
+  title: "Tambah Laman",
+};
+
 export default async function TambahLamanPage() {
   const configuredSchemaName = process.env.TENANT_SCHEMA?.trim();
   const activeEvent =

@@ -8,6 +8,11 @@ import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { Button } from '@/components/ui/button';
 import { DisbursementList } from '@/components/admin/finance/DisbursementList';
 
+
+export const metadata = {
+  title: "Pencairan Dana",
+};
+
 export default async function PencairanPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   const result = await getDisbursements();

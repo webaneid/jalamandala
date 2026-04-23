@@ -131,6 +131,11 @@ async function getEventSettingData() {
   };
 }
 
+
+export const metadata = {
+  title: "Pengaturan",
+};
+
 export default async function SettingPage() {
   const [data, pricePhaseSchedules] = await Promise.all([
     getEventSettingData(),

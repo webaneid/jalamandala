@@ -10,6 +10,11 @@ interface Props {
   params: Promise<{ eventSlug: string; businessId: string }>
 }
 
+
+export const metadata = {
+  title: "Lengkapi Data Usaha",
+};
+
 export default async function LengkapiUsahaPage({ params }: Props) {
   const { eventSlug, businessId } = await params
   const session = await getCurrentParticipantSession()
