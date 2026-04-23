@@ -1,21 +1,18 @@
 import { notFound } from "next/navigation";
 import {
-  Building2,
   CheckCircle2,
   Clock,
-  FileText,
-  History,
-  MessageCircle,
-  User,
   XCircle,
+  ImageIcon,
 } from "lucide-react";
 
 import { getInvoiceByToken } from "@/actions/finance";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { getCurrentParticipantSession } from "@/lib/participant-session";
 import { CopyButton } from "@/components/invoice/CopyButton";
+import { InvoiceBackButton } from "@/components/invoice/InvoiceBackButton";
 import { PaymentConfirmationTrigger } from "@/components/invoice/PaymentConfirmationTrigger";
 import { PrintButton } from "@/components/invoice/PrintButton";
+import { ProofImageLightbox } from "@/components/invoice/ProofImageLightbox";
 
 type PublicInvoiceItem = NonNullable<Awaited<ReturnType<typeof getInvoiceByToken>>>["items"][number];
 
@@ -38,17 +35,20 @@ export default async function PublicInvoicePage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const data = await getInvoiceByToken(token);
+  const [data, session] = await Promise.all([
+    getInvoiceByToken(token),
+    getCurrentParticipantSession(),
+  ]);
 
   if (!data) notFound();
 
   const { invoice, participant, business, businessId, items, payments, event, paymentChannels, qrisConfig, qrisDynamic, whatsappSenderId } = data;
 
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(amount);
+  const fmt = (n: number) =>
+    new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
 
-  const formatDate = (date: Date) =>
-    new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", year: "numeric" }).format(date);
+  const fmtDate = (d: Date) =>
+    new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", year: "numeric" }).format(d);
 
   const totalPaid = payments.filter((p) => p.status === "paid").reduce((s, p) => s + p.amount, 0);
   const isOverdue =
@@ -61,52 +61,24 @@ export default async function PublicInvoicePage({
   const showPaymentSection = !isClosedStatus;
   const hasPendingPayment = payments.some((p) => p.status === "pending_verification");
   const pendingPayments = payments.filter((p) => p.status === "pending_verification");
-  const paidPayments = payments.filter((p) => p.status === "paid");
 
-  function StatusBadge() {
-    if (isPaid) {
-      return (
-        <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none gap-1.5">
-          <CheckCircle2 className="w-4 h-4" />
-          Lunas
-        </Badge>
-      );
-    }
-    if (isWaitingConfirmation) {
-      return (
-        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none gap-1.5">
-          <Clock className="w-4 h-4" />
-          Menunggu Konfirmasi Panitia
-        </Badge>
-      );
-    }
-    if (invoice.status === "expired" || invoice.status === "cancelled") {
-      return (
-        <Badge className="bg-neutral-100 text-neutral-500 hover:bg-neutral-100 border-none gap-1.5">
-          <XCircle className="w-4 h-4" />
-          {invoice.status === "expired" ? "Kadaluarsa" : "Dibatalkan"}
-        </Badge>
-      );
-    }
-    if (isOverdue) {
-      return (
-        <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-none gap-1.5">
-          <Clock className="w-4 h-4" />
-          Jatuh Tempo Terlampaui
-        </Badge>
-      );
-    }
-    return (
-      <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none gap-1.5">
-        <Clock className="w-4 h-4" />
-        Menunggu Pembayaran
-      </Badge>
-    );
-  }
+  const statusConfig = isPaid
+    ? { label: "Lunas", color: "bg-emerald-500", text: "text-emerald-700 bg-emerald-50 border border-emerald-200", Icon: CheckCircle2 }
+    : isWaitingConfirmation
+    ? { label: "Menunggu Konfirmasi", color: "bg-blue-500", text: "text-blue-700 bg-blue-50 border border-blue-200", Icon: Clock }
+    : invoice.status === "expired" || invoice.status === "cancelled"
+    ? { label: invoice.status === "expired" ? "Kadaluarsa" : "Dibatalkan", color: "bg-slate-400", text: "text-slate-600 bg-slate-100 border border-slate-200", Icon: XCircle }
+    : isOverdue
+    ? { label: "Jatuh Tempo Terlampaui", color: "bg-red-500", text: "text-red-700 bg-red-50 border border-red-200", Icon: Clock }
+    : { label: "Menunggu Pembayaran", color: "bg-amber-400", text: "text-amber-700 bg-amber-50 border border-amber-200", Icon: Clock };
+
+  const fallbackUrl = session
+    ? `/${event.slug}/dashboard`
+    : `/${event.slug}/login`;
 
   const waMessage = business
-    ? `Halo, saya sudah transfer untuk invoice ${invoice.invoiceNumber} atas nama ${business.companyName} sebesar ${formatCurrency(invoice.grandTotal)}. Mohon konfirmasi. Terima kasih.`
-    : `Halo, saya sudah transfer untuk invoice ${invoice.invoiceNumber} sebesar ${formatCurrency(invoice.grandTotal)}. Mohon konfirmasi. Terima kasih.`;
+    ? `Halo, saya sudah transfer untuk invoice ${invoice.invoiceNumber} atas nama ${business.companyName} sebesar ${fmt(invoice.grandTotal)}. Mohon konfirmasi. Terima kasih.`
+    : `Halo, saya sudah transfer untuk invoice ${invoice.invoiceNumber} sebesar ${fmt(invoice.grandTotal)}. Mohon konfirmasi. Terima kasih.`;
 
   const paymentOptions = [
     ...paymentChannels.map((ch) => ({
@@ -121,377 +93,446 @@ export default async function PublicInvoicePage({
   const waLink = whatsappSenderId
     ? `https://wa.me/${whatsappSenderId.replace(/\D/g, "")}?text=${encodeURIComponent(waMessage)}`
     : null;
+
   const displayItems = buildDisplayInvoiceItems(items);
 
+  const paymentStatusConfig = {
+    paid: { label: "Terverifikasi", cls: "text-emerald-700 bg-emerald-50 border-emerald-200" },
+    pending_verification: { label: "Menunggu Verifikasi", cls: "text-blue-700 bg-blue-50 border-blue-200" },
+    rejected: { label: "Ditolak", cls: "text-red-700 bg-red-50 border-red-200" },
+  } as const;
+
   return (
-    <div className="min-h-screen bg-neutral-50/50 py-12 px-4 sm:px-6 lg:px-8 print:bg-white print:py-0">
-      <div className="max-w-3xl mx-auto space-y-4">
-        {/* Action bar */}
-        <div className="flex justify-end print:hidden">
+    <div className="min-h-screen bg-slate-50 print:bg-white">
+      {/* Top accent bar */}
+      <div className={`h-1.5 w-full ${statusConfig.color} print:hidden`} />
+
+      <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+        {/* Nav bar */}
+        <div className="flex items-center justify-between print:hidden">
+          <InvoiceBackButton fallbackUrl={fallbackUrl} />
           <PrintButton />
         </div>
 
-        <Card className="shadow-lg border-neutral-200 overflow-hidden print:shadow-none print:border-none">
-          <div className={`h-2 w-full ${isPaid ? "bg-green-500" : isOverdue ? "bg-red-500" : "bg-blue-600"}`} />
+        {/* ── INVOICE HEADER CARD ── */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          {/* Colored top stripe */}
+          <div className={`h-1 w-full ${statusConfig.color}`} />
 
-          {/* Header */}
-          <CardHeader className="pb-4">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-start gap-4">
+          <div className="p-5 sm:p-6">
+            {/* Logo + Invoice title row */}
+            <div className="flex items-start justify-between gap-3 mb-5">
               <div>
-                {event.logoAssetId && (
+                {event.logoAssetId ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={`/api/media/${event.logoAssetId}`} alt={event.name} className="h-10 mb-2 object-contain" />
+                  <img
+                    src={`/api/media/${event.logoAssetId}`}
+                    alt={event.name}
+                    className="h-9 object-contain mb-2"
+                  />
+                ) : (
+                  <p className="text-sm font-semibold text-primary mb-1">{event.name}</p>
                 )}
-                <p className="text-xs text-neutral-500">{event.name}</p>
-                <h1 className="text-2xl font-bold tracking-tight text-neutral-900 mt-1">INVOICE</h1>
-                <p className="text-sm text-neutral-500">{invoice.invoiceNumber}</p>
+                <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">INVOICE</h1>
+                <p className="text-xs text-slate-400 mt-0.5">{invoice.invoiceNumber}</p>
               </div>
-              <div className="flex flex-col items-end gap-2 text-right">
-                <StatusBadge />
-                {invoice.dueDate && (
-                  <p className={`text-sm ${isOverdue ? "text-red-600 font-medium" : "text-neutral-500"}`}>
-                    Jatuh tempo: {formatDate(invoice.dueDate)}
-                  </p>
-                )}
-              </div>
-            </div>
-          </CardHeader>
 
-          <CardContent className="space-y-8">
-            {/* Parties */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-1">
-                <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider flex items-center gap-1">
-                  <Building2 className="w-3 h-3" />
-                  Diterbitkan Oleh
-                </p>
-                <p className="font-semibold text-neutral-900">{event.name}</p>
-                <p className="text-sm text-neutral-500">Panitia Penyelenggara</p>
-                {event.venue && <p className="text-sm text-neutral-500">{event.venue}</p>}
+              {/* Status pill */}
+              <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border shrink-0 ${statusConfig.text}`}>
+                <statusConfig.Icon className="w-3.5 h-3.5" />
+                {statusConfig.label}
+              </span>
+            </div>
+
+            {/* From / To */}
+            <div className="grid grid-cols-2 gap-4 mb-5 text-sm">
+              <div className="space-y-0.5">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Dari</p>
+                <p className="font-semibold text-slate-800">{event.name}</p>
+                <p className="text-slate-500 text-xs">Panitia Penyelenggara</p>
+                {event.venue && <p className="text-slate-400 text-xs">{event.venue}</p>}
               </div>
-              <div className="space-y-1">
-                <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider flex items-center gap-1">
-                  <User className="w-3 h-3" />
-                  Ditagihkan Kepada
-                </p>
+              <div className="space-y-0.5">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Kepada</p>
                 {business ? (
                   <>
-                    <p className="font-semibold text-neutral-900">{business.companyName}</p>
+                    <p className="font-semibold text-slate-800">{business.companyName}</p>
                     {business.brandName && business.brandName !== business.companyName && (
-                      <p className="text-sm text-neutral-600">{business.brandName}</p>
+                      <p className="text-slate-600 text-xs">{business.brandName}</p>
                     )}
-                    {participant && (
-                      <p className="text-sm text-neutral-500">{participant.name}</p>
-                    )}
-                    {business.companyAddress && (
-                      <p className="text-sm text-neutral-500">{business.companyAddress}</p>
-                    )}
-                    {(business.companyPhone || business.companyWhatsapp) && (
-                      <p className="text-sm text-neutral-500">
-                        {business.companyPhone || business.companyWhatsapp}
-                      </p>
-                    )}
+                    {participant && <p className="text-slate-500 text-xs">{participant.name}</p>}
+                    {business.companyAddress && <p className="text-slate-400 text-xs">{business.companyAddress}</p>}
                   </>
                 ) : participant ? (
                   <>
-                    <p className="font-semibold text-neutral-900">{participant.name}</p>
-                    <p className="text-sm text-neutral-500">{participant.phone}</p>
+                    <p className="font-semibold text-slate-800">{participant.name}</p>
+                    <p className="text-slate-500 text-xs">{participant.phone}</p>
                   </>
                 ) : (
-                  <p className="text-sm text-neutral-500 italic">Peserta Terdaftar</p>
+                  <p className="text-slate-400 text-xs italic">Peserta Terdaftar</p>
                 )}
               </div>
             </div>
 
-            {/* Summary bar */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-neutral-50 rounded-lg">
-              <div>
-                <p className="text-xs text-neutral-500 mb-1">Tanggal Terbit</p>
-                <p className="text-sm font-medium">{formatDate(invoice.issueDate)}</p>
+            {/* Summary strip */}
+            <div className="grid grid-cols-3 rounded-xl bg-slate-50 border border-slate-100 divide-x divide-slate-100 text-center">
+              <div className="px-3 py-3">
+                <p className="text-[10px] text-slate-400 mb-0.5">Terbit</p>
+                <p className="text-xs font-semibold text-slate-700">{fmtDate(invoice.issueDate)}</p>
               </div>
-              <div>
-                <p className="text-xs text-neutral-500 mb-1">Jatuh Tempo</p>
-                <p className={`text-sm font-medium ${isOverdue ? "text-red-600" : ""}`}>
-                  {invoice.dueDate ? formatDate(invoice.dueDate) : "-"}
+              <div className="px-3 py-3">
+                <p className="text-[10px] text-slate-400 mb-0.5">Jatuh Tempo</p>
+                <p className={`text-xs font-semibold ${isOverdue ? "text-red-600" : "text-slate-700"}`}>
+                  {invoice.dueDate ? fmtDate(invoice.dueDate) : "—"}
                 </p>
               </div>
-              <div className="col-span-2 md:text-right">
-                <p className="text-xs text-neutral-500 mb-1">Total Tagihan</p>
-                <p className="text-lg font-bold text-neutral-900">{formatCurrency(invoice.grandTotal)}</p>
+              <div className="px-3 py-3">
+                <p className="text-[10px] text-slate-400 mb-0.5">Total</p>
+                <p className="text-xs font-bold text-slate-900">{fmt(invoice.grandTotal)}</p>
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* Items table */}
-            <div>
-              <h3 className="text-sm font-semibold text-neutral-900 mb-3 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-neutral-400" />
-                Rincian Tagihan
-              </h3>
-              <div className="border rounded-lg overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-neutral-50 border-b">
-                    <tr>
-                      <th className="px-4 py-3 text-left font-medium text-neutral-500">Deskripsi</th>
-                      <th className="px-4 py-3 text-right font-medium text-neutral-500 w-16">Qty</th>
-                      <th className="px-4 py-3 text-right font-medium text-neutral-500 w-32">Harga Satuan</th>
-                      <th className="px-4 py-3 text-right font-medium text-neutral-500 w-32">Subtotal</th>
+        {/* ── RINCIAN TAGIHAN ── */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-50">
+            <p className="text-sm font-bold text-slate-800">Rincian Tagihan</p>
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden sm:block">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/60">
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-400">Deskripsi</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-400 w-14">Qty</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-slate-400 w-28">Harga Satuan</th>
+                  <th className="px-5 py-3 text-right text-xs font-semibold text-slate-400 w-28">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {displayItems.length > 0 ? (
+                  displayItems.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-50/40 transition">
+                      <td className="px-5 py-3.5">
+                        <p className="font-medium text-slate-800">{item.title}</p>
+                        {item.description && (
+                          <p className="text-xs text-slate-400 mt-0.5">{item.description}</p>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5 text-center text-slate-500">{item.quantityLabel}</td>
+                      <td className="px-4 py-3.5 text-right text-slate-500">{fmt(item.unitPrice)}</td>
+                      <td className="px-5 py-3.5 text-right font-semibold text-slate-800">{fmt(item.subtotal)}</td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {displayItems.length > 0 ? (
-                      displayItems.map((item) => (
-                        <tr key={item.id} className="bg-white">
-                          <td className="px-4 py-3">
-                            <p className="font-medium text-neutral-900">{item.title}</p>
-                            {item.description && (
-                              <p className="text-neutral-500 text-xs mt-0.5">{item.description}</p>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-right text-neutral-600">{item.quantityLabel}</td>
-                          <td className="px-4 py-3 text-right text-neutral-600">{formatCurrency(item.unitPrice)}</td>
-                          <td className="px-4 py-3 text-right font-medium text-neutral-900">{formatCurrency(item.subtotal)}</td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={4} className="px-4 py-8 text-center text-neutral-500">
-                          Tidak ada rincian item.
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="px-5 py-8 text-center text-slate-400 text-sm">
+                      Tidak ada rincian item.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+              <tfoot className="border-t border-slate-100 bg-slate-50/40">
+                {invoice.taxAmount > 0 && (
+                  <>
+                    <tr>
+                      <td colSpan={3} className="px-5 py-2 text-right text-xs text-slate-400">Subtotal</td>
+                      <td className="px-5 py-2 text-right text-sm text-slate-600">{fmt(invoice.subtotal)}</td>
+                    </tr>
+                    <tr>
+                      <td colSpan={3} className="px-5 py-2 text-right text-xs text-slate-400">Pajak</td>
+                      <td className="px-5 py-2 text-right text-sm text-slate-600">{fmt(invoice.taxAmount)}</td>
+                    </tr>
+                  </>
+                )}
+                <tr>
+                  <td colSpan={3} className="px-5 py-3 text-right font-semibold text-slate-600">Total</td>
+                  <td className="px-5 py-3 text-right font-extrabold text-slate-900 text-base">{fmt(invoice.grandTotal)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="sm:hidden divide-y divide-slate-50">
+            {displayItems.length > 0 ? (
+              displayItems.map((item) => (
+                <div key={item.id} className="px-5 py-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-slate-800 text-sm">{item.title}</p>
+                      {item.description && (
+                        <p className="text-xs text-slate-400 mt-0.5">{item.description}</p>
+                      )}
+                    </div>
+                    <p className="font-bold text-slate-900 text-sm shrink-0">{fmt(item.subtotal)}</p>
+                  </div>
+                  <div className="mt-2 flex items-center gap-3 text-xs text-slate-400">
+                    <span>{item.quantityLabel} × {fmt(item.unitPrice)}</span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="px-5 py-8 text-center text-slate-400 text-sm">Tidak ada rincian item.</p>
+            )}
+            {/* Mobile total */}
+            <div className="px-5 py-4 bg-slate-50/60 flex justify-between items-center">
+              {invoice.taxAmount > 0 && (
+                <div className="text-xs text-slate-400 space-y-0.5">
+                  <div>Subtotal: {fmt(invoice.subtotal)}</div>
+                  <div>Pajak: {fmt(invoice.taxAmount)}</div>
+                </div>
+              )}
+              <div className="ml-auto text-right">
+                <p className="text-[10px] text-slate-400 mb-0.5">Total Tagihan</p>
+                <p className="text-lg font-extrabold text-slate-900">{fmt(invoice.grandTotal)}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── INSTRUKSI PEMBAYARAN ── */}
+        {showPaymentSection && (
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden print:hidden">
+            <div className="px-5 py-4 border-b border-slate-50">
+              <p className="text-sm font-bold text-slate-800">Cara Pembayaran</p>
+            </div>
+            <div className="p-5 space-y-4">
+              {paymentChannels.length === 0 && !qrisConfig?.isEnabled ? (
+                <p className="text-sm text-slate-500 italic">Hubungi admin untuk instruksi pembayaran.</p>
+              ) : (
+                <>
+                  {paymentChannels.map((ch) => (
+                    <div key={ch.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2">
+                      <p className="text-[10px] font-bold text-primary uppercase tracking-widest">
+                        Transfer Bank · {ch.bankName ?? ch.label}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Atas nama: <span className="font-semibold text-slate-800">{ch.accountName}</span>
+                      </p>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-bold text-slate-900 text-xl tracking-wider">{ch.accountNumber}</p>
+                        {ch.accountNumber && <CopyButton text={ch.accountNumber} />}
+                      </div>
+                      <p className="text-xs text-slate-500">
+                        Transfer sejumlah:{" "}
+                        <span className="font-bold text-slate-900">{fmt(invoice.grandTotal)}</span>
+                      </p>
+                      {ch.instruction && (
+                        <p className="text-xs text-slate-400 border-t border-slate-200 pt-2">{ch.instruction}</p>
+                      )}
+                    </div>
+                  ))}
+
+                  {qrisConfig?.isEnabled && (qrisDynamic?.qrDataUrl || qrisConfig.imageAssetId) && (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 flex flex-col items-center gap-3">
+                      <p className="text-[10px] font-bold text-primary uppercase tracking-widest self-start">QRIS</p>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={qrisDynamic?.qrDataUrl ?? `/api/media/${qrisConfig.imageAssetId}`}
+                        alt="QRIS"
+                        className="w-44 h-44 object-contain"
+                      />
+                      {(qrisDynamic?.merchantName || qrisConfig.merchantName) && (
+                        <p className="text-sm font-semibold text-slate-800">
+                          {qrisDynamic?.merchantName ?? qrisConfig.merchantName}
+                        </p>
+                      )}
+                      <p className="text-xs text-slate-500">
+                        Nominal: <span className="font-bold">{fmt(invoice.grandTotal)}</span>
+                      </p>
+                      {qrisDynamic && (
+                        <p className="text-xs text-primary font-medium">Scan QRIS · Nominal sudah terkunci</p>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Pending confirmation notice OR confirm button */}
+              {hasPendingPayment ? (
+                <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <Clock className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold text-blue-800">Konfirmasi pembayaran sedang diverifikasi</p>
+                      <p className="text-xs text-blue-600 mt-0.5">Panitia sedang memverifikasi bukti transfer Anda. Mohon tunggu.</p>
+                    </div>
+                  </div>
+                  {pendingPayments.map((p) => (
+                    <div key={p.id} className="rounded-lg bg-white border border-blue-100 p-3 text-xs space-y-1.5">
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Nominal</span>
+                        <span className="font-semibold text-slate-800">{fmt(p.amount)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Atas nama</span>
+                        <span className="font-medium text-slate-700">{p.senderName ?? "—"}</span>
+                      </div>
+                      {p.paymentChannelLabel && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Via</span>
+                          <span className="font-medium text-slate-700">{p.paymentChannelLabel}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Tanggal transfer</span>
+                        <span className="font-medium text-slate-700">{fmtDate(p.paidAt)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                paymentChannels.length > 0 || qrisConfig?.isEnabled ? (
+                  <PaymentConfirmationTrigger
+                    businessId={businessId}
+                    eventSlug={event.slug}
+                    grandTotal={invoice.grandTotal}
+                    invoiceNumber={invoice.invoiceNumber}
+                    paymentOptions={paymentOptions}
+                    publicToken={invoice.publicToken}
+                  />
+                ) : null
+              )}
+
+              {/* WhatsApp */}
+              {waLink && (
+                <a
+                  href={waLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-[#25D366] hover:bg-[#20bd5a] text-white text-sm font-semibold rounded-xl transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                  </svg>
+                  Konfirmasi via WhatsApp
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── HISTORI PEMBAYARAN ── */}
+        {payments.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-50">
+              <p className="text-sm font-bold text-slate-800">Histori Pembayaran</p>
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden sm:block">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-100 bg-slate-50/60">
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-400">Tanggal</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400">Channel / Pengirim</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-slate-400">Nominal</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400">Status</th>
+                    <th className="px-5 py-3 text-center text-xs font-semibold text-slate-400">Bukti</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {payments.map((p) => {
+                    const psCfg = paymentStatusConfig[p.status as keyof typeof paymentStatusConfig];
+                    return (
+                      <tr key={p.id} className="hover:bg-slate-50/40 transition">
+                        <td className="px-5 py-3.5 text-slate-600 text-xs">{fmtDate(p.paidAt)}</td>
+                        <td className="px-4 py-3.5 text-slate-600">
+                          <p className="text-xs">{p.paymentChannelLabel ?? p.method ?? "—"}</p>
+                          {p.senderName && <p className="text-xs text-slate-400">a/n {p.senderName}</p>}
+                          {p.referenceNumber && <p className="text-xs text-slate-400">{p.referenceNumber}</p>}
+                        </td>
+                        <td className="px-4 py-3.5 text-right font-semibold text-slate-800 text-xs">{fmt(p.amount)}</td>
+                        <td className="px-4 py-3.5">
+                          {psCfg ? (
+                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold border ${psCfg.cls}`}>
+                              {psCfg.label}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-400">{p.status}</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-3.5 text-center">
+                          {p.proofAssetId ? (
+                            <ProofImageLightbox assetId={p.proofAssetId} />
+                          ) : (
+                            <ImageIcon className="w-4 h-4 text-slate-200 mx-auto" />
+                          )}
                         </td>
                       </tr>
-                    )}
-                  </tbody>
-                  <tfoot className="bg-neutral-50/50 border-t">
-                    {invoice.taxAmount > 0 && (
-                      <>
-                        <tr>
-                          <td colSpan={3} className="px-4 py-2 text-right text-sm text-neutral-500">Subtotal</td>
-                          <td className="px-4 py-2 text-right text-sm text-neutral-600">{formatCurrency(invoice.subtotal)}</td>
-                        </tr>
-                        <tr>
-                          <td colSpan={3} className="px-4 py-2 text-right text-sm text-neutral-500">Pajak</td>
-                          <td className="px-4 py-2 text-right text-sm text-neutral-600">{formatCurrency(invoice.taxAmount)}</td>
-                        </tr>
-                      </>
-                    )}
+                    );
+                  })}
+                </tbody>
+                {totalPaid > 0 && (
+                  <tfoot className="border-t border-slate-100 bg-slate-50/40">
                     <tr>
-                      <td colSpan={3} className="px-4 py-3 text-right font-medium text-neutral-700">Total</td>
-                      <td className="px-4 py-3 text-right font-bold text-neutral-900 text-base">
-                        {formatCurrency(invoice.grandTotal)}
+                      <td colSpan={2} className="px-5 py-3 text-right text-xs font-semibold text-slate-500">
+                        Total Terverifikasi
                       </td>
+                      <td className="px-4 py-3 text-right font-extrabold text-emerald-700 text-sm">
+                        {fmt(totalPaid)}
+                      </td>
+                      <td colSpan={2} />
                     </tr>
                   </tfoot>
-                </table>
-              </div>
+                )}
+              </table>
             </div>
 
-            {/* Payment instructions */}
-            {showPaymentSection && (
-              <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-6 print:hidden">
-                <h3 className="text-base font-semibold text-blue-900 mb-4">Instruksi Pembayaran</h3>
-
-                {paymentChannels.length === 0 && !qrisConfig?.isEnabled ? (
-                  <p className="text-sm text-blue-800 italic">
-                    Hubungi admin untuk instruksi pembayaran.
-                  </p>
-                ) : (
-                  <div className="space-y-4">
-                    {/* Bank channels */}
-                    {paymentChannels.map((ch) => (
-                      <div key={ch.id} className="bg-white border border-blue-200 rounded-lg p-4 space-y-2">
-                        <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">
-                          Transfer Bank · {ch.bankName ?? ch.label}
-                        </p>
-                        <p className="text-sm text-neutral-600">
-                          Atas nama: <span className="font-medium text-neutral-900">{ch.accountName}</span>
-                        </p>
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="font-bold text-neutral-900 text-lg tracking-wider">
-                            {ch.accountNumber}
-                          </p>
-                          {ch.accountNumber && <CopyButton text={ch.accountNumber} />}
-                        </div>
-                        <p className="text-sm text-neutral-600">
-                          Transfer sejumlah:{" "}
-                          <span className="font-bold text-neutral-900">{formatCurrency(invoice.grandTotal)}</span>
-                        </p>
-                        {ch.instruction && (
-                          <p className="text-xs text-neutral-500 border-t pt-2">{ch.instruction}</p>
+            {/* Mobile cards */}
+            <div className="sm:hidden divide-y divide-slate-50">
+              {payments.map((p) => {
+                const psCfg = paymentStatusConfig[p.status as keyof typeof paymentStatusConfig];
+                return (
+                  <div key={p.id} className="px-5 py-4 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-slate-800">{fmt(p.amount)}</p>
+                        <p className="text-xs text-slate-400 mt-0.5">{fmtDate(p.paidAt)}</p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {p.proofAssetId && <ProofImageLightbox assetId={p.proofAssetId} />}
+                        {psCfg ? (
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold border ${psCfg.cls}`}>
+                            {psCfg.label}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-slate-400">{p.status}</span>
                         )}
                       </div>
-                    ))}
-
-                    {/* QRIS */}
-                    {qrisConfig?.isEnabled && (qrisDynamic?.qrDataUrl || qrisConfig.imageAssetId) && (
-                      <div className="bg-white border border-blue-200 rounded-lg p-4 flex flex-col items-center gap-3">
-                        <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider self-start">
-                          QRIS
-                        </p>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={qrisDynamic?.qrDataUrl ?? `/api/media/${qrisConfig.imageAssetId}`}
-                          alt="QRIS"
-                          className="w-48 h-48 object-contain"
-                        />
-                        {(qrisDynamic?.merchantName || qrisConfig.merchantName) && (
-                          <p className="text-sm font-medium text-neutral-900">
-                            {qrisDynamic?.merchantName ?? qrisConfig.merchantName}
-                          </p>
-                        )}
-                        {qrisDynamic ? (
-                          <p className="text-xs text-blue-700 font-medium">
-                            Scan QRIS di bawah • Nominal sudah terkunci
-                          </p>
-                        ) : null}
-                        <p className="text-sm text-neutral-600">
-                          Nominal: <span className="font-bold">{formatCurrency(invoice.grandTotal)}</span>
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Pending confirmation notice */}
-                    {hasPendingPayment ? (
-                      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 space-y-3">
-                        <div className="flex items-start gap-2">
-                          <Clock className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
-                          <div>
-                            <p className="text-sm font-semibold text-blue-800">Konfirmasi pembayaran sedang diverifikasi</p>
-                            <p className="text-xs text-blue-700 mt-0.5">
-                              Panitia sedang memverifikasi bukti transfer Anda. Mohon tunggu notifikasi.
-                            </p>
-                          </div>
-                        </div>
-                        {pendingPayments.map((p) => (
-                          <div key={p.id} className="rounded-lg bg-white border border-blue-100 p-3 text-sm space-y-1">
-                            <div className="flex justify-between">
-                              <span className="text-neutral-500">Nominal</span>
-                              <span className="font-semibold text-neutral-900">{formatCurrency(p.amount)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-neutral-500">Atas nama</span>
-                              <span className="font-medium text-neutral-800">{p.senderName ?? "—"}</span>
-                            </div>
-                            {p.paymentChannelLabel && (
-                              <div className="flex justify-between">
-                                <span className="text-neutral-500">Via</span>
-                                <span className="font-medium text-neutral-800">{p.paymentChannelLabel}</span>
-                              </div>
-                            )}
-                            <div className="flex justify-between">
-                              <span className="text-neutral-500">Waktu transfer</span>
-                              <span className="font-medium text-neutral-800">{formatDate(p.paidAt)}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <PaymentConfirmationTrigger
-                        businessId={businessId}
-                        eventSlug={event.slug}
-                        grandTotal={invoice.grandTotal}
-                        invoiceNumber={invoice.invoiceNumber}
-                        paymentOptions={paymentOptions}
-                        publicToken={invoice.publicToken}
-                      />
-                    )}
-
-                    {/* WA confirmation */}
-                    {waLink && (
-                      <a
-                        href={waLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-lg transition-colors"
-                      >
-                        <MessageCircle className="w-4 h-4" />
-                        Konfirmasi via WhatsApp
-                      </a>
-                    )}
+                    </div>
+                    <div className="text-xs text-slate-500 space-y-0.5">
+                      {(p.paymentChannelLabel || p.method) && (
+                        <p>Via: <span className="text-slate-700">{p.paymentChannelLabel ?? p.method}</span></p>
+                      )}
+                      {p.senderName && (
+                        <p>Atas nama: <span className="text-slate-700">{p.senderName}</span></p>
+                      )}
+                      {p.referenceNumber && (
+                        <p>Ref: <span className="text-slate-700">{p.referenceNumber}</span></p>
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
-            )}
-
-            {/* Payment history — all payments */}
-            {payments.length > 0 && (
-              <div>
-                <h3 className="text-sm font-semibold text-neutral-900 mb-3 flex items-center gap-2">
-                  <History className="w-4 h-4 text-neutral-400" />
-                  Histori Pembayaran
-                </h3>
-                <div className="border rounded-lg overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-neutral-50 border-b">
-                      <tr>
-                        <th className="px-4 py-3 text-left font-medium text-neutral-500">Tanggal</th>
-                        <th className="px-4 py-3 text-left font-medium text-neutral-500">Channel / Pengirim</th>
-                        <th className="px-4 py-3 text-right font-medium text-neutral-500">Nominal</th>
-                        <th className="px-4 py-3 text-left font-medium text-neutral-500">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {payments.map((p) => (
-                        <tr key={p.id} className="bg-white">
-                          <td className="px-4 py-3 text-neutral-700">{formatDate(p.paidAt)}</td>
-                          <td className="px-4 py-3 text-neutral-700">
-                            <p>{p.paymentChannelLabel ?? p.method ?? "-"}</p>
-                            {p.senderName && <p className="text-xs text-neutral-400">a/n {p.senderName}</p>}
-                            {p.referenceNumber && <p className="text-xs text-neutral-400">{p.referenceNumber}</p>}
-                          </td>
-                          <td className="px-4 py-3 text-right font-medium text-neutral-900">
-                            {formatCurrency(p.amount)}
-                          </td>
-                          <td className="px-4 py-3">
-                            {p.status === "paid" ? (
-                              <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none text-xs">
-                                Terverifikasi
-                              </Badge>
-                            ) : p.status === "pending_verification" ? (
-                              <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none text-xs">
-                                Menunggu Verifikasi
-                              </Badge>
-                            ) : p.status === "rejected" ? (
-                              <Badge className="bg-red-100 text-red-600 hover:bg-red-100 border-none text-xs">
-                                Ditolak
-                              </Badge>
-                            ) : (
-                              <Badge className="bg-neutral-100 text-neutral-500 border-none text-xs">
-                                {p.status}
-                              </Badge>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                    {totalPaid > 0 && (
-                      <tfoot className="bg-neutral-50/50 border-t">
-                        <tr>
-                          <td colSpan={2} className="px-4 py-2 text-right text-sm text-neutral-500">
-                            Total Terverifikasi
-                          </td>
-                          <td className="px-4 py-2 text-right font-bold text-green-700">
-                            {formatCurrency(totalPaid)}
-                          </td>
-                          <td />
-                        </tr>
-                      </tfoot>
-                    )}
-                  </table>
+                );
+              })}
+              {totalPaid > 0 && (
+                <div className="px-5 py-3 bg-slate-50/60 flex justify-between items-center">
+                  <p className="text-xs text-slate-400">Total Terverifikasi</p>
+                  <p className="font-extrabold text-emerald-700">{fmt(totalPaid)}</p>
                 </div>
-              </div>
-            )}
-          </CardContent>
+              )}
+            </div>
+          </div>
+        )}
 
-          <hr className="border-border" />
-
-          <CardFooter className="py-6 bg-neutral-50/30 flex flex-col items-center justify-center text-center">
-            <p className="text-xs text-neutral-500">
-              Pertanyaan mengenai tagihan ini? Hubungi panitia {event.name}.
-            </p>
-            <p className="text-xs text-neutral-400 mt-1">
-              Dihasilkan secara otomatis oleh sistem Jalamandala.
-            </p>
-          </CardFooter>
-        </Card>
+        {/* Footer */}
+        <div className="text-center py-4 text-xs text-slate-400 space-y-0.5">
+          <p>Pertanyaan? Hubungi panitia {event.name}.</p>
+          <p>Dihasilkan otomatis oleh sistem Jalamandala.</p>
+        </div>
       </div>
     </div>
   );
@@ -511,17 +552,9 @@ function buildDisplayInvoiceItems(items: PublicInvoiceItem[]): DisplayInvoiceIte
 
       if (existingIndex !== undefined) {
         const existing = displayItems[existingIndex];
-
-        if (!existing) {
-          continue;
-        }
-
+        if (!existing) continue;
         const nextBoothCodes = dedupeDisplayValues([...(existing.boothCodes ?? []), ...boothCodes]);
-        const nextFacilities = dedupeDisplayValues([
-          ...(existing.boothFacilities ?? []),
-          ...boothFacilities,
-        ]);
-
+        const nextFacilities = dedupeDisplayValues([...(existing.boothFacilities ?? []), ...boothFacilities]);
         existing.boothCodes = nextBoothCodes;
         existing.boothFacilities = nextFacilities;
         existing.description = buildBoothDescription(nextBoothCodes, nextFacilities);
@@ -549,7 +582,6 @@ function buildDisplayInvoiceItems(items: PublicInvoiceItem[]): DisplayInvoiceIte
 
     if (item.itemType === "addon") {
       const unitName = item.addonUnitName?.trim();
-
       displayItems.push({
         description: item.addonDescription ?? item.description,
         id: item.id,
@@ -580,32 +612,19 @@ function buildDisplayInvoiceItems(items: PublicInvoiceItem[]): DisplayInvoiceIte
 
 function buildBoothDescription(boothCodes: string[], facilities: string[]) {
   const parts: string[] = [];
-
-  if (boothCodes.length > 0) {
-    parts.push(`Booth: ${boothCodes.join(", ")}`);
-  }
-
-  if (facilities.length > 0) {
-    parts.push(`Fasilitas: ${facilities.join(", ")}`);
-  }
-
+  if (boothCodes.length > 0) parts.push(`Booth: ${boothCodes.join(", ")}`);
+  if (facilities.length > 0) parts.push(`Fasilitas: ${facilities.join(", ")}`);
   return parts.length > 0 ? parts.join(". ") : null;
 }
 
 function dedupeDisplayValues(values: string[]) {
   const seen = new Set<string>();
   const result: string[] = [];
-
   for (const value of values) {
     const normalized = value.trim();
-
-    if (!normalized || seen.has(normalized.toLowerCase())) {
-      continue;
-    }
-
+    if (!normalized || seen.has(normalized.toLowerCase())) continue;
     seen.add(normalized.toLowerCase());
     result.push(normalized);
   }
-
   return result;
 }

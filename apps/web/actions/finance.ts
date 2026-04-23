@@ -1375,6 +1375,7 @@ export async function getInvoiceByToken(token: string) {
         paymentChannelLabel: p.paymentChannelLabel,
         senderName: p.senderName,
         status: p.status,
+        proofAssetId: p.proofAssetId,
       })),
       event: {
         name: event.name,
