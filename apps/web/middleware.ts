@@ -28,10 +28,6 @@ export function middleware(request: NextRequest) {
     return NextResponse.rewrite(rewrittenUrl);
   }
 
-  if (isExpo) {
-    return NextResponse.redirect(new URL('/vendor/login', request.url));
-  }
-
   if (isApi && !url.pathname.startsWith('/api')) {
     return NextResponse.rewrite(new URL(`/api${url.pathname}`, request.url))
   }
