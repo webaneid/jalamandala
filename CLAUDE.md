@@ -142,11 +142,112 @@ Aturan penting:
 - Admin verifikasi melalui `verifyPaymentConfirmation()` di `actions/finance.ts`.
 - `getInvoiceByToken` di `actions/finance.ts` adalah fungsi utama untuk halaman invoice publik — returns invoice, participant, business, items (enriched), payments (dengan `proofAssetId`), event, paymentChannels, qrisConfig.
 
+## Alur Pendaftaran Peserta (End-to-End)
+
+### Ringkasan Alur
+
+```
+Login/OTP → Booking Booth (5 step) → Syarat & Ketentuan → Invoice → Bayar → Konfirmasi → E-Pass
+```
+
+### 1. Autentikasi Peserta
+
+- Login via WhatsApp OTP di `/{eventSlug}/login`
+- Session disimpan di cookie, dikelola oleh `apps/web/lib/participant-session.ts`
+- Setelah login, redirect ke `/{eventSlug}/dashboard`
+
+### 2. Booking Booth — 5 Step Flow
+
+Entry point: `/{eventSlug}/booking` (page: `apps/web/app/[eventSlug]/booking/page.tsx`)
+
+State machine berbasis URL params — tidak ada client state, browser back berfungsi alami:
+
+| Step | URL Params | Komponen |
+|------|-----------|----------|
+| 1 — Pilih Usaha | *(kosong)* | inline di page |
+| 2 — Pilih Zona | `?businessId=` | inline di page |
+| 3 — Pilih Booth | `?businessId=&zone=` | `PublicBookingClient` + `PublicBoothMap` |
+| 4 — Add-on | `?businessId=&zone=&boothIds=` | `PublicAddonStep` |
+| 5 — Syarat & Ketentuan | `?businessId=&zone=&boothIds=&termsStep=1` | `PublicTermsStep` |
+
+**Multi-booth**: Step 3 menggunakan multi-select (`Set<string>`). URL param `boothIds` = comma-separated IDs (bukan `boothId` tunggal). Satu invoice mencakup semua booth yang dipilih.
+
+**Add-on param**: `addons=addonId1:qty,addonId2:qty` — di-carry dari step 4 ke step 5 via URL.
+
+**Syarat & Ketentuan wajib per order** — tombol "Lewati Add-on" dan "Tambah Add-on" di `PublicAddonStep` selalu redirect ke step S&K, tidak pernah langsung buat invoice. Pengecekan `hasActiveTermsApproval` sudah dihapus — tidak ada bypass meskipun peserta sudah pernah setuju sebelumnya.
+
+### 3. Pembuatan Invoice
+
+Di `PublicTermsStep` (`apps/web/components/public/PublicTermsStep.tsx`):
+1. `createTermsApproval()` → simpan persetujuan S&K ke `participantTermsApprovals` (public schema) dengan HMAC token + QR
+2. Tampilkan QR sebentar (~1.2 detik)
+3. `createPublicBoothBooking({ boothIds: string[], ... })` → memanggil `createManualInvoice()` di `apps/web/actions/finance.ts`
+4. Redirect ke `/invoice/{publicToken}`
+
+`createManualInvoice` (tenant schema):
+- Buat `boothBookings` (status `booked`) untuk setiap boothId, update `booths.status = reserved`
+- Buat `orders` + `orderItems`
+- Buat `invoices` + `invoiceItems` (itemType `booth_booking` dan `addon`)
+- Kirim notifikasi WhatsApp ke peserta
+
+### 4. Pembayaran
+
+Halaman invoice: `/invoice/{publicToken}` (`apps/web/app/invoice/[token]/page.tsx`)
+
+- Peserta upload bukti transfer → `submitPaymentProof()` di `actions/finance.ts`
+- Status invoice: `waiting_for_payment` → `waiting_confirmation`
+- Satu invoice hanya boleh punya **satu** payment `pending_verification` — blokir submit baru jika sudah ada
+- Bukti transfer disimpan di MinIO, ditampilkan via `/api/media/{assetId}?publicToken={invoicePublicToken}` (bypass auth)
+
+### 5. Verifikasi Admin & E-Pass
+
+- Admin verifikasi di `/admin/keuangan` → `verifyPaymentConfirmation()` → status `paid`
+- Peserta dapat E-Pass di `/{eventSlug}/usaha/{businessId}/epass` (QR code + info booth)
+- E-Pass hanya muncul jika `bookingStatus === "booked"`
+
+### Skema Database Terkait
+
+**Public schema** (shared):
+- `participants` — data peserta (nama, WA, organisasi)
+- `participantBusinesses` — profil usaha (1 peserta → banyak usaha)
+- `participantTermsApprovals` — rekaman persetujuan S&K per order (dengan HMAC token, QR payload, IP, user agent)
+- `vendors` + `vendorAddonAssignments` — vendor add-on beserta WhatsApp-nya
+
+**Tenant schema** (e.g. `expo_forbis2026`):
+- `zones` → `booths` → `boothBookings` — lokasi dan status pemesanan booth
+- `boothFacilities` + `boothFacilityCatalog` — fasilitas per booth
+- `eventAddons` — daftar add-on yang tersedia
+- `orders` → `invoices` → `invoiceItems` — transaksi keuangan
+- `invoicePayments` — bukti pembayaran (proofAssetId → MinIO)
+
+**Relasi lintas schema** (tidak ada FK di DB, di-join secara manual di kode):
+- `boothBookings.businessId` → `public.participantBusinesses.id`
+- `invoiceItems.referenceId` (itemType=addon) → `eventAddons.id`
+- `vendorAddonAssignments.eventAddonId` → `eventAddons.id`
+- `disbursementRequests.vendorId` → `public.vendors.id`
+
+### Surat Pernyataan (PDF)
+
+Route: `GET /api/surat-pernyataan/{approvalId}` (`apps/web/app/api/surat-pernyataan/[approvalId]/route.ts`)
+
+- Generate HTML → kirim ke Gotenberg → kembalikan PDF inline
+- Gunakan `approval.approvedAt` (with timezone, UTC) untuk display waktu, bukan `approvedAtWib` (stored as UTC-shifted, akan double-shift jika diformat dengan timezone)
+- QR di PDF berisi `approval.approvalToken` (HMAC string, bukan JSON)
+
 ## Dashboard Participant
 
-Dashboard berada di `apps/web/app/[eventSlug]/dashboard/` dengan layout `fixed inset-0 z-30` (full-screen overlay di atas public layout). Bottom navigation 4 tab: Beranda, Usaha, Invoice, Profil.
+Dashboard berada di `apps/web/app/[eventSlug]/dashboard/` dengan layout `fixed inset-0 z-[60]` (full-screen overlay di atas public header yang `z-50`). Bottom navigation 4 tab:
 
-Alur post-payment: Konfirmasi Pembayaran → Lengkapi Data Usaha (`/usaha/[businessId]/lengkapi`) → E-Pass Booth (`/usaha/[businessId]/epass`) → Dashboard.
+| Tab | Path | Isi |
+|-----|------|-----|
+| Beranda | `/dashboard` | Ringkasan + quick actions + Booking Booth |
+| Booth | `/dashboard/booth` | List semua booth dipesan (per booking, bisa > 1) |
+| Invoice | `/dashboard/invoice` | List invoice |
+| Profil | `/dashboard/profil` | Info kontak, dokumen S&K, menu "Usaha Saya" |
+
+**Tab Booth** → klik card → detail di `/dashboard/booth/{bookingId}`: zona, fasilitas, rincian add-on + nama & WA vendor.
+
+**"Usaha Saya"** ada di tab Profil (bukan tab terpisah), mengarah ke `/dashboard/usaha` untuk manage profil bisnis.
 
 ## Conventions
 
