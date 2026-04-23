@@ -766,13 +766,13 @@ function VvipZoneLayout({
   const sortedBooths = [...zone.booths].sort(
     (first, second) => extractBoothNumber(first.code) - extractBoothNumber(second.code)
   );
-  const leftBooths = sortedBooths.slice(0, 4);
-  const rightBooths = sortedBooths.slice(4, 8);
+  const leftBooths = sortedBooths.slice(0, 3);
+  const rightBooths = sortedBooths.slice(3, 6);
 
   return (
     <div className="overflow-x-auto rounded-[30px] bg-slate-50 p-5 ring-1 ring-slate-200/90">
       <div className="grid min-w-[960px] grid-cols-[1fr_96px_1fr] items-stretch gap-4">
-        <div className="grid grid-cols-4 gap-0">
+        <div className="grid grid-cols-3 gap-0">
           {leftBooths.map((booth) => (
             <VvipBoothCard key={booth.id} booth={booth} onClick={() => onBoothClick(booth)} />
           ))}
@@ -785,7 +785,7 @@ function VvipZoneLayout({
           <div className="mt-3 h-16 w-px bg-slate-300" />
         </div>
 
-        <div className="grid grid-cols-4 gap-0">
+        <div className="grid grid-cols-3 gap-0">
           {rightBooths.map((booth) => (
             <VvipBoothCard key={booth.id} booth={booth} onClick={() => onBoothClick(booth)} />
           ))}
@@ -843,7 +843,7 @@ function VipZoneLayout({
   const sortedBooths = [...zone.booths].sort(
     (first, second) => extractBoothNumber(first.code) - extractBoothNumber(second.code)
   );
-  const rows = [sortedBooths.slice(0, 8), sortedBooths.slice(8, 16)];
+  const rows = [sortedBooths.slice(0, 6), sortedBooths.slice(6, 12)];
 
   return (
     <div className="overflow-x-auto rounded-[30px] bg-slate-50 p-5 ring-1 ring-slate-200/90">
@@ -853,8 +853,8 @@ function VipZoneLayout({
             className="grid grid-cols-[1fr_96px_1fr] items-stretch gap-4"
             key={`vip-row-${rowIndex + 1}`}
           >
-            <div className="grid grid-cols-4 gap-0">
-              {row.slice(0, 4).map((booth) => (
+            <div className="grid grid-cols-3 gap-0">
+              {row.slice(0, 3).map((booth) => (
                 <VipBoothCard key={booth.id} booth={booth} onClick={() => onBoothClick(booth)} />
               ))}
             </div>
@@ -866,8 +866,8 @@ function VipZoneLayout({
               <div className="mt-3 h-16 w-px bg-slate-300" />
             </div>
 
-            <div className="grid grid-cols-4 gap-0">
-              {row.slice(4, 8).map((booth) => (
+            <div className="grid grid-cols-3 gap-0">
+              {row.slice(3, 6).map((booth) => (
                 <VipBoothCard key={booth.id} booth={booth} onClick={() => onBoothClick(booth)} />
               ))}
             </div>

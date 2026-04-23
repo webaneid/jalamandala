@@ -83,19 +83,19 @@ type LayoutProps = { zone: PublicZoneData; selected: Set<string>; onSelect: (b: 
 
 function VvipLayout({ zone, selected, onSelect }: LayoutProps) {
   const sorted = [...zone.booths].sort((a, b) => extract(a.code) - extract(b.code))
-  const left = sorted.slice(0, 4)
-  const right = sorted.slice(4, 8)
+  const left = sorted.slice(0, 3)
+  const right = sorted.slice(3, 6)
   return (
     <div className="overflow-x-auto rounded-[30px] bg-slate-50 p-5 ring-1 ring-slate-200/90">
-      <div className="grid min-w-[900px] grid-cols-[1fr_96px_1fr] items-stretch gap-4">
-        <div className="grid grid-cols-4 gap-0">
+      <div className="grid min-w-[680px] grid-cols-[1fr_96px_1fr] items-stretch gap-4">
+        <div className="grid grid-cols-3 gap-0">
           {left.map((b) => <BoothCell key={b.id} booth={b} isSelected={selected.has(b.id)} onSelect={onSelect} className="first:rounded-l-[20px] last:rounded-r-[20px]" />)}
         </div>
         <div className="flex flex-col items-center justify-center rounded-[26px] border border-dashed border-slate-300/90 bg-white/60 text-center">
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">Gangway</p>
           <div className="mt-3 h-16 w-px bg-slate-300" />
         </div>
-        <div className="grid grid-cols-4 gap-0">
+        <div className="grid grid-cols-3 gap-0">
           {right.map((b) => <BoothCell key={b.id} booth={b} isSelected={selected.has(b.id)} onSelect={onSelect} className="first:rounded-l-[20px] last:rounded-r-[20px]" />)}
         </div>
       </div>
@@ -105,21 +105,21 @@ function VvipLayout({ zone, selected, onSelect }: LayoutProps) {
 
 function VipLayout({ zone, selected, onSelect }: LayoutProps) {
   const sorted = [...zone.booths].sort((a, b) => extract(a.code) - extract(b.code))
-  const rows = [sorted.slice(0, 8), sorted.slice(8, 16)]
+  const rows = [sorted.slice(0, 6), sorted.slice(6, 12)]
   return (
     <div className="overflow-x-auto rounded-[30px] bg-slate-50 p-5 ring-1 ring-slate-200/90">
-      <div className="grid min-w-[900px] gap-5">
+      <div className="grid min-w-[680px] gap-5">
         {rows.map((row, ri) => (
           <div className="grid grid-cols-[1fr_96px_1fr] items-stretch gap-4" key={ri}>
-            <div className="grid grid-cols-4 gap-0">
-              {row.slice(0, 4).map((b) => <BoothCell key={b.id} booth={b} isSelected={selected.has(b.id)} onSelect={onSelect} className="first:rounded-l-[20px] last:rounded-r-[20px]" />)}
+            <div className="grid grid-cols-3 gap-0">
+              {row.slice(0, 3).map((b) => <BoothCell key={b.id} booth={b} isSelected={selected.has(b.id)} onSelect={onSelect} className="first:rounded-l-[20px] last:rounded-r-[20px]" />)}
             </div>
             <div className="flex flex-col items-center justify-center rounded-[26px] border border-dashed border-slate-300/90 bg-white/60 text-center">
               <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">Gangway</p>
               <div className="mt-3 h-16 w-px bg-slate-300" />
             </div>
-            <div className="grid grid-cols-4 gap-0">
-              {row.slice(4, 8).map((b) => <BoothCell key={b.id} booth={b} isSelected={selected.has(b.id)} onSelect={onSelect} className="first:rounded-l-[20px] last:rounded-r-[20px]" />)}
+            <div className="grid grid-cols-3 gap-0">
+              {row.slice(3, 6).map((b) => <BoothCell key={b.id} booth={b} isSelected={selected.has(b.id)} onSelect={onSelect} className="first:rounded-l-[20px] last:rounded-r-[20px]" />)}
             </div>
           </div>
         ))}
