@@ -66,7 +66,9 @@ export async function GET(
     columns: { companyName: true, brandName: true },
   })
 
-  const approvedDate = approval.approvedAtWib ?? approval.approvedAt
+  // approvedAt has timezone info (UTC) — use this for display, converted to WIB via Intl
+  // approvedAtWib is stored as local-shifted UTC (double-timezone bug if formatted with tz)
+  const approvedDate = approval.approvedAt
   const qrData = approval.approvalToken
   const qrDataUrl = await QRCode.toDataURL(qrData, {
     margin: 1,
