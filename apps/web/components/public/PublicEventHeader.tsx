@@ -184,16 +184,7 @@ export function PublicEventHeader({
 }: PublicEventHeaderProps) {
   return (
     <header className="sticky top-0 z-50">
-      {/* Glass gradient bar */}
-      <div
-        className="border-b border-white/8 backdrop-blur-xl"
-        style={{
-          background:
-            "linear-gradient(90deg, rgba(8,29,65,0.88) 0%, rgba(13,36,81,0.84) 50%, rgba(8,29,65,0.88) 100%)",
-          boxShadow: "0 1px 0 rgba(0,173,238,0.08), 0 8px 32px rgba(0,0,0,0.28)",
-        }}
-      >
-        <div className="mx-auto flex h-16 max-w-[720px] items-center justify-between px-5">
+      <div className="mx-auto flex h-14 max-w-[720px] items-center justify-between px-5 pt-0 sm:h-20 sm:pt-4">
 
           {/* LEFT — Countdown */}
           <div className="flex-1">
@@ -220,7 +211,6 @@ export function PublicEventHeader({
             {/* Avatar / user menu */}
             <AvatarMenu participant={participant} eventSlug={eventSlug} />
           </div>
-        </div>
       </div>
     </header>
   );

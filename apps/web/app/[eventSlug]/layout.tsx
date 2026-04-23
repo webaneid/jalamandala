@@ -34,7 +34,7 @@ export default async function PublicEventLayout({
     <div
       className="relative min-h-screen text-white"
       style={{
-        background: "linear-gradient(160deg, #081d41 0%, #04101f 55%, #020a14 100%)",
+        background: "linear-gradient(135deg, #050e1f 0%, #0a1f48 30%, #071630 55%, #040c1a 100%)",
       }}
     >
       {/* Ambient glow */}
@@ -42,7 +42,7 @@ export default async function PublicEventLayout({
         className="pointer-events-none fixed inset-0 z-0"
         style={{
           background:
-            "radial-gradient(ellipse 80% 40% at 50% 0%, rgba(0,173,238,0.10) 0%, transparent 60%), radial-gradient(ellipse 60% 50% at 80% 80%, rgba(19,67,151,0.14) 0%, transparent 60%)",
+            "radial-gradient(ellipse 100% 50% at 50% 0%, rgba(19,67,151,0.28) 0%, transparent 55%), radial-gradient(ellipse 70% 40% at 50% 45%, rgba(0,173,238,0.07) 0%, transparent 60%), radial-gradient(ellipse 50% 30% at 80% 85%, rgba(19,67,151,0.18) 0%, transparent 60%)",
         }}
       />
 
