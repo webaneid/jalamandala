@@ -500,6 +500,17 @@ export function PublicParticipantAuthForm({
               />
             )}
           </FieldShell>
+          {isForbisOrganization && (
+            <FieldShell hint="Nomor ID keanggotaan FORBIS (otomatis terisi)" id="forbisMemberId" label="Nomor ID FORBIS">
+              <Input
+                className="h-11 rounded-2xl bg-slate-50"
+                id="forbisMemberId"
+                onChange={(event) => setRegisterForm((current) => ({ ...current, forbisMemberId: event.target.value }))}
+                placeholder="Terisi otomatis saat memilih nama anggota"
+                value={registerForm.forbisMemberId}
+              />
+            </FieldShell>
+          )}
           <FieldShell hint="Opsional. Dipakai untuk pengiriman invoice dan notifikasi." id="email" label="Email">
             <Input
               autoComplete="email"
