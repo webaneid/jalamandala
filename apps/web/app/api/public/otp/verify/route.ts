@@ -28,10 +28,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Kode OTP salah atau sudah kedaluwarsa.' }, { status: 401 })
     }
 
-    const participant = await db.query.participants.findFirst({
+    let participant = await db.query.participants.findFirst({
       where: eq(participants.whatsapp, phone),
       columns: { id: true, name: true, whatsapp: true },
     })
+
+    // Fallback: cari dengan nomor raw (format 08...) untuk data peserta lama
+    if (!participant && rawPhone !== phone) {
+      participant = await db.query.participants.findFirst({
+        where: eq(participants.whatsapp, rawPhone),
+        columns: { id: true, name: true, whatsapp: true },
+      })
+    }
 
     if (!participant) {
       return NextResponse.json({ success: false, error: 'Akun peserta tidak ditemukan. Silakan daftar terlebih dahulu.' }, { status: 404 })

@@ -29,6 +29,11 @@ export async function createQuickBusiness(
   data: QuickBusinessPayload
 ): Promise<{ success: boolean; businessId?: string; error?: string }> {
   try {
+    const session = await import("@/lib/participant-session").then(m => m.getCurrentParticipantSession())
+    if (!session || session.participantId !== participantId) {
+      return { success: false, error: "Sesi tidak valid. Silakan login kembali." }
+    }
+
     const companyName = data.companyName.trim()
     if (!companyName) {
       return { success: false, error: "Nama perusahaan wajib diisi." }

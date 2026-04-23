@@ -1,7 +1,10 @@
 "use server"
 
+import { eq } from "drizzle-orm"
 import { createManualInvoice } from "@/actions/finance"
 import { getCurrentParticipantSession } from "@/lib/participant-session"
+import { db } from "@repo/db"
+import { participantBusinesses } from "@repo/db/schema/public"
 
 export async function createPublicBoothBooking(payload: {
   addons?: Array<{ addonId: string; quantity: number }>
@@ -9,10 +12,18 @@ export async function createPublicBoothBooking(payload: {
   businessId: string
   participantId: string
 }): Promise<{ success: boolean; publicToken?: string; error?: string }> {
-  // Verify the caller is a logged-in participant who owns this business
   const session = await getCurrentParticipantSession()
   if (!session || session.participantId !== payload.participantId) {
     return { success: false, error: "Sesi tidak valid. Silakan login kembali." }
+  }
+
+  // Verify businessId belongs to this participant
+  const business = await db.query.participantBusinesses.findFirst({
+    where: eq(participantBusinesses.id, payload.businessId),
+    columns: { participantId: true },
+  })
+  if (!business || business.participantId !== session.participantId) {
+    return { success: false, error: "Usaha tidak ditemukan atau bukan milik Anda." }
   }
 
   const result = await createManualInvoice({

@@ -478,6 +478,7 @@ export function PublicParticipantAuthForm({
                     forbisMemberId: member.forbisMemberId ?? "",
                     forbisMemberSourceId: member.id,
                     isKmiAlumni: member.isKmiAlumni ? "true" : "false",
+                    kmiYear: member.isKmiAlumni ? (member.kmiYear ?? "") : "",
                     name: member.name,
                     phone: member.phone ?? member.whatsapp ?? "",
                     sameWhatsapp: !member.whatsapp || Boolean(member.phone && member.phone === member.whatsapp),
