@@ -181,7 +181,7 @@ export function PublicOtpLoginForm({ eventSlug }: Props) {
       >
         {loading ? 'Memverifikasi...' : 'Verifikasi & Masuk'}
       </PublicButton>
-      <div className="text-center text-sm text-slate-500">
+      <div className="text-center text-sm text-white/45">
         {cooldown > 0 ? (
           <span>Kirim ulang dalam {cooldown} detik</span>
         ) : (
@@ -193,7 +193,7 @@ export function PublicOtpLoginForm({ eventSlug }: Props) {
         <button
           type="button"
           onClick={() => { setStep('phone'); setOtp(''); setError('') }}
-          className="font-medium text-slate-600 hover:underline"
+          className="font-medium text-white/55 hover:text-white/80 hover:underline"
         >
           Ganti nomor
         </button>

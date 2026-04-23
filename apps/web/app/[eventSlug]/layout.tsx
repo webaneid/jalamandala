@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getEventContextBySlug, getPublishedEventMenus } from "@/actions/public-pages";
 import { getCurrentParticipantSession } from "@/lib/participant-session";
 import { PublicEventHeader } from "@/components/public/PublicEventHeader";
+import { PublicBottomNav } from "@/components/public/PublicBottomNav";
 
 export default async function PublicEventLayout({
   children,
@@ -54,11 +55,17 @@ export default async function PublicEventLayout({
           participant={participantInfo}
         />
 
-        <main className="flex-1">
+        <main className="flex-1 pb-28">
           {children}
         </main>
 
-        <footer className="border-t border-white/8 py-8">
+        <PublicBottomNav
+          eventSlug={event.slug}
+          eventName={event.name}
+          logoSrc={event.logoAssetId ? `/api/media/${event.logoAssetId}` : null}
+        />
+
+        <footer className="border-t border-white/8 py-8 pb-32">
           <div className="mx-auto max-w-[720px] px-5 flex flex-col gap-4 text-center sm:flex-row sm:justify-between sm:text-left">
             <p className="text-sm text-white/40">
               &copy; {new Date().getFullYear()} {event.name}. Hak cipta dilindungi.

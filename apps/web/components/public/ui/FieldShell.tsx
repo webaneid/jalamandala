@@ -28,7 +28,7 @@ export function FieldShell({
       {label ? (
         <label
           htmlFor={id}
-          className={cn("block text-sm font-medium text-foreground", labelClassName)}
+          className={cn("block text-sm font-medium text-white/80", labelClassName)}
         >
           {label}
           {required ? <span className="text-destructive"> *</span> : null}
@@ -36,9 +36,9 @@ export function FieldShell({
       ) : null}
       {children}
       {error ? (
-        <p className="text-xs text-destructive">{error}</p>
+        <p className="text-xs text-red-400">{error}</p>
       ) : hint ? (
-        <p className="text-xs text-muted-foreground">{hint}</p>
+        <p className="text-xs text-white/40">{hint}</p>
       ) : null}
     </div>
   );

@@ -6,3 +6,11 @@ export async function POST() {
   response.cookies.delete(SESSION_COOKIE)
   return response
 }
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const redirectTo = searchParams.get("next") ?? "/"
+  const response = NextResponse.redirect(new URL(redirectTo, request.url))
+  response.cookies.delete(SESSION_COOKIE)
+  return response
+}

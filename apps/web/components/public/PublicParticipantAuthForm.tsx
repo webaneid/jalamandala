@@ -296,7 +296,7 @@ export function PublicParticipantAuthForm({
             Kirim ulang OTP
           </button>
           <span className="text-muted-foreground">·</span>
-          <button className="font-medium text-slate-600 hover:underline" disabled={isSubmitting} onClick={() => setStep("form")} type="button">
+          <button className="font-medium text-white/50 hover:text-white/80 hover:underline" disabled={isSubmitting} onClick={() => setStep("form")} type="button">
             Kembali
           </button>
         </div>
@@ -327,7 +327,7 @@ export function PublicParticipantAuthForm({
         <FieldShell id="reset-new-password" label="Password Baru" required>
           <Input
             autoComplete="new-password"
-            className="h-11 rounded-2xl"
+            className="h-11 rounded-2xl border-white/12 bg-white/8 text-white placeholder:text-white/30 focus-visible:border-[#00adee]/50"
             disabled={isSubmitting}
             id="reset-new-password"
             minLength={8}
@@ -345,7 +345,7 @@ export function PublicParticipantAuthForm({
             Kirim ulang OTP
           </button>
           <span className="text-muted-foreground">·</span>
-          <button className="font-medium text-slate-600 hover:underline" disabled={isSubmitting} onClick={() => setStep("form")} type="button">
+          <button className="font-medium text-white/50 hover:text-white/80 hover:underline" disabled={isSubmitting} onClick={() => setStep("form")} type="button">
             Kembali
           </button>
         </div>
@@ -355,12 +355,12 @@ export function PublicParticipantAuthForm({
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 rounded-2xl bg-slate-100 p-1">
+      <div className="grid grid-cols-2 rounded-2xl bg-white/8 p-1">
         {(["login", "register"] as const).map((item) => (
           <button
             className={cn(
               "rounded-xl px-4 py-2.5 text-sm font-semibold transition",
-              mode === item ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-900"
+              mode === item ? "bg-white/15 text-white shadow-sm" : "text-white/40 hover:text-white/70"
             )}
             key={item}
             onClick={() => resetTransientState(item)}
@@ -376,7 +376,7 @@ export function PublicParticipantAuthForm({
           <FieldShell error={error || undefined} id="identifier" label="Email atau Nomor WhatsApp" required>
             <Input
               autoComplete="username"
-              className="h-11 rounded-2xl"
+              className="h-11 rounded-2xl border-white/12 bg-white/8 text-white placeholder:text-white/30 focus-visible:border-[#00adee]/50"
               disabled={isSubmitting}
               id="identifier"
               onChange={(event) => setLoginForm((current) => ({ ...current, identifier: event.target.value }))}
@@ -387,7 +387,7 @@ export function PublicParticipantAuthForm({
           <FieldShell id="login-password" label="Password" required>
             <Input
               autoComplete="current-password"
-              className="h-11 rounded-2xl"
+              className="h-11 rounded-2xl border-white/12 bg-white/8 text-white placeholder:text-white/30 focus-visible:border-[#00adee]/50"
               disabled={isSubmitting}
               id="login-password"
               onChange={(event) => setLoginForm((current) => ({ ...current, password: event.target.value }))}
@@ -415,7 +415,7 @@ export function PublicParticipantAuthForm({
           <FieldShell error={error || undefined} id="reset-whatsapp" label="Nomor WhatsApp Terdaftar" required>
             <Input
               autoComplete="tel"
-              className="h-11 rounded-2xl"
+              className="h-11 rounded-2xl border-white/12 bg-white/8 text-white placeholder:text-white/30 focus-visible:border-[#00adee]/50"
               disabled={isSubmitting}
               id="reset-whatsapp"
               onChange={(event) => setResetForm((current) => ({ ...current, whatsapp: event.target.value }))}
@@ -428,7 +428,7 @@ export function PublicParticipantAuthForm({
           </PublicButton>
           <div className="text-center">
             <button
-              className="text-sm font-medium text-slate-600 hover:underline"
+              className="text-sm font-medium text-white/50 hover:text-white/80 hover:underline"
               disabled={isSubmitting}
               onClick={() => resetTransientState("login")}
               type="button"
@@ -441,6 +441,7 @@ export function PublicParticipantAuthForm({
         <form className="space-y-4" onSubmit={handleRegister}>
       <FieldShell id="organization" label="Pilih Organisasi" required>
             <OptionAutocompleteSelect
+              variant="dark"
               disabled={isSubmitting}
               onValueChange={(value) => {
                 setSelectedForbisMember(null);
@@ -491,7 +492,7 @@ export function PublicParticipantAuthForm({
             ) : (
               <Input
                 autoComplete="name"
-                className="h-11 rounded-2xl"
+                className="h-11 rounded-2xl border-white/12 bg-white/8 text-white placeholder:text-white/30 focus-visible:border-[#00adee]/50"
                 disabled={isSubmitting || !registerForm.organizationGroupId}
                 id="name"
                 onChange={(event) => setRegisterForm((current) => ({ ...current, name: event.target.value }))}
@@ -503,7 +504,7 @@ export function PublicParticipantAuthForm({
           {isForbisOrganization && (
             <FieldShell hint="Nomor ID keanggotaan FORBIS (otomatis terisi)" id="forbisMemberId" label="Nomor ID FORBIS">
               <Input
-                className="h-11 rounded-2xl bg-slate-50"
+                className="h-11 rounded-2xl border-white/8 bg-white/5 text-white/50 placeholder:text-white/25"
                 id="forbisMemberId"
                 onChange={(event) => setRegisterForm((current) => ({ ...current, forbisMemberId: event.target.value }))}
                 placeholder="Terisi otomatis saat memilih nama anggota"
@@ -514,7 +515,7 @@ export function PublicParticipantAuthForm({
           <FieldShell hint="Opsional. Dipakai untuk pengiriman invoice dan notifikasi." id="email" label="Email">
             <Input
               autoComplete="email"
-              className="h-11 rounded-2xl"
+              className="h-11 rounded-2xl border-white/12 bg-white/8 text-white placeholder:text-white/30 focus-visible:border-[#00adee]/50"
               disabled={isSubmitting || !registerForm.organizationGroupId}
               id="email"
               onChange={(event) => setRegisterForm((current) => ({ ...current, email: event.target.value }))}
@@ -527,7 +528,7 @@ export function PublicParticipantAuthForm({
             <FieldShell id="phone" label="Nomor Telepon" required>
               <Input
                 autoComplete="tel"
-                className="h-11 rounded-2xl"
+                className="h-11 rounded-2xl border-white/12 bg-white/8 text-white placeholder:text-white/30 focus-visible:border-[#00adee]/50"
                 disabled={isSubmitting || !registerForm.organizationGroupId}
                 id="phone"
                 onChange={(event) => setRegisterForm((current) => ({ ...current, phone: event.target.value }))}
@@ -538,7 +539,7 @@ export function PublicParticipantAuthForm({
             <FieldShell id="whatsapp" label="Nomor WhatsApp" required>
               <Input
                 autoComplete="tel"
-                className="h-11 rounded-2xl"
+                className="h-11 rounded-2xl border-white/12 bg-white/8 text-white placeholder:text-white/30 focus-visible:border-[#00adee]/50"
                 disabled={isSubmitting || registerForm.sameWhatsapp || !registerForm.organizationGroupId}
                 id="whatsapp"
                 onChange={(event) => setRegisterForm((current) => ({ ...current, whatsapp: event.target.value }))}
@@ -558,7 +559,7 @@ export function PublicParticipantAuthForm({
           </label>
           <FieldShell id="kmi" label="Alumni Pondok Modern Gontor?" required>
             <select
-              className="h-11 w-full rounded-2xl border border-border bg-white px-3 text-sm"
+              className="h-11 w-full rounded-2xl border border-white/12 bg-white/8 px-3 text-sm text-white"
               disabled={isSubmitting || !registerForm.organizationGroupId}
               id="kmi"
               onChange={(event) =>
@@ -578,7 +579,7 @@ export function PublicParticipantAuthForm({
           {registerForm.isKmiAlumni === "true" && (
             <FieldShell hint="Tahun lulus/tamat dari KMI" id="kmiYear" label="Tahun Alumni KMI" required>
               <Input
-                className="h-11 rounded-2xl"
+                className="h-11 rounded-2xl border-white/12 bg-white/8 text-white placeholder:text-white/30 focus-visible:border-[#00adee]/50"
                 disabled={isSubmitting}
                 id="kmiYear"
                 inputMode="numeric"
@@ -597,7 +598,7 @@ export function PublicParticipantAuthForm({
           <FieldShell id="password" label="Buat Password" required>
             <Input
               autoComplete="new-password"
-              className="h-11 rounded-2xl"
+              className="h-11 rounded-2xl border-white/12 bg-white/8 text-white placeholder:text-white/30 focus-visible:border-[#00adee]/50"
               disabled={isSubmitting || !registerForm.organizationGroupId}
               id="password"
               minLength={8}

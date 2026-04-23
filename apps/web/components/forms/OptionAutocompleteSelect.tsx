@@ -19,6 +19,7 @@ type OptionAutocompleteSelectProps = {
   options: FormSelectOption[];
   placeholder: string;
   value: string;
+  variant?: "default" | "dark";
 };
 
 export function OptionAutocompleteSelect({
@@ -28,7 +29,9 @@ export function OptionAutocompleteSelect({
   options,
   placeholder,
   value,
+  variant = "default",
 }: OptionAutocompleteSelectProps) {
+  const isDark = variant === "dark";
   const selectedOption = options.find((option) => option.id === value) ?? null;
   const [inputValue, setInputValue] = React.useState(selectedOption?.label ?? "");
   const [isOpen, setIsOpen] = React.useState(false);
@@ -65,7 +68,7 @@ export function OptionAutocompleteSelect({
       <Search className="pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2 text-muted-foreground/70" />
       <Input
         autoComplete="off"
-        className="h-11 rounded-2xl pr-11 pl-9"
+        className={cn("h-11 rounded-2xl pr-11 pl-9", isDark && "border-white/12 bg-white/8 text-white placeholder:text-white/30")}
         disabled={disabled}
         onBlur={() => {
           window.setTimeout(() => setIsOpen(false), 120);
@@ -88,7 +91,12 @@ export function OptionAutocompleteSelect({
       <ChevronDown className="pointer-events-none absolute top-1/2 right-3 z-10 size-4 -translate-y-1/2 text-muted-foreground/70" />
 
       {isOpen && !disabled ? (
-        <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-2xl border border-border/80 bg-white/98 shadow-[0_24px_60px_rgba(15,23,42,0.14)] backdrop-blur-sm">
+        <div className={cn(
+          "absolute z-30 mt-2 w-full overflow-hidden rounded-2xl border shadow-[0_24px_60px_rgba(15,23,42,0.24)] backdrop-blur-sm",
+          isDark
+            ? "border-white/12 bg-[#0d2451]/95"
+            : "border-border/80 bg-white/98"
+        )}>
           {filteredOptions.length > 0 ? (
             <div className="max-h-72 overflow-y-auto p-2">
               {filteredOptions.map((option) => {
@@ -98,9 +106,13 @@ export function OptionAutocompleteSelect({
                   <button
                     className={cn(
                       "flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm transition-colors",
-                      isSelected
-                        ? "bg-primary-50 font-medium text-primary-900"
-                        : "text-foreground hover:bg-muted/60"
+                      isDark
+                        ? isSelected
+                          ? "bg-white/12 font-medium text-white"
+                          : "text-white/70 hover:bg-white/8 hover:text-white"
+                        : isSelected
+                          ? "bg-primary-50 font-medium text-primary-900"
+                          : "text-foreground hover:bg-muted/60"
                     )}
                     key={option.id}
                     onMouseDown={(event) => {
@@ -116,7 +128,7 @@ export function OptionAutocompleteSelect({
               })}
             </div>
           ) : (
-            <div className="px-4 py-3 text-sm text-muted-foreground">
+            <div className={cn("px-4 py-3 text-sm", isDark ? "text-white/40" : "text-muted-foreground")}>
               Tidak ada opsi yang cocok.
             </div>
           )}

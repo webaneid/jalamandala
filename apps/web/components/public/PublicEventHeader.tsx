@@ -135,18 +135,18 @@ function AvatarMenu({
             <>
               <div className="border-b border-white/8 px-4 py-2.5">
                 <p className="text-xs font-semibold text-white">{participant!.name}</p>
+                <p className="text-[10px] text-white/35">Peserta terdaftar</p>
               </div>
               <Link
-                href={`/${eventSlug}/dashboard/profil`}
+                href={`/${eventSlug}/dashboard`}
                 className="flex items-center gap-2 px-4 py-2.5 text-sm text-white/70 transition hover:bg-white/8 hover:text-white"
                 onClick={() => setOpen(false)}
               >
-                Profil
+                Dashboard
               </Link>
               <a
-                href="/api/public/logout"
+                href={`/api/public/logout?next=/${eventSlug}`}
                 className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-red-400 transition hover:bg-white/8 hover:text-red-300"
-                onClick={() => setOpen(false)}
               >
                 Keluar
               </a>
