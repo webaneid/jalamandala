@@ -159,12 +159,22 @@ export default async function DashboardUsahaPage({
           })
         )}
 
-        {/* FAB Tambah Usaha */}
+        {/* FAB actions */}
         {businesses.length > 0 && (
-          <div className="pt-2 pb-6 flex justify-center">
+          <div className="pt-2 pb-6 flex flex-col gap-3">
+            <Link
+              href={`/${eventSlug}/booking`}
+              className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3.5 text-sm font-semibold text-white shadow-sm"
+            >
+              <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path d="M3 9l9-7 9 7v11a1 1 0 01-1 1H4a1 1 0 01-1-1z" strokeLinecap="round" />
+                <path d="M9 22V12h6v10" strokeLinecap="round" />
+              </svg>
+              Booking Booth Baru
+            </Link>
             <Link
               href={`/${eventSlug}/usaha/baru`}
-              className="flex items-center gap-2 rounded-full border-2 border-primary bg-white px-5 py-3 text-sm font-semibold text-primary shadow-sm"
+              className="flex items-center justify-center gap-2 rounded-2xl border-2 border-primary bg-white px-5 py-3 text-sm font-semibold text-primary"
             >
               <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                 <path d="M12 5v14M5 12h14" strokeLinecap="round" />

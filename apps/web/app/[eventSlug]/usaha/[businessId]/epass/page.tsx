@@ -1,8 +1,9 @@
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { eq } from "drizzle-orm"
+import QRCode from "qrcode"
 import { db, createTenantDb } from "@repo/db"
-import { participants, participantBusinesses } from "@repo/db/schema/public"
+import { expoEvents, participants, participantBusinesses } from "@repo/db/schema/public"
 import { boothBookings } from "@repo/db/schema/tenant"
 import { getCurrentParticipantSession } from "@/lib/participant-session"
 
@@ -20,7 +21,7 @@ export default async function EPassBoothPage({ params }: Props) {
     redirect(`/${eventSlug}/login`)
   }
 
-  const [participant, business] = await Promise.all([
+  const [participant, business, event] = await Promise.all([
     db.query.participants.findFirst({
       where: eq(participants.id, session.participantId),
       columns: { name: true, organizationGroupName: true },
@@ -35,6 +36,10 @@ export default async function EPassBoothPage({ params }: Props) {
         requestedBoothCategoryName: true,
         logoAssetId: true,
       },
+    }),
+    db.query.expoEvents.findFirst({
+      where: eq(expoEvents.slug, eventSlug),
+      columns: { name: true },
     }),
   ])
 
@@ -61,6 +66,17 @@ export default async function EPassBoothPage({ params }: Props) {
   const zoneColorCode = booking?.booth?.zone?.colorCode ?? null
   const bookingStatus = booking?.bookingStatus ?? null
 
+  // QR code — encode booth code + business ID untuk verifikasi panitia
+  const qrContent = boothCode
+    ? `${boothCode}|${businessId}`
+    : businessId
+  const qrSvg = await QRCode.toString(qrContent, {
+    type: "svg",
+    margin: 0,
+    width: 160,
+    color: { dark: "#134397", light: "#ffffff" },
+  })
+
   const initials = (participant?.name ?? "?")
     .split(" ")
     .slice(0, 2)
@@ -86,7 +102,7 @@ export default async function EPassBoothPage({ params }: Props) {
               E-Pass Booth
             </p>
             <p className="relative mt-1 text-lg font-bold tracking-wide">
-              FORBIS Expo 2026
+              {event?.name ?? eventSlug}
             </p>
 
             {/* Avatar — overlaps into body */}
@@ -143,8 +159,17 @@ export default async function EPassBoothPage({ params }: Props) {
               <StatusChip status={bookingStatus} />
             </div>
 
+            {/* QR Code */}
+            <div className="mt-5 flex flex-col items-center gap-2">
+              <div
+                className="rounded-2xl border border-slate-100 bg-white p-3 shadow-inner"
+                dangerouslySetInnerHTML={{ __html: qrSvg }}
+              />
+              <p className="text-[10px] text-slate-400 tracking-widest uppercase">Scan untuk verifikasi</p>
+            </div>
+
             {/* Divider + peserta info */}
-            <div className="mt-5 border-t border-dashed border-slate-200 pt-5 space-y-0.5">
+            <div className="mt-4 border-t border-dashed border-slate-200 pt-4 space-y-0.5">
               <p className="text-[10px] text-slate-400 uppercase tracking-widest">Peserta</p>
               <p className="text-sm font-semibold text-slate-700">{participant?.name ?? "—"}</p>
               {business.requestedBoothCategoryName && (

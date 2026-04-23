@@ -84,15 +84,20 @@ export default async function DashboardProfilPage({
             termsApprovals.map((t) => (
               <div key={t.id} className="flex items-center justify-between px-4 py-3 border-t border-slate-50">
                 <div>
-                  <p className="text-sm font-medium text-slate-800">Syarat & Ketentuan</p>
+                  <p className="text-sm font-medium text-slate-800">{t.termsPageTitle}</p>
                   <p className="text-xs text-slate-500">Ditandatangani: {fmtDate(t.approvedAt)}</p>
                 </div>
-                <Link
-                  href={`/${eventSlug}/syarat-ketentuan`}
-                  className="shrink-0 rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                <a
+                  href={`/api/surat-pernyataan/${t.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/5 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/10 transition"
                 >
+                  <svg className="size-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
                   Lihat PDF
-                </Link>
+                </a>
               </div>
             ))
           )}
