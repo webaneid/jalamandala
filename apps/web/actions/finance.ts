@@ -1012,6 +1012,15 @@ export async function submitPublicPaymentConfirmation(payload: {
       return { success: false, error: "Invoice tidak aktif." };
     }
 
+    // Block if already has a pending_verification payment
+    const existingPending = await tenantDb.query.invoicePayments.findFirst({
+      where: and(eq(invoicePayments.invoiceId, invoice.id), eq(invoicePayments.status, "pending_verification")),
+      columns: { id: true },
+    });
+    if (existingPending) {
+      return { success: false, error: "Konfirmasi pembayaran Anda sedang dalam proses verifikasi. Mohon tunggu konfirmasi dari panitia." };
+    }
+
     const paidAt = wibInputToDate(normalizeText(payload.paidAt) || null);
     if (!paidAt) return { success: false, error: "Tanggal transfer tidak valid." };
 
@@ -1060,6 +1069,12 @@ export async function submitPublicPaymentConfirmation(payload: {
         module: "finance",
       });
     }
+
+    // Update invoice status to waiting_confirmation
+    await tenantDb
+      .update(invoices)
+      .set({ status: "waiting_confirmation", updatedAt: new Date() })
+      .where(eq(invoices.id, invoice.id));
 
     revalidatePath(`/invoice/${payload.publicToken}`);
     return { success: true };
@@ -1358,6 +1373,7 @@ export async function getInvoiceByToken(token: string) {
         method: p.method,
         referenceNumber: p.referenceNumber,
         paymentChannelLabel: p.paymentChannelLabel,
+        senderName: p.senderName,
         status: p.status,
       })),
       event: {

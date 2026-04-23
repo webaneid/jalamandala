@@ -15,7 +15,8 @@ const fmtDate = (d: Date | null | undefined) =>
 
 const STATUS_MAP: Record<string, { label: string; color: string; dot: string }> = {
   paid: { label: "Lunas", color: "bg-emerald-50 border-emerald-200 text-emerald-700", dot: "bg-emerald-400" },
-  waiting_for_payment: { label: "Menunggu Bayar", color: "bg-amber-50 border-amber-200 text-amber-700", dot: "bg-amber-400" },
+  waiting_for_payment: { label: "Menunggu Pembayaran", color: "bg-amber-50 border-amber-200 text-amber-700", dot: "bg-amber-400" },
+  waiting_confirmation: { label: "Menunggu Konfirmasi", color: "bg-blue-50 border-blue-200 text-blue-700", dot: "bg-blue-400" },
   expired: { label: "Kedaluwarsa", color: "bg-slate-100 border-slate-200 text-slate-500", dot: "bg-slate-400" },
   cancelled: { label: "Dibatalkan", color: "bg-red-50 border-red-200 text-red-600", dot: "bg-red-400" },
 }

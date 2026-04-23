@@ -669,14 +669,34 @@ function InvoiceStatusBadge({ status }: { status: string }) {
   if (status === "paid") {
     return (
       <Badge className="bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200">
-        Paid
+        Lunas
       </Badge>
     );
   }
-
+  if (status === "waiting_confirmation") {
+    return (
+      <Badge className="bg-blue-50 text-blue-700 ring-1 ring-blue-200">
+        Menunggu Konfirmasi
+      </Badge>
+    );
+  }
+  if (status === "expired") {
+    return (
+      <Badge className="bg-neutral-100 text-neutral-500 ring-1 ring-neutral-200">
+        Kedaluwarsa
+      </Badge>
+    );
+  }
+  if (status === "cancelled") {
+    return (
+      <Badge className="bg-red-50 text-red-600 ring-1 ring-red-200">
+        Dibatalkan
+      </Badge>
+    );
+  }
   return (
     <Badge className="bg-amber-50 text-amber-700 ring-1 ring-amber-200">
-      Waiting for payment
+      Menunggu Pembayaran
     </Badge>
   );
 }

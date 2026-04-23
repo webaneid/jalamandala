@@ -56,8 +56,11 @@ export default async function PublicInvoicePage({
       ? new Date() > invoice.dueDate && invoice.status !== "paid" && invoice.status !== "cancelled"
       : false;
   const isPaid = invoice.status === "paid";
+  const isWaitingConfirmation = invoice.status === "waiting_confirmation";
   const isClosedStatus = isPaid || invoice.status === "expired" || invoice.status === "cancelled";
   const showPaymentSection = !isClosedStatus;
+  const hasPendingPayment = payments.some((p) => p.status === "pending_verification");
+  const pendingPayments = payments.filter((p) => p.status === "pending_verification");
   const paidPayments = payments.filter((p) => p.status === "paid");
 
   function StatusBadge() {
@@ -66,6 +69,14 @@ export default async function PublicInvoicePage({
         <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none gap-1.5">
           <CheckCircle2 className="w-4 h-4" />
           Lunas
+        </Badge>
+      );
+    }
+    if (isWaitingConfirmation) {
+      return (
+        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none gap-1.5">
+          <Clock className="w-4 h-4" />
+          Menunggu Konfirmasi Panitia
         </Badge>
       );
     }
@@ -337,15 +348,51 @@ export default async function PublicInvoicePage({
                       </div>
                     )}
 
-                    {/* Masukan pembayaran */}
-                    <PaymentConfirmationTrigger
-                      businessId={businessId}
-                      eventSlug={event.slug}
-                      grandTotal={invoice.grandTotal}
-                      invoiceNumber={invoice.invoiceNumber}
-                      paymentOptions={paymentOptions}
-                      publicToken={invoice.publicToken}
-                    />
+                    {/* Pending confirmation notice */}
+                    {hasPendingPayment ? (
+                      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 space-y-3">
+                        <div className="flex items-start gap-2">
+                          <Clock className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-sm font-semibold text-blue-800">Konfirmasi pembayaran sedang diverifikasi</p>
+                            <p className="text-xs text-blue-700 mt-0.5">
+                              Panitia sedang memverifikasi bukti transfer Anda. Mohon tunggu notifikasi.
+                            </p>
+                          </div>
+                        </div>
+                        {pendingPayments.map((p) => (
+                          <div key={p.id} className="rounded-lg bg-white border border-blue-100 p-3 text-sm space-y-1">
+                            <div className="flex justify-between">
+                              <span className="text-neutral-500">Nominal</span>
+                              <span className="font-semibold text-neutral-900">{formatCurrency(p.amount)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-neutral-500">Atas nama</span>
+                              <span className="font-medium text-neutral-800">{p.senderName ?? "—"}</span>
+                            </div>
+                            {p.paymentChannelLabel && (
+                              <div className="flex justify-between">
+                                <span className="text-neutral-500">Via</span>
+                                <span className="font-medium text-neutral-800">{p.paymentChannelLabel}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between">
+                              <span className="text-neutral-500">Waktu transfer</span>
+                              <span className="font-medium text-neutral-800">{formatDate(p.paidAt)}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <PaymentConfirmationTrigger
+                        businessId={businessId}
+                        eventSlug={event.slug}
+                        grandTotal={invoice.grandTotal}
+                        invoiceNumber={invoice.invoiceNumber}
+                        paymentOptions={paymentOptions}
+                        publicToken={invoice.publicToken}
+                      />
+                    )}
 
                     {/* WA confirmation */}
                     {waLink && (
@@ -364,8 +411,8 @@ export default async function PublicInvoicePage({
               </div>
             )}
 
-            {/* Payment history */}
-            {paidPayments.length > 0 && (
+            {/* Payment history — all payments */}
+            {payments.length > 0 && (
               <div>
                 <h3 className="text-sm font-semibold text-neutral-900 mb-3 flex items-center gap-2">
                   <History className="w-4 h-4 text-neutral-400" />
@@ -376,28 +423,41 @@ export default async function PublicInvoicePage({
                     <thead className="bg-neutral-50 border-b">
                       <tr>
                         <th className="px-4 py-3 text-left font-medium text-neutral-500">Tanggal</th>
-                        <th className="px-4 py-3 text-left font-medium text-neutral-500">Channel</th>
+                        <th className="px-4 py-3 text-left font-medium text-neutral-500">Channel / Pengirim</th>
                         <th className="px-4 py-3 text-right font-medium text-neutral-500">Nominal</th>
                         <th className="px-4 py-3 text-left font-medium text-neutral-500">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
-                      {paidPayments.map((p) => (
+                      {payments.map((p) => (
                         <tr key={p.id} className="bg-white">
                           <td className="px-4 py-3 text-neutral-700">{formatDate(p.paidAt)}</td>
                           <td className="px-4 py-3 text-neutral-700">
-                            {p.paymentChannelLabel ?? p.method ?? "-"}
-                            {p.referenceNumber && (
-                              <p className="text-xs text-neutral-400">{p.referenceNumber}</p>
-                            )}
+                            <p>{p.paymentChannelLabel ?? p.method ?? "-"}</p>
+                            {p.senderName && <p className="text-xs text-neutral-400">a/n {p.senderName}</p>}
+                            {p.referenceNumber && <p className="text-xs text-neutral-400">{p.referenceNumber}</p>}
                           </td>
                           <td className="px-4 py-3 text-right font-medium text-neutral-900">
                             {formatCurrency(p.amount)}
                           </td>
                           <td className="px-4 py-3">
-                            <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none text-xs">
-                              Terverifikasi
-                            </Badge>
+                            {p.status === "paid" ? (
+                              <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none text-xs">
+                                Terverifikasi
+                              </Badge>
+                            ) : p.status === "pending_verification" ? (
+                              <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none text-xs">
+                                Menunggu Verifikasi
+                              </Badge>
+                            ) : p.status === "rejected" ? (
+                              <Badge className="bg-red-100 text-red-600 hover:bg-red-100 border-none text-xs">
+                                Ditolak
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-neutral-100 text-neutral-500 border-none text-xs">
+                                {p.status}
+                              </Badge>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -406,7 +466,7 @@ export default async function PublicInvoicePage({
                       <tfoot className="bg-neutral-50/50 border-t">
                         <tr>
                           <td colSpan={2} className="px-4 py-2 text-right text-sm text-neutral-500">
-                            Total Dibayar
+                            Total Terverifikasi
                           </td>
                           <td className="px-4 py-2 text-right font-bold text-green-700">
                             {formatCurrency(totalPaid)}
