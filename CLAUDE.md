@@ -205,6 +205,24 @@ Halaman invoice: `/invoice/{publicToken}` (`apps/web/app/invoice/[token]/page.ts
 - Peserta dapat E-Pass di `/{eventSlug}/usaha/{businessId}/epass` (QR code + info booth)
 - E-Pass hanya muncul jika `bookingStatus === "booked"`
 
+### Layout Booth (Hardcoded per Zone Slug)
+
+Layout visual booth di admin (`ClickableBoothMap.tsx`) dan frontend (`PublicBoothMap.tsx`) adalah **hardcoded per `zone.slug`** — bukan dinamis dari DB. Data booth (kode, status, harga) dari DB, tapi susunan grid/gangway dikode manual.
+
+| Zone slug | Layout | Konfigurasi saat ini |
+|-----------|--------|----------------------|
+| `vvip` | 2 kolom + gangway tengah, 1 baris | 3 kiri + 3 kanan = **6 booth** |
+| `vip` | 2 kolom + gangway tengah, 2 baris | 3 kiri + 3 kanan per baris = **12 booth** |
+| `premium` | 2 kolom vertikal + gangway, scrollable | ~36 booth, chunk 18 |
+| `festival-west` | Kolom tunggal vertikal, scrollable | 5 booth per blok |
+| `festival-north` | Baris tunggal horizontal, scrollable | 5 booth per blok |
+
+Kalau jumlah booth berubah, update `slice()` dan `grid-cols-N` di **dua tempat sekaligus**:
+1. `apps/web/components/admin/booth/ClickableBoothMap.tsx`
+2. `apps/web/components/public/PublicBoothMap.tsx`
+
+Jangan lupa sesuaikan `min-w-[Npx]` di wrapper jika lebar total grid berubah signifikan.
+
 ### Skema Database Terkait
 
 **Public schema** (shared):
