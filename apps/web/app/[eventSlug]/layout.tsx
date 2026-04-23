@@ -1,23 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getEventContextBySlug, getPublishedEventMenus } from "@/actions/public-pages";
+import { getCurrentParticipantSession } from "@/lib/participant-session";
 import { PublicEventHeader } from "@/components/public/PublicEventHeader";
-
-function resolveMenuUrl(menu: any, eventSlug: string) {
-  if (menu.sourceType === "external") return menu.externalUrl || "#";
-  if (menu.sourceType === "system") {
-    if (menu.systemKey === "homepage") return `/${eventSlug}`;
-    if (menu.systemKey === "agenda") return `/${eventSlug}/agenda`;
-    if (menu.systemKey === "booth") return `/${eventSlug}/booth`;
-    return `/${eventSlug}/${menu.systemKey}`;
-  }
-  if (menu.sourceType === "page" && menu.page) {
-    if (menu.page.pageType === "legal_tnc") return `/${eventSlug}/syarat-ketentuan`;
-    if (menu.page.pageType === "legal_privacy") return `/${eventSlug}/kebijakan-privasi`;
-    return `/${eventSlug}/halaman/${menu.page.slug}`;
-  }
-  return "#";
-}
 
 export default async function PublicEventLayout({
   children,
@@ -27,9 +12,9 @@ export default async function PublicEventLayout({
   params: Promise<{ eventSlug: string }>;
 }) {
   const resolvedParams = await params;
-  const [event, menus] = await Promise.all([
+  const [event, session] = await Promise.all([
     getEventContextBySlug(resolvedParams.eventSlug),
-    getPublishedEventMenus(resolvedParams.eventSlug)
+    getCurrentParticipantSession(),
   ]);
 
   if (!event) {
@@ -39,13 +24,11 @@ export default async function PublicEventLayout({
   const eventPagesData = (event as any).pages || [];
   const legalTnc = eventPagesData.find((p: any) => p.pageType === "legal_tnc");
   const legalPrivacy = eventPagesData.find((p: any) => p.pageType === "legal_privacy");
-  const logoSrc = event.logoAssetId ? `/api/media/${event.logoAssetId}` : null;
-  const headerMenus = menus.map((menu: any) => ({
-    id: menu.id,
-    label: menu.label,
-    href: resolveMenuUrl(menu, event.slug),
-    openInNewTab: menu.openInNewTab,
-  }));
+
+  const participantInfo =
+    session && session.eventSlug === event.slug
+      ? { name: session.name, eventSlug: session.eventSlug }
+      : null;
 
   return (
     <div
@@ -54,7 +37,7 @@ export default async function PublicEventLayout({
         background: "linear-gradient(160deg, #081d41 0%, #04101f 55%, #020a14 100%)",
       }}
     >
-      {/* Subtle ambient glow */}
+      {/* Ambient glow */}
       <div
         className="pointer-events-none fixed inset-0 z-0"
         style={{
@@ -64,7 +47,12 @@ export default async function PublicEventLayout({
       />
 
       <div className="relative z-10 flex min-h-screen flex-col">
-        <PublicEventHeader event={event} logoSrc={logoSrc} menus={headerMenus} />
+        <PublicEventHeader
+          eventSlug={event.slug}
+          eventName={event.name}
+          startDate={event.startDate ? event.startDate.toISOString() : null}
+          participant={participantInfo}
+        />
 
         <main className="flex-1">
           {children}
