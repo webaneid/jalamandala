@@ -249,6 +249,7 @@ export async function getPublicTenantZones() {
       activePricePhase: activePhase,
       activePricePhaseLabel: PRICE_PHASE_LABELS[activePhase as PricePhase] ?? activePhase,
       boothCount: zone.booths.length,
+      colorCode: zone.colorCode,
       description: zone.description,
       facilities: Array.from(facilities.values()).slice(0, 4),
       id: zone.id,

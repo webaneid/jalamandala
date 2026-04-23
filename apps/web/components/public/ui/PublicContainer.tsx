@@ -7,21 +7,14 @@ type PublicContainerProps = React.ComponentProps<"div"> & {
   asChild?: false;
 };
 
-const sizeClassMap: Record<NonNullable<PublicContainerProps["size"]>, string> = {
-  sm: "max-w-3xl",
-  md: "max-w-5xl",
-  lg: "max-w-7xl",
-  xl: "max-w-7xl",
-};
-
 export function PublicContainer({
   className,
-  size = "lg",
+  size: _size,
   ...props
 }: PublicContainerProps) {
   return (
     <div
-      className={cn("mx-auto w-full px-6 lg:px-8", sizeClassMap[size], className)}
+      className={cn("mx-auto w-full max-w-[720px] px-5", className)}
       {...props}
     />
   );

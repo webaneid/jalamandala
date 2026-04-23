@@ -3,8 +3,6 @@ import { notFound } from "next/navigation";
 
 import { getEventContextBySlug, getPublishedEventAgendas } from "@/actions/public-pages";
 import { PublicContainer } from "@/components/public/ui/PublicContainer";
-import { getPublicButtonClassName } from "@/components/public/ui/PublicButton";
-import { SectionHeader } from "@/components/public/ui/SectionHeader";
 
 const AGENDA_TIMEZONE = "Asia/Jakarta";
 
@@ -43,19 +41,13 @@ function getAgendaDateKey(value: Date | string) {
 
 function groupAgendasByDay(agendas: any[]) {
   const groups = new Map<string, { key: string; label: string; items: any[] }>();
-
   for (const agenda of agendas) {
     const key = getAgendaDateKey(agenda.startAt);
     if (!groups.has(key)) {
-      groups.set(key, {
-        key,
-        label: formatAgendaDate(agenda.startAt),
-        items: [],
-      });
+      groups.set(key, { key, label: formatAgendaDate(agenda.startAt), items: [] });
     }
     groups.get(key)?.items.push(agenda);
   }
-
   return Array.from(groups.values());
 }
 
@@ -66,94 +58,86 @@ export default async function PublicAgendaPage({
 }) {
   const { eventSlug } = await params;
   const event = await getEventContextBySlug(eventSlug);
-
-  if (!event) {
-    notFound();
-  }
+  if (!event) notFound();
 
   const agendas = await getPublishedEventAgendas(event.id);
   const agendaGroups = groupAgendasByDay(agendas);
 
   return (
-    <section className="bg-white py-16 sm:py-20">
+    <section className="py-12">
       <PublicContainer>
+        {/* Back */}
         <div className="mb-8">
           <Link
             href={`/${event.slug}`}
-            className={getPublicButtonClassName({
-              tone: "outline",
-              className: "h-10 rounded-xl px-4 text-sm",
-            })}
+            className="inline-flex h-9 items-center rounded-xl border border-white/14 bg-white/6 px-4 text-sm font-medium text-white/70 transition hover:bg-white/10 hover:text-white"
           >
-            Kembali ke beranda
+            ← Kembali ke beranda
           </Link>
         </div>
 
-        <SectionHeader
-          eyebrow={event.name}
-          title="Agenda Lengkap"
-          description="Susunan agenda lengkap berdasarkan hari dan jam. Semua waktu menggunakan WIB."
-        />
+        {/* Header */}
+        <div className="mb-8 space-y-2">
+          <span className="inline-flex items-center rounded-full bg-[#00adee]/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#00adee]">
+            {event.name}
+          </span>
+          <h1 className="text-3xl font-bold tracking-tight text-white">Agenda Lengkap</h1>
+          <p className="text-sm text-white/50">
+            Susunan agenda lengkap berdasarkan hari dan jam. Semua waktu menggunakan WIB.
+          </p>
+        </div>
 
-        <div className="mt-10 space-y-8">
+        {/* Content */}
+        <div className="space-y-5">
           {agendaGroups.length === 0 ? (
-            <div className="rounded-[2rem] border border-slate-100 bg-slate-50 p-8 text-center text-slate-600">
+            <div className="rounded-3xl border border-white/8 bg-white/5 p-8 text-center text-sm text-white/45">
               Agenda belum tersedia saat ini.
             </div>
           ) : (
             agendaGroups.map((group) => (
               <section
                 key={group.key}
-                className="overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.06)]"
+                className="overflow-hidden rounded-3xl border border-white/8 bg-white/4"
               >
-                <div className="border-b border-slate-100 bg-slate-50 px-5 py-4 sm:px-6">
-                  <h2 className="text-xl font-semibold tracking-[-0.03em] text-slate-950">
-                    {group.label}
-                  </h2>
+                <div className="border-b border-white/8 bg-[#134397]/25 px-5 py-3">
+                  <h2 className="text-base font-semibold text-white">{group.label}</h2>
                 </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[760px] border-collapse text-left">
-                    <thead className="bg-white text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      <tr>
-                        <th className="w-48 border-b border-slate-100 px-5 py-4 sm:px-6">Jam</th>
-                        <th className="border-b border-slate-100 px-5 py-4 sm:px-6">Agenda</th>
-                        <th className="w-64 border-b border-slate-100 px-5 py-4 sm:px-6">Lokasi</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {group.items.map((agenda) => {
-                        const location = [agenda.venueName, agenda.stageName].filter(Boolean).join(" · ");
-                        const speakers = Array.isArray(agenda.speakerNames)
-                          ? agenda.speakerNames.filter(Boolean).join(", ")
-                          : "";
+                <div className="divide-y divide-white/6">
+                  {group.items.map((agenda) => {
+                    const location = [agenda.venueName, agenda.stageName]
+                      .filter(Boolean)
+                      .join(" · ");
+                    const speakers = Array.isArray(agenda.speakerNames)
+                      ? agenda.speakerNames.filter(Boolean).join(", ")
+                      : "";
 
-                        return (
-                          <tr key={agenda.id} className="align-top transition-colors hover:bg-slate-50/70">
-                            <td className="px-5 py-5 text-sm font-semibold text-primary-700 sm:px-6">
-                              {formatAgendaTimeRange(agenda.startAt, agenda.endAt)}
-                            </td>
-                            <td className="px-5 py-5 sm:px-6">
-                              <h3 className="text-base font-semibold text-slate-950">{agenda.title}</h3>
-                              {agenda.description ? (
-                                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-                                  {agenda.description}
-                                </p>
-                              ) : null}
-                              {speakers ? (
-                                <p className="mt-3 text-sm font-medium text-slate-700">
-                                  Narasumber: {speakers}
-                                </p>
-                              ) : null}
-                            </td>
-                            <td className="px-5 py-5 text-sm leading-6 text-slate-600 sm:px-6">
-                              {location || "-"}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                    return (
+                      <div key={agenda.id} className="px-5 py-4">
+                        <div className="flex flex-col gap-1 sm:flex-row sm:gap-4">
+                          <p className="shrink-0 text-sm font-semibold text-[#00adee] sm:w-36">
+                            {formatAgendaTimeRange(agenda.startAt, agenda.endAt)}
+                          </p>
+                          <div className="flex-1 space-y-1">
+                            <p className="text-sm font-semibold text-white">{agenda.title}</p>
+                            {agenda.description && (
+                              <p className="text-sm leading-6 text-white/50">{agenda.description}</p>
+                            )}
+                            {speakers && (
+                              <p className="text-xs font-medium text-white/40">
+                                Narasumber: {speakers}
+                              </p>
+                            )}
+                          </div>
+                          {location && (
+                            <p className="shrink-0 text-xs text-white/40 sm:w-36 sm:text-right">
+                              {location}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </section>
             ))

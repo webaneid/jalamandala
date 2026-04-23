@@ -36,7 +36,6 @@ export default async function PublicEventLayout({
     notFound();
   }
 
-  // Cari link legal dari data pages yang ada
   const eventPagesData = (event as any).pages || [];
   const legalTnc = eventPagesData.find((p: any) => p.pageType === "legal_tnc");
   const legalPrivacy = eventPagesData.find((p: any) => p.pageType === "legal_privacy");
@@ -49,33 +48,48 @@ export default async function PublicEventLayout({
   }));
 
   return (
-    <div className="flex min-h-screen flex-col bg-white bg-[radial-gradient(circle_at_12%_0%,rgba(0,173,238,0.22),transparent_32%),radial-gradient(circle_at_86%_4%,rgba(19,67,151,0.18),transparent_30%),linear-gradient(180deg,#c6d4e9_0%,#e5f7fd_24rem,#ffffff_42rem)] bg-[length:100%_640px] bg-no-repeat">
-      <PublicEventHeader event={event} logoSrc={logoSrc} menus={headerMenus} />
+    <div
+      className="relative min-h-screen text-white"
+      style={{
+        background: "linear-gradient(160deg, #081d41 0%, #04101f 55%, #020a14 100%)",
+      }}
+    >
+      {/* Subtle ambient glow */}
+      <div
+        className="pointer-events-none fixed inset-0 z-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 40% at 50% 0%, rgba(0,173,238,0.10) 0%, transparent 60%), radial-gradient(ellipse 60% 50% at 80% 80%, rgba(19,67,151,0.14) 0%, transparent 60%)",
+        }}
+      />
 
-      <main className="flex-1">
-        {children}
-      </main>
+      <div className="relative z-10 flex min-h-screen flex-col">
+        <PublicEventHeader event={event} logoSrc={logoSrc} menus={headerMenus} />
 
-      {/* Global Minimal Footer */}
-      <footer className="bg-white border-t border-slate-100 py-8">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-slate-500">
-            &copy; {new Date().getFullYear()} {event.name}. All rights reserved.
-          </p>
-          <div className="flex gap-4 text-sm text-slate-500">
-            {legalTnc && (
-              <Link href={`/${event.slug}/syarat-ketentuan`} className="hover:text-slate-900">
-                Syarat & Ketentuan
-              </Link>
-            )}
-            {legalPrivacy && (
-              <Link href={`/${event.slug}/kebijakan-privasi`} className="hover:text-slate-900">
-                Kebijakan Privasi
-              </Link>
-            )}
+        <main className="flex-1">
+          {children}
+        </main>
+
+        <footer className="border-t border-white/8 py-8">
+          <div className="mx-auto max-w-[720px] px-5 flex flex-col gap-4 text-center sm:flex-row sm:justify-between sm:text-left">
+            <p className="text-sm text-white/40">
+              &copy; {new Date().getFullYear()} {event.name}. Hak cipta dilindungi.
+            </p>
+            <div className="flex justify-center gap-5 text-sm sm:justify-end">
+              {legalTnc && (
+                <Link href={`/${event.slug}/syarat-ketentuan`} className="text-white/40 transition hover:text-white/70">
+                  Syarat & Ketentuan
+                </Link>
+              )}
+              {legalPrivacy && (
+                <Link href={`/${event.slug}/kebijakan-privasi`} className="text-white/40 transition hover:text-white/70">
+                  Kebijakan Privasi
+                </Link>
+              )}
+            </div>
           </div>
-        </div>
-      </footer>
+        </footer>
+      </div>
     </div>
   );
 }

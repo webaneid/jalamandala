@@ -5,8 +5,6 @@ import { boothGroups } from '@repo/db/schema/tenant'
 import { getCurrentParticipantSession } from '@/lib/participant-session'
 import { PublicParticipantAuthForm } from '@/components/public/PublicParticipantAuthForm'
 import { PublicContainer } from '@/components/public/ui/PublicContainer'
-import { SectionHeader } from '@/components/public/ui/SectionHeader'
-import { FormSectionCard } from '@/components/public/ui/FormSectionCard'
 
 export const metadata = {
   title: 'Masuk — Peserta Expo',
@@ -44,15 +42,19 @@ export default async function LoginPage({ params, searchParams }: Props) {
   })
 
   return (
-    <PublicContainer size="sm" className="py-12 sm:py-16">
-      <div className="mx-auto flex min-h-[70vh] items-center justify-center">
-        <div className="w-full space-y-6">
-          <SectionHeader
-            align="center"
-            eyebrow="Akses Peserta"
-            title="Masuk atau Daftar Peserta"
-          />
-          <FormSectionCard className="mx-auto max-w-md" contentClassName="pt-6">
+    <PublicContainer className="py-14">
+      <div className="flex min-h-[70vh] items-center justify-center">
+        <div className="w-full max-w-sm space-y-6">
+          {/* Header */}
+          <div className="space-y-1 text-center">
+            <span className="inline-flex items-center rounded-full bg-[#00adee]/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#00adee]">
+              Akses Peserta
+            </span>
+            <h1 className="text-2xl font-bold text-white">Masuk atau Daftar Peserta</h1>
+          </div>
+
+          {/* Auth card */}
+          <div className="rounded-3xl border border-white/10 bg-white/6 p-6 backdrop-blur-sm">
             <PublicParticipantAuthForm
               eventSlug={eventSlug}
               initialMode={initialMode}
@@ -63,7 +65,7 @@ export default async function LoginPage({ params, searchParams }: Props) {
               }))}
               redirectTo={redirectTo}
             />
-          </FormSectionCard>
+          </div>
         </div>
       </div>
     </PublicContainer>

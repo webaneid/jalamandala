@@ -38,12 +38,11 @@ export default async function SyaratKetentuanPage({
   }
 
   return (
-    <div className="py-20 bg-white">
-      <div className="mx-auto max-w-3xl px-6 lg:px-8">
-        <h1 className="text-4xl font-bold tracking-tight text-slate-900 mb-8">{pageData.title}</h1>
-        
-        <article 
-          className="prose prose-slate prose-lg max-w-none font-sans prose-img:rounded-2xl prose-img:border prose-img:border-slate-100"
+    <div className="py-14">
+      <div className="mx-auto max-w-[720px] px-5">
+        <h1 className="mb-8 text-3xl font-bold tracking-tight text-white">{pageData.title}</h1>
+        <article
+          className="prose prose-invert prose-sm max-w-none prose-img:rounded-2xl"
           dangerouslySetInnerHTML={{ __html: htmlString }}
         />
       </div>
