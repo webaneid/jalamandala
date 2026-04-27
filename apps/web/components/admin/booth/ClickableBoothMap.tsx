@@ -914,26 +914,22 @@ function PremiumZoneLayout({
 
   return (
     <div className="overflow-x-auto rounded-[30px] bg-slate-50 p-5 ring-1 ring-slate-200/90">
-      <div className="flex min-w-[620px] items-start justify-center gap-2">
-        <PremiumCol booths={outerLeft} />
-
-        <PremiumCol booths={innerLeft} />
-
-        {/* Stage + area tengah */}
-        <div className="flex w-40 shrink-0 flex-col items-stretch">
-          <div className="rounded-xl border-2 border-slate-400 bg-slate-200 px-3 py-2.5 text-center">
+      <div className="flex min-w-[620px] flex-col gap-3">
+        {/* Stage — berdiri sendiri di atas, tengah, kiri-kanan kosong */}
+        <div className="flex items-center justify-center px-8">
+          <div className="rounded-xl border-2 border-slate-400 bg-slate-200 px-14 py-2.5 text-center">
             <p className="text-xs font-bold uppercase tracking-widest text-slate-600">Stage</p>
-          </div>
-          <div className="flex flex-1 items-center justify-center border-x border-b border-dashed border-slate-300 py-4">
-            <p className="rotate-180 text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-400 [writing-mode:vertical-rl]">
-              Area Penonton
-            </p>
           </div>
         </div>
 
-        <PremiumCol booths={innerRight} />
-
-        <PremiumCol booths={outerRight} />
+        {/* 4 kolom booth di bawah stage */}
+        <div className="flex items-start justify-center gap-2">
+          <PremiumCol booths={outerLeft} />
+          <PremiumCol booths={innerLeft} />
+          <div className="w-10 shrink-0" />
+          <PremiumCol booths={innerRight} />
+          <PremiumCol booths={outerRight} />
+        </div>
       </div>
     </div>
   );

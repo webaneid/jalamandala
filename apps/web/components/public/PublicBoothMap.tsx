@@ -136,28 +136,22 @@ function PremiumLayout({ zone, selected, onSelect }: LayoutProps) {
   return (
     <div className="rounded-[30px] bg-slate-50 p-4 ring-1 ring-slate-200/90">
       <div className="overflow-x-auto">
-        <div className="flex min-w-[560px] items-start justify-center gap-2">
-          {/* Outer left */}
-          <PremiumCol booths={outerLeft} selected={selected} onSelect={onSelect} />
-
-          {/* Inner left */}
-          <PremiumCol booths={innerLeft} selected={selected} onSelect={onSelect} />
-
-          {/* Stage + area tengah */}
-          <div className="flex w-36 shrink-0 flex-col items-stretch gap-0">
-            <div className="rounded-xl border-2 border-slate-400 bg-slate-200 px-2 py-2 text-center">
+        <div className="flex min-w-[560px] flex-col gap-3">
+          {/* Stage — berdiri sendiri di atas, tengah, kiri-kanan kosong */}
+          <div className="flex items-center justify-center px-8">
+            <div className="rounded-xl border-2 border-slate-400 bg-slate-200 px-12 py-2.5 text-center">
               <p className="text-[11px] font-bold uppercase tracking-widest text-slate-600">Stage</p>
-            </div>
-            <div className="flex flex-1 items-center justify-center border-x border-b border-dashed border-slate-300 py-4">
-              <p className="rotate-180 text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-400 [writing-mode:vertical-rl]">Area Penonton</p>
             </div>
           </div>
 
-          {/* Inner right */}
-          <PremiumCol booths={innerRight} selected={selected} onSelect={onSelect} />
-
-          {/* Outer right */}
-          <PremiumCol booths={outerRight} selected={selected} onSelect={onSelect} />
+          {/* 4 kolom booth di bawah stage */}
+          <div className="flex items-start justify-center gap-2">
+            <PremiumCol booths={outerLeft} selected={selected} onSelect={onSelect} />
+            <PremiumCol booths={innerLeft} selected={selected} onSelect={onSelect} />
+            <div className="w-10 shrink-0" />
+            <PremiumCol booths={innerRight} selected={selected} onSelect={onSelect} />
+            <PremiumCol booths={outerRight} selected={selected} onSelect={onSelect} />
+          </div>
         </div>
       </div>
     </div>
