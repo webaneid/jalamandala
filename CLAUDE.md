@@ -68,8 +68,11 @@ packages/typescript-config/
 A single Next.js instance serves multiple subdomains via `apps/web/middleware.ts`:
 
 - `app.*` → rewrites to `/admin` (admin dashboard)
-- `expo.*` → rewrites to `/expo` (public event pages)
+- `expo.*` + path `/vendor/...` → rewrites to `/expo/vendor/...` (vendor portal)
+- `expo.*` + path lainnya → dilayani langsung oleh Next.js routes (public event pages `[eventSlug]`)
 - `api.*` → rewrites to `/api`
+
+**Vendor portal URL**: `expo.forbis.id/vendor/login`, `expo.forbis.id/vendor/dashboard`, dst. Semua internal href di vendor components menggunakan `/vendor/...` (bukan `/expo/vendor/...`) agar tidak ada double redirect.
 
 ### Multi-Tenant Database Pattern
 
@@ -107,16 +110,23 @@ Gotenberg microservice handles PDF rendering (not Next.js). Point `GOTENBERG_URL
 ## Key Environment Variables
 
 ```
-DATABASE_URL          # postgresql://jalamandala:secret@localhost:6432/jalamandala
-TENANT_SCHEMA         # e.g. expo_forbis2026
-MINIO_ENDPOINT        # localhost (internal, untuk upload server-side)
-MINIO_PORT            # 9000
-MINIO_ACCESS_KEY      # admin
-MINIO_SECRET_KEY      # password123
-MINIO_BUCKET          # participant-assets
-MINIO_PUBLIC_URL      # https://storage.forbis.id (WAJIB di production, untuk presigned URL ke client)
-REDIS_URL             # redis://localhost:6379
-GOTENBERG_URL         # http://localhost:3001
+DATABASE_URL              # postgresql://jalamandala:secret@localhost:6432/jalamandala
+TENANT_SCHEMA             # e.g. expo_forbis2026
+MINIO_ENDPOINT            # localhost (internal, untuk upload server-side)
+MINIO_PORT                # 9000
+MINIO_ACCESS_KEY          # admin
+MINIO_SECRET_KEY          # password123
+MINIO_BUCKET              # participant-assets
+MINIO_PUBLIC_URL          # https://storage.forbis.id (WAJIB di production, untuk presigned URL ke client)
+REDIS_URL                 # redis://localhost:6379
+GOTENBERG_URL             # http://localhost:3001
+NEXT_PUBLIC_APP_URL       # https://app.forbis.id (dipakai di WA link admin/pencairan)
+NEXT_PUBLIC_EXPO_URL      # https://expo.forbis.id (dipakai di WA link invoice ke peserta)
+GOWA_ENABLED              # true/false — set false untuk disable WA di dev/staging
+GOWA_URL                  # URL GoWA instance (fallback jika DB config kosong)
+GOWA_USERNAME             # GoWA username
+GOWA_PASSWORD             # GoWA password
+GOWA_DEVICE_ID            # GoWA device ID
 ```
 
 ## Deployment (Production)
@@ -130,6 +140,33 @@ cd /var/www/jalamandala && git pull && bun install && bun run build && pm2 reloa
 - Gunakan `pm2 reload` (bukan `restart`) untuk zero-downtime.
 - `bun install` wajib dijalankan setelah pull jika ada perubahan `bun.lock`.
 
+## SEO & Metadata
+
+Semua halaman menggunakan Next.js `generateMetadata` / `export const metadata`:
+
+- **Root layout** — title template `%s — Jalamandala`, `metadataBase` dari `NEXT_PUBLIC_APP_URL`
+- **`[eventSlug]/layout.tsx`** — `generateMetadata` fetch nama event → template `%s — {eventName}`
+- **`[eventSlug]/page.tsx`** — dynamic dari DB: `seoTitle`, `seoDescription`, `featuredImageAssetId` (OG image via `/api/media/{id}`)
+- **`[eventSlug]/halaman/[slug]/page.tsx`** — same, per-page SEO dari DB
+- **Admin layout** — template `%s — Admin Jalamandala`
+- **Vendor layout** — template `%s — Vendor Portal`
+- Semua halaman lain: hardcoded `export const metadata = { title: '...' }`
+
+## WhatsApp Notification Flow
+
+WA dikirim via GoWA. Config diambil dari DB (`whatsappConfigs` tabel, via `/admin/setting`) dengan fallback env vars `GOWA_*`.
+
+**Template diambil dari DB** (`messageTemplates` tabel). Seed default: `bun run db:seed:wa-templates` (jalankan sekali per event).
+
+| Event | Key | Trigger |
+|-------|-----|---------|
+| Invoice terbit | `invoice_terbit` | `createManualInvoice()` — baik dari admin maupun peserta booking sendiri |
+| Invoice lunas | `invoice_lunas` | `verifyPaymentConfirmation()` — admin verifikasi bayar |
+| Vendor akun dibuat | `vendor_akun_dibuat` | Admin buat akun vendor |
+| Pencairan disetujui/ditolak/ditransfer | `pencairan_*` | Admin proses pencairan |
+
+**Link invoice di WA** menggunakan `NEXT_PUBLIC_EXPO_URL` env var. Wajib di-set di production agar link tidak pakai fallback.
+
 ## Invoice & Payment Flow
 
 Status invoice: `waiting_for_payment` → `waiting_confirmation` (user submit bukti) → `paid` (admin verifikasi) / `expired` / `cancelled`
@@ -141,6 +178,8 @@ Aturan penting:
 - Saat user submit bukti transfer, status invoice otomatis berubah ke `waiting_confirmation`.
 - Admin verifikasi melalui `verifyPaymentConfirmation()` di `actions/finance.ts`.
 - `getInvoiceByToken` di `actions/finance.ts` adalah fungsi utama untuk halaman invoice publik — returns invoice, participant, business, items (enriched), payments (dengan `proofAssetId`), event, paymentChannels, qrisConfig.
+
+**Hapus invoice (admin):** `deleteInvoiceCompletely(invoiceId)` di `actions/finance.ts` — hapus invoice + order + booth bookings (reset booths ke `open`) + participant + businesses + terms approvals. Tombol ada di halaman detail invoice (`/admin/keuangan/{id}`), requires konfirmasi ketik "HAPUS".
 
 ## Alur Pendaftaran Peserta (End-to-End)
 
@@ -266,6 +305,16 @@ Route: `GET /api/surat-pernyataan/{approvalId}` (`apps/web/app/api/surat-pernyat
 - Gunakan `approval.approvedAt` (with timezone, UTC) untuk display waktu, bukan `approvedAtWib` (stored as UTC-shifted, akan double-shift jika diformat dengan timezone)
 - QR di PDF berisi `approval.approvalToken` (HMAC string, bukan JSON)
 
+## Vendor Portal
+
+URL: `expo.forbis.id/vendor/...` → middleware rewrite ke `/expo/vendor/...`
+
+- Login: `expo.forbis.id/vendor/login`
+- Shell: `VendorShell.tsx` — dark mobile-first UI, bottom pill nav (Dashboard, Data Booth atau Add-on, Pencairan)
+- Vendor type `booth`: akses halaman `/vendor/booths` (daftar tenant per zona)
+- Vendor type `addon`: akses halaman `/vendor/addons` (daftar pesanan add-on)
+- Pencairan: vendor submit request pencairan dana, admin approve di `/admin/keuangan/pencairan`
+
 ## Dashboard Participant
 
 Dashboard berada di `apps/web/app/[eventSlug]/dashboard/` dengan layout `fixed inset-0 z-[60]` (full-screen overlay di atas public header yang `z-50`). Bottom navigation 4 tab:
@@ -280,6 +329,23 @@ Dashboard berada di `apps/web/app/[eventSlug]/dashboard/` dengan layout `fixed i
 **Tab Booth** → klik card → detail di `/dashboard/booth/{bookingId}`: zona, fasilitas, rincian add-on + nama & WA vendor.
 
 **"Usaha Saya"** ada di tab Profil (bukan tab terpisah), mengarah ke `/dashboard/usaha` untuk manage profil bisnis.
+
+## Public Frontend Design System
+
+Seluruh public-facing pages (`[eventSlug]/*`, vendor portal) menggunakan dark mobile-first design:
+
+- **Max width**: `max-w-[720px]` — mobile-first, capped di lebar tablet
+- **Background**: `linear-gradient(135deg, #050e1f 0%, #0a1f48 30%, #071630 55%, #040c1a 100%)`
+- **Brand colors**: Primary `#134397`, Accent `#00adee`
+- **Cards**: `bg-white/5 border-white/8 rounded-2xl backdrop-blur-sm`
+- **Header**: sticky, transparent → gradient on scroll (`rgba(4,16,31,0.93)` → transparent)
+- **Bottom nav**: fixed pill nav `rgba(13,28,60,0.82)` dengan `backdrop-blur(20px)`
+- **Dark inputs**: `border-white/12 bg-white/8 text-white placeholder:text-white/30`
+
+Komponen utama di `apps/web/components/public/`:
+- `PublicEventHeader` — countdown timer, shop icon, avatar dropdown (login/logout)
+- `PublicBottomNav` — 4 tab: logo→home, calendar→agenda, store→tenant, dashboard
+- `PublicBoothMap` — zone map dengan `isVertical` flag: vertikal = info di atas + map di bawah, horizontal = image kiri + map kanan
 
 ## Conventions
 
