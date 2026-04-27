@@ -85,6 +85,7 @@ async function getEventSettingData() {
       financeWaNumbers: activeEvent.financeWaNumbers ?? [],
       leaderWaNumbers: activeEvent.leaderWaNumbers ?? [],
       eventTeamWaNumbers: activeEvent.eventTeamWaNumbers ?? [],
+      registrationWaNumbers: (activeEvent as any).registrationWaNumbers ?? [],
       invoiceDueDays: activeEvent.invoiceDueDays ?? 1,
     },
     paymentChannels: activeEvent.paymentChannels

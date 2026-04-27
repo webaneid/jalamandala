@@ -769,21 +769,20 @@ export async function markInvoiceAsPaid(payload: {
             if (msg) void sendWhatsApp({ to: ptcp.whatsapp, message: msg, context: 'invoice-paid' })
           }
 
-          // E1
+          // E1 — bagian pendaftaran
           const event = await resolveActiveEvent()
-          const numbers: string[] = event.eventTeamWaNumbers ?? []
-          if (numbers.length > 0) {
-            const msg = await renderWaTemplate(WA_KEYS.TIM_ACARA_CONFIRMED, {
+          const regNumbers: string[] = (event as any).registrationWaNumbers ?? []
+          if (regNumbers.length > 0) {
+            const msg = await renderWaTemplate(WA_KEYS.PENDAFTARAN_PESERTA_CONFIRMED, {
               nama: ptcp?.name ?? '-',
               perusahaan: biz?.companyName ?? ptcp?.name ?? '-',
               company_name: biz?.companyName ?? ptcp?.name ?? '-',
               invoice_number: invoice.invoiceNumber,
               whatsapp: ptcp?.whatsapp ?? '-',
-              rekening: ptcp?.whatsapp ?? '-',
             })
             if (msg) {
-              for (const number of numbers) {
-                void sendWhatsApp({ to: number, message: msg, context: 'confirmed-e1' })
+              for (const number of regNumbers) {
+                void sendWhatsApp({ to: number, message: msg, context: 'confirmed-pendaftaran' })
               }
             }
           }
@@ -1157,6 +1156,26 @@ export async function createManualInvoice(payload: {
       })()
     }
 
+    // Notify finance team
+    void (async () => {
+      try {
+        const event = await resolveActiveEvent()
+        const financeNumbers: string[] = event.financeWaNumbers ?? []
+        if (!financeNumbers.length) return
+        const participantName = business?.companyName
+          ? (await db.query.participants.findFirst({ where: eq(participants.id, participantId!), columns: { name: true } }))?.name ?? '-'
+          : '-'
+        const msg = await renderWaTemplate(WA_KEYS.FINANCE_INVOICE_BARU, {
+          nama: participantName,
+          perusahaan: business?.companyName ?? participantName,
+          invoice_number: invoice.invoiceNumber,
+          total: fmtRp(subtotal),
+          jatuh_tempo: invoice.dueDate ? fmtDate(invoice.dueDate) : '-',
+        })
+        if (msg) for (const n of financeNumbers) void sendWhatsApp({ to: n, message: msg, context: 'finance-invoice-baru' })
+      } catch { /* non-blocking */ }
+    })()
+
     revalidatePath("/admin/keuangan");
     revalidatePath("/admin/booth");
     return { success: true, data: invoice };
@@ -1255,6 +1274,33 @@ export async function submitPublicPaymentConfirmation(payload: {
       .set({ status: "waiting_confirmation", updatedAt: new Date() })
       .where(eq(invoices.id, invoice.id));
 
+    // Notify finance team
+    void (async () => {
+      try {
+        const event = await resolveActiveEvent()
+        const financeNumbers: string[] = event.financeWaNumbers ?? []
+        if (!financeNumbers.length) return
+        const [ptcp, biz] = await Promise.all([
+          invoice.participantId ? db.query.participants.findFirst({ where: eq(participants.id, invoice.participantId), columns: { name: true } }) : Promise.resolve(null),
+          invoice.businessId ? db.query.participantBusinesses.findFirst({ where: eq(participantBusinesses.id, invoice.businessId), columns: { companyName: true } }) : Promise.resolve(null),
+        ])
+        const invoiceUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.forbis.id'}/admin/keuangan/${invoice.id}`
+        const paymentMethod = payload.paymentMethodKey
+          ? await resolvePaymentMethodOption(payload.paymentMethodKey).catch(() => null)
+          : null
+        const msg = await renderWaTemplate(WA_KEYS.FINANCE_BUKTI_MASUK, {
+          nama: ptcp?.name ?? '-',
+          perusahaan: biz?.companyName ?? ptcp?.name ?? '-',
+          invoice_number: invoice.invoiceNumber,
+          total: fmtRp(paymentAmount),
+          atas_nama: senderName,
+          payment_channel_label: paymentMethod?.label ?? '-',
+          link_invoice: invoiceUrl,
+        })
+        if (msg) for (const n of financeNumbers) void sendWhatsApp({ to: n, message: msg, context: 'finance-bukti-masuk' })
+      } catch { /* non-blocking */ }
+    })()
+
     revalidatePath(`/invoice/${payload.publicToken}`);
     return { success: true };
   } catch (error) {
@@ -1350,6 +1396,40 @@ export async function verifyPaymentConfirmation(paymentId: string) {
 
     revalidatePath("/admin/keuangan");
     revalidatePath(`/invoice/${invoice.publicToken}`);
+
+    if (isFullyPaid && invoice.participantId) {
+      void (async () => {
+        try {
+          const [ptcp, biz, event] = await Promise.all([
+            db.query.participants.findFirst({ where: eq(participants.id, invoice.participantId!), columns: { whatsapp: true, name: true } }),
+            invoice.order?.businessId
+              ? db.query.participantBusinesses.findFirst({ where: eq(participantBusinesses.id, invoice.order.businessId), columns: { companyName: true } })
+              : Promise.resolve(null),
+            resolveActiveEvent(),
+          ])
+          const invoiceUrl = `${process.env.NEXT_PUBLIC_EXPO_URL ?? 'https://expo.forbis.id'}/invoice/${invoice.publicToken}`
+
+          if (ptcp?.whatsapp) {
+            const msg = await renderWaTemplate(WA_KEYS.INVOICE_LUNAS, {
+              nama: ptcp.name, perusahaan: biz?.companyName ?? ptcp.name,
+              invoice_number: invoice.invoiceNumber, jumlah: fmtRp(payment.amount),
+              total: fmtRp(invoice.grandTotal), link_invoice: invoiceUrl,
+            })
+            if (msg) void sendWhatsApp({ to: ptcp.whatsapp, message: msg, context: 'invoice-paid' })
+          }
+
+          const regNumbers: string[] = (event as any).registrationWaNumbers ?? []
+          if (regNumbers.length > 0) {
+            const msg = await renderWaTemplate(WA_KEYS.PENDAFTARAN_PESERTA_CONFIRMED, {
+              nama: ptcp?.name ?? '-', perusahaan: biz?.companyName ?? ptcp?.name ?? '-',
+              invoice_number: invoice.invoiceNumber, whatsapp: ptcp?.whatsapp ?? '-',
+            })
+            if (msg) for (const n of regNumbers) void sendWhatsApp({ to: n, message: msg, context: 'confirmed-pendaftaran' })
+          }
+        } catch { /* non-blocking */ }
+      })()
+    }
+
     return { success: true, isFullyPaid };
   } catch (error) {
     console.error("Error verifying payment confirmation:", error);

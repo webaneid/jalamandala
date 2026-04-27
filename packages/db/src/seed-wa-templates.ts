@@ -119,6 +119,45 @@ WA: {{rekening}}
 Invoice: {{invoice_number}}`,
   },
   {
+    key: 'pendaftaran_peserta_confirmed',
+    title: 'Notif Pendaftaran — Peserta Terkonfirmasi',
+    sortOrder: 11,
+    body: `✅ *Peserta Baru Terkonfirmasi*
+
+Perusahaan: *{{perusahaan}}*
+PIC: {{nama}}
+WA: {{whatsapp}}
+Invoice: {{invoice_number}}`,
+  },
+  {
+    key: 'finance_invoice_baru',
+    title: 'Notif Finance — Invoice Baru Diterbitkan',
+    sortOrder: 12,
+    body: `📄 *Invoice Baru Diterbitkan*
+
+Peserta: {{nama}}
+Perusahaan: {{perusahaan}}
+No. Invoice: *{{invoice_number}}*
+Total: *{{total}}*
+Jatuh Tempo: {{jatuh_tempo}}`,
+  },
+  {
+    key: 'finance_bukti_masuk',
+    title: 'Notif Finance — Bukti Pembayaran Masuk',
+    sortOrder: 13,
+    body: `💰 *Bukti Pembayaran Masuk — Perlu Verifikasi*
+
+Peserta: {{nama}}
+Perusahaan: {{perusahaan}}
+Invoice: *{{invoice_number}}*
+Nominal: *{{total}}*
+Atas Nama: {{atas_nama}}
+Via: {{payment_channel_label}}
+
+Login untuk verifikasi:
+{{link_invoice}}`,
+  },
+  {
     key: 'invoice_mau_expired',
     title: 'Pengingat Invoice Hampir Kadaluarsa',
     sortOrder: 10,

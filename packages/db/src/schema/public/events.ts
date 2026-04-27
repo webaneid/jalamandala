@@ -34,6 +34,7 @@ export const expoEvents = pgTable('expo_events', {
   financeWaNumbers: text('finance_wa_numbers').array().default([]),
   leaderWaNumbers: text('leader_wa_numbers').array().default([]),
   eventTeamWaNumbers: text('event_team_wa_numbers').array().default([]),
+  registrationWaNumbers: text('registration_wa_numbers').array().default([]),
   invoiceDueDays: integer('invoice_due_days').default(1).notNull(),
   isActive: boolean('is_active').default(true),
   createdAt: timestamp('created_at').defaultNow(),

@@ -49,6 +49,7 @@ type EventSettingData = {
     financeWaNumbers: string[];
     leaderWaNumbers: string[];
     eventTeamWaNumbers: string[];
+    registrationWaNumbers: string[];
     invoiceDueDays: number;
   };
   paymentChannels: Array<{
@@ -177,6 +178,7 @@ export function EventSettingConfiguration({
           financeWaNumbers: (data.event.financeWaNumbers ?? []).join("\n"),
           leaderWaNumbers: (data.event.leaderWaNumbers ?? []).join("\n"),
           eventTeamWaNumbers: (data.event.eventTeamWaNumbers ?? []).join("\n"),
+          registrationWaNumbers: (data.event.registrationWaNumbers ?? []).join("\n"),
         }
       : {
           endDate: "",
@@ -188,6 +190,7 @@ export function EventSettingConfiguration({
           financeWaNumbers: "",
           leaderWaNumbers: "",
           eventTeamWaNumbers: "",
+          registrationWaNumbers: "",
         }
   );
   const [qrisForm, setQrisForm] = React.useState(() => ({
@@ -226,6 +229,7 @@ export function EventSettingConfiguration({
       financeWaNumbers: (data.event.financeWaNumbers ?? []).join("\n"),
       leaderWaNumbers: (data.event.leaderWaNumbers ?? []).join("\n"),
       eventTeamWaNumbers: (data.event.eventTeamWaNumbers ?? []).join("\n"),
+      registrationWaNumbers: (data.event.registrationWaNumbers ?? []).join("\n"),
     });
   }, [data?.event]);
 
@@ -410,6 +414,7 @@ export function EventSettingConfiguration({
         financeWaNumbers: parseNumbers(profileForm.financeWaNumbers),
         leaderWaNumbers: parseNumbers(profileForm.leaderWaNumbers),
         eventTeamWaNumbers: parseNumbers(profileForm.eventTeamWaNumbers),
+        registrationWaNumbers: parseNumbers(profileForm.registrationWaNumbers),
       });
 
       if (!result.success) {
@@ -718,7 +723,7 @@ export function EventSettingConfiguration({
                   />
                 </FieldBlock>
                 <FieldBlock
-                  hint="Satu nomor per baris. Penerima notif peserta baru terkonfirmasi."
+                  hint="Satu nomor per baris. Terima notif rundown H-1 sebelum event."
                   label="Nomor WA Tim Acara"
                 >
                   <textarea
@@ -728,6 +733,19 @@ export function EventSettingConfiguration({
                     }
                     placeholder={"6281234567890"}
                     value={profileForm.eventTeamWaNumbers}
+                  />
+                </FieldBlock>
+                <FieldBlock
+                  hint="Satu nomor per baris. Terima notif peserta baru terkonfirmasi (invoice lunas)."
+                  label="Nomor WA Bagian Pendaftaran"
+                >
+                  <textarea
+                    className="min-h-20 w-full rounded-2xl border border-input bg-white px-3 py-3 text-sm outline-none focus:border-primary-600 focus:ring-3 focus:ring-primary-100"
+                    onChange={(event) =>
+                      setProfileForm((current) => ({ ...current, registrationWaNumbers: event.target.value }))
+                    }
+                    placeholder={"6281234567890"}
+                    value={profileForm.registrationWaNumbers}
                   />
                 </FieldBlock>
               </div>

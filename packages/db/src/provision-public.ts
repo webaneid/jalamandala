@@ -37,6 +37,10 @@ async function provisionPublicSchema() {
       ALTER TABLE public.expo_events
       ADD COLUMN IF NOT EXISTS invoice_due_days integer NOT NULL DEFAULT 1
     `);
+    await sql.unsafe(`
+      ALTER TABLE public.expo_events
+      ADD COLUMN IF NOT EXISTS registration_wa_numbers text[] DEFAULT '{}'
+    `);
 
     await sql.unsafe(`
       ALTER TABLE public.participants

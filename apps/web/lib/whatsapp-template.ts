@@ -12,7 +12,10 @@ export const WA_KEYS = {
   PENCAIRAN_DITRANSFER:    'pencairan_ditransfer',
   FINANCE_PENCAIRAN_BARU:  'finance_pencairan_baru',
   TIM_ACARA_CONFIRMED:     'tim_acara_confirmed',
-  INVOICE_MAU_EXPIRED:     'invoice_mau_expired',
+  INVOICE_MAU_EXPIRED:          'invoice_mau_expired',
+  PENDAFTARAN_PESERTA_CONFIRMED: 'pendaftaran_peserta_confirmed',
+  FINANCE_INVOICE_BARU:         'finance_invoice_baru',
+  FINANCE_BUKTI_MASUK:          'finance_bukti_masuk',
 } as const
 
 export type WaKey = typeof WA_KEYS[keyof typeof WA_KEYS]

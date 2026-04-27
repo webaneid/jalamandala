@@ -97,6 +97,7 @@ export async function updateEventProfile(payload: {
   financeWaNumbers?: string[];
   leaderWaNumbers?: string[];
   eventTeamWaNumbers?: string[];
+  registrationWaNumbers?: string[];
 }) {
   try {
     const activeEvent = await resolveActiveEvent();
@@ -123,6 +124,7 @@ export async function updateEventProfile(payload: {
         financeWaNumbers: parseWaNumbers(payload.financeWaNumbers),
         leaderWaNumbers: parseWaNumbers(payload.leaderWaNumbers),
         eventTeamWaNumbers: parseWaNumbers(payload.eventTeamWaNumbers),
+        registrationWaNumbers: parseWaNumbers(payload.registrationWaNumbers),
       })
       .where(eq(expoEvents.id, activeEvent.id));
 
