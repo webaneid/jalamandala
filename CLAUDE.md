@@ -249,6 +249,69 @@ Halaman invoice: `/invoice/{publicToken}` (`apps/web/app/invoice/[token]/page.ts
 - Peserta dapat E-Pass di `/{eventSlug}/usaha/{businessId}/epass` (QR code + info booth)
 - E-Pass hanya muncul jika `bookingStatus === "booked"`
 
+### Arsitektur Booth — Group, Category, Status
+
+Booth memiliki 3 dimensi yang saling berkaitan:
+
+#### 1. Booth Group — Siapa yang boleh memesan
+
+Setiap booth di-assign ke satu group. Group menentukan organisasi peserta mana yang eligible:
+
+| Booth Group | Organisasi Peserta yang Bisa Pesan |
+|-------------|-------------------------------------|
+| `general` | Umum (`general`) + FORBIS (`forbis`) |
+| `forbis` | FORBIS (`forbis`) saja |
+| `fpag` | FPAG (`fpag`) saja |
+| `formaqin` | FORMAQIN (`formaqin`) saja |
+| `gontor` | Gontor (`gontor`) saja |
+| `sponsor` | Sponsor (`sponsor`) saja |
+
+Mapping ini ada di `apps/web/lib/booth-eligibility.ts` → `BOOTH_GROUP_ACCESS`. `participant.organizationGroupSlug` dicocokkan dengan booth group yang diizinkan.
+
+#### 2. Booth Category — Jenis usaha yang cocok
+
+| Booth Category | Usaha yang Bisa Masuk |
+|----------------|------------------------|
+| `free` | Semua jenis usaha (default) |
+| `non_fnb` | Hanya non-FnB |
+| `fnb_dry_food` | FnB Dry Food atau FnB Kitchen |
+| `fnb_kitchen` | Hanya FnB Kitchen |
+
+`business.requestedBoothCategorySlug` dicocokkan lewat `isBoothCategoryAllowed()`. FnB Dry Food lebih fleksibel — bisa masuk booth Kitchen, tapi tidak sebaliknya.
+
+#### 3. Booth Status — Siklus hidup booth
+
+```
+open → reserved → booked
+        ↑               ↓
+        └───── open (jika invoice dihapus/cancel)
+```
+
+- `open` — tersedia untuk dipesan
+- `reserved` — boothBooking sudah dibuat, invoice **belum lunas**
+- `booked` — invoice **sudah lunas/verified** (pembayaran dikonfirmasi)
+
+Transisi ada di `actions/finance.ts`:
+- Booking dibuat → booth jadi `reserved`
+- Invoice paid (verifikasi admin) → booth jadi `booked`
+- Invoice dihapus (`deleteInvoiceCompletely`) → booth kembali `open`
+
+#### 4. Warna Kotak Booth di `/admin/booth`
+
+Prioritas dari tertinggi ke terendah (`resolveBoothFill` di `ClickableBoothMap.tsx`):
+
+| Prioritas | Kondisi | Warna |
+|-----------|---------|-------|
+| 1 | Group `gontor` | Hijau (selalu, open maupun booked) |
+| 2 | Group `fpag` | Kuning (selalu) |
+| 3 | Group `formaqin` | Orange (selalu) |
+| 4 | Status `booked` (group lain) | Abu-abu |
+| 5 | Open + Category `fnb_kitchen` | Biru muda |
+| 6 | Open + Category `fnb_dry_food` | Biru |
+| 7 | Default (open, free/non_fnb) | Putih |
+
+Group `general`, `forbis`, `sponsor` tidak ada di legenda → tidak dapat warna khusus.
+
 ### Layout Booth (Hardcoded per Zone Slug)
 
 Layout visual booth di admin (`ClickableBoothMap.tsx`) dan frontend (`PublicBoothMap.tsx`) adalah **hardcoded per `zone.slug`** — bukan dinamis dari DB. Data booth (kode, status, harga) dari DB, tapi susunan grid/gangway dikode manual.
