@@ -1292,7 +1292,10 @@ function resolveZonePriceGroupsFromRows(
 }
 
 function buildEditablePriceRows(zone: BoothMapZone) {
-  const groups = ["forbis", "public"];
+  // Sponsor hanya di zona VIP
+  const groups = zone.slug === "vip"
+    ? ["forbis", "public", "sponsor"]
+    : ["forbis", "public"];
 
   return groups.flatMap((priceGroup) =>
     PRICE_PHASE_ORDER.map((pricePhase) => {

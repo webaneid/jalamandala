@@ -646,7 +646,10 @@ async function seedBoothCatalog() {
   await tenantDb.delete(zonePriceRules);
 
   for (const zone of zoneRows) {
-    const priceGroups = ['forbis', 'public'] as const;
+    // Sponsor hanya di zona VIP
+    const priceGroups = zone.slug === 'vip'
+      ? (['forbis', 'public', 'sponsor'] as const)
+      : (['forbis', 'public'] as const);
 
     for (const priceGroup of priceGroups) {
       for (const pricePhase of PRICE_PHASES) {
