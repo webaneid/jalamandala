@@ -62,14 +62,6 @@ const LARGE_GAP = 84;
 
 const zoneSeeds = [
   {
-    name: 'VVIP',
-    slug: 'vvip',
-    description: 'Zona strategis untuk tenant prioritas VVIP.',
-    location: 'Area Aligard, bagian depan gedung Aligard',
-    colorCode: '#FACC15',
-    sortOrder: 1,
-  },
-  {
     name: 'VIP',
     slug: 'vip',
     description: 'Zona utama untuk tenant VIP.',
@@ -261,32 +253,6 @@ const boothCategorySeeds = [
   },
 ];
 
-function buildVvipSeeds() {
-  // Layout: 3 kiri + gangway + 3 kanan = 6 booth
-  const leftX = 40;
-  const rightX = 480;
-  const y = 40;
-  const seeds: BoothSeed[] = [];
-
-  for (let i = 1; i <= 3; i++) {
-    seeds.push(
-      createBoothSeed('vvip', `VVIP${i}`, i, leftX + (i - 1) * BOOTH_WIDTH, y, {
-        description: 'Booth VVIP di Area Aligard.',
-      })
-    );
-  }
-
-  for (let i = 4; i <= 6; i++) {
-    seeds.push(
-      createBoothSeed('vvip', `VVIP${i}`, i, rightX + (i - 4) * BOOTH_WIDTH, y, {
-        description: 'Booth VVIP di Area Aligard.',
-      })
-    );
-  }
-
-  return seeds;
-}
-
 function buildVipSeeds() {
   // Layout: 2 baris, tiap baris 3 kiri + gangway + 3 kanan = 12 booth total
   const leftX = 40;
@@ -324,26 +290,33 @@ function buildVipSeeds() {
 }
 
 function buildPremiumSeeds() {
-  // Layout: 4 strip kolom × 7 booth = 28 booth total
-  // Tiap strip: 3 atas + gangway kecil + 4 bawah
-  // Pasangan kiri: col1 (P1-P7) + gangway + col2 (P8-P14)
-  // Pasangan kanan: col3 (P15-P21) + gangway + col4 (P22-P28)
+  // Layout: 4 kolom × 8 booth = 32 booth total
+  // Kiri-luar (P25-P32) | Kiri-dalam (P1-P8) | [Stage/Area] | Kanan-dalam (P9-P16) | Kanan-luar (P17-P24)
+  // Dalam setiap kolom: nomor kecil di bawah (y besar), nomor besar di atas (y kecil)
   const seeds: BoothSeed[] = [];
-  const cellHeight = 38;
-  const startY = 48;
-  const gangwayWidth = 86;
-  const colXPositions = [60, 60 + BOOTH_WIDTH + gangwayWidth, 620, 620 + BOOTH_WIDTH + gangwayWidth];
+  const rowH = BOOTH_HEIGHT + SMALL_GAP; // 52
+  const startY = 60;
+  const outerGap = 40;
+  const stageGap = 180;
 
-  let counter = 1;
-  for (const colX of colXPositions) {
-    for (let row = 0; row < 7; row++) {
+  const columns = [
+    { x: 40,                                                          startNum: 25 }, // kiri-luar
+    { x: 40 + BOOTH_WIDTH + outerGap,                                startNum: 1  }, // kiri-dalam
+    { x: 40 + BOOTH_WIDTH + outerGap + BOOTH_WIDTH + stageGap,       startNum: 9  }, // kanan-dalam
+    { x: 40 + BOOTH_WIDTH + outerGap + BOOTH_WIDTH + stageGap + BOOTH_WIDTH + outerGap, startNum: 17 }, // kanan-luar
+  ];
+
+  for (const { x, startNum } of columns) {
+    for (let i = 0; i < 8; i++) {
+      const num = startNum + i;
+      const rowFromTop = 7 - i; // num kecil di bawah (rowFromTop=7), num besar di atas (rowFromTop=0)
+      const y = startY + rowFromTop * rowH;
       seeds.push(
-        createBoothSeed('premium', `P${counter}`, counter, colX, startY + row * cellHeight, {
+        createBoothSeed('premium', `P${num}`, num, x, y, {
           description: 'Booth Premium di Area Aligard.',
-          height: cellHeight,
+          height: BOOTH_HEIGHT,
         })
       );
-      counter++;
     }
   }
 
@@ -409,9 +382,8 @@ function buildHorizontalFestivalSeeds(
 }
 
 const boothSeeds: BoothSeed[] = [
-  ...buildVvipSeeds(),          // VVIP1–VVIP6   (6 booth)
   ...buildVipSeeds(),            // VIP1–VIP12    (12 booth)
-  ...buildPremiumSeeds(),        // P1–P28        (28 booth)
+  ...buildPremiumSeeds(),        // P1–P32        (32 booth)
   ...buildVerticalFestivalSeeds('festival-west', 'FW', 27, {}),   // FW1–FW27  (27 booth)
   ...buildHorizontalFestivalSeeds('festival-north', 'FN', 27, {}), // FN1–FN27  (27 booth)
 ];
@@ -674,10 +646,7 @@ async function seedBoothCatalog() {
   await tenantDb.delete(zonePriceRules);
 
   for (const zone of zoneRows) {
-    const priceGroups =
-      zone.slug === 'vvip'
-        ? (['sponsor', 'forbis', 'public'] as const)
-        : (['forbis', 'public'] as const);
+    const priceGroups = ['forbis', 'public'] as const;
 
     for (const priceGroup of priceGroups) {
       for (const pricePhase of PRICE_PHASES) {

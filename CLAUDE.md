@@ -216,13 +216,14 @@ Layout visual booth di admin (`ClickableBoothMap.tsx`) dan frontend (`PublicBoot
 
 | Zone slug | Layout | Konfigurasi saat ini |
 |-----------|--------|----------------------|
-| `vvip` | 2 kolom + gangway tengah, 1 baris | VVIP1–VVIP6 = **6 booth** (3 kiri + 3 kanan) |
 | `vip` | 2 kolom + gangway tengah, 2 baris | VIP1–VIP12 = **12 booth** (3+3 per baris × 2 baris) |
-| `premium` | 4 strip kolom (2 pasang), tiap strip 3 atas + gangway kecil + 4 bawah | P1–P28 = **28 booth** (col1: P1-7, col2: P8-14, col3: P15-21, col4: P22-28) |
+| `premium` | 4 kolom vertikal + Stage di tengah atas | P1–P32 = **32 booth** — kiri-luar (P25-32) \| kiri-dalam (P1-8) \| [Stage] \| kanan-dalam (P9-16) \| kanan-luar (P17-24). Dalam kolom: nomor besar di atas, kecil di bawah. |
 | `festival-west` | Kolom kiri (4 blok: 5+5+6+6) + kolom kanan atas (5) | FW1–FW27 = **27 booth** (FW1-5 kanan atas, FW6-27 kiri turun) |
 | `festival-north` | Baris horizontal scrollable, dinamis (blok 5) | FN1–FN27 = **27 booth** — tidak perlu ubah kode saat jumlah berubah |
 
-Total keseluruhan: **100 booth** (6+12+28+27+27). Seed: `bun run db:seed:booths` di `packages/db`.
+Total keseluruhan: **98 booth** (12+32+27+27). Seed: `bun run db:seed:booths` di `packages/db`.
+
+**Zona VVIP dihapus.** Tidak ada lagi zona `vvip` di seed, layout, maupun price rules.
 
 Kalau jumlah booth berubah, update `slice()` dan `grid-cols-N` di **dua tempat sekaligus**:
 1. `apps/web/components/admin/booth/ClickableBoothMap.tsx`

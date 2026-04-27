@@ -406,9 +406,7 @@ export function ClickableBoothMap({
                   </div>
                 </div>
 
-                {zone.slug === "vvip" ? (
-                  <VvipZoneLayout onBoothClick={(booth) => openBooth(zone, booth)} zone={zone} />
-                ) : zone.slug === "vip" ? (
+                {zone.slug === "vip" ? (
                   <VipZoneLayout onBoothClick={(booth) => openBooth(zone, booth)} zone={zone} />
                 ) : zone.slug === "premium" ? (
                   <PremiumZoneLayout
@@ -799,45 +797,6 @@ function BookingInfoItem({ label, value }: { label: string; value: string }) {
   );
 }
 
-function VvipZoneLayout({
-  onBoothClick,
-  zone,
-}: {
-  onBoothClick: (booth: BoothMapBooth) => void;
-  zone: BoothMapZone;
-}) {
-  const sortedBooths = [...zone.booths].sort(
-    (first, second) => extractBoothNumber(first.code) - extractBoothNumber(second.code)
-  );
-  const leftBooths = sortedBooths.slice(0, 3);
-  const rightBooths = sortedBooths.slice(3, 6);
-
-  return (
-    <div className="overflow-x-auto rounded-[30px] bg-slate-50 p-5 ring-1 ring-slate-200/90">
-      <div className="grid min-w-[960px] grid-cols-[1fr_96px_1fr] items-stretch gap-4">
-        <div className="grid grid-cols-3 gap-0">
-          {leftBooths.map((booth) => (
-            <VvipBoothCard key={booth.id} booth={booth} onClick={() => onBoothClick(booth)} />
-          ))}
-        </div>
-
-        <div className="flex flex-col items-center justify-center rounded-[26px] border border-dashed border-slate-300/90 bg-white/60 text-center">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-            Gangway
-          </p>
-          <div className="mt-3 h-16 w-px bg-slate-300" />
-        </div>
-
-        <div className="grid grid-cols-3 gap-0">
-          {rightBooths.map((booth) => (
-            <VvipBoothCard key={booth.id} booth={booth} onClick={() => onBoothClick(booth)} />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function BoothCanvasLayout({
   onBoothClick,
   viewport,
@@ -928,80 +887,54 @@ function PremiumZoneLayout({
   onBoothClick: (booth: BoothMapBooth) => void;
   zone: BoothMapZone;
 }) {
-  const sortedBooths = [...zone.booths].sort(
-    (first, second) => extractBoothNumber(first.code) - extractBoothNumber(second.code)
+  const sorted = [...zone.booths].sort(
+    (a, b) => extractBoothNumber(a.code) - extractBoothNumber(b.code)
   );
-  const col1 = sortedBooths.slice(0, 7);
-  const col2 = sortedBooths.slice(7, 14);
-  const col3 = sortedBooths.slice(14, 21);
-  const col4 = sortedBooths.slice(21, 28);
+  // P1-P8: kiri-dalam, P9-P16: kanan-dalam, P17-P24: kanan-luar, P25-P32: kiri-luar
+  // Tampil atas→bawah: nomor besar dulu
+  const innerLeft  = sorted.slice(0, 8).reverse();
+  const innerRight = sorted.slice(8, 16).reverse();
+  const outerRight = sorted.slice(16, 24).reverse();
+  const outerLeft  = sorted.slice(24, 32).reverse();
+
+  function PremiumCol({ booths }: { booths: BoothMapBooth[] }) {
+    return (
+      <div className="flex flex-col gap-0">
+        {booths.map((booth, i) => (
+          <VipBoothCard
+            key={booth.id}
+            booth={booth}
+            onClick={() => onBoothClick(booth)}
+            className={`${i === 0 ? "rounded-t-[20px]" : ""} ${i === booths.length - 1 ? "rounded-b-[20px]" : ""}`}
+          />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="overflow-x-auto rounded-[30px] bg-slate-50 p-5 ring-1 ring-slate-200/90">
-      <div className="flex min-w-[640px] justify-center gap-10">
-        <PremiumSection colA={col1} colB={col2} onBoothClick={onBoothClick} />
-        <PremiumSection colA={col3} colB={col4} onBoothClick={onBoothClick} />
-      </div>
-    </div>
-  );
-}
+      <div className="flex min-w-[620px] items-start justify-center gap-2">
+        <PremiumCol booths={outerLeft} />
 
-function PremiumColumnStrip({
-  booths,
-  onBoothClick,
-}: {
-  booths: BoothMapBooth[];
-  onBoothClick: (booth: BoothMapBooth) => void;
-}) {
-  const top = booths.slice(0, 3);
-  const bottom = booths.slice(3, 7);
-  return (
-    <div className="flex flex-col">
-      <div className="grid gap-0">
-        {top.map((booth) => (
-          <VipBoothCard
-            className="first:rounded-t-[20px]"
-            key={booth.id}
-            booth={booth}
-            onClick={() => onBoothClick(booth)}
-          />
-        ))}
-      </div>
-      <div className="flex h-7 items-center px-2">
-        <div className="w-full border-b border-dashed border-slate-300" />
-      </div>
-      <div className="grid gap-0">
-        {bottom.map((booth) => (
-          <VipBoothCard
-            className="last:rounded-b-[20px]"
-            key={booth.id}
-            booth={booth}
-            onClick={() => onBoothClick(booth)}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
+        <PremiumCol booths={innerLeft} />
 
-function PremiumSection({
-  colA,
-  colB,
-  onBoothClick,
-}: {
-  colA: BoothMapBooth[];
-  colB: BoothMapBooth[];
-  onBoothClick: (booth: BoothMapBooth) => void;
-}) {
-  return (
-    <div className="flex items-stretch">
-      <PremiumColumnStrip booths={colA} onBoothClick={onBoothClick} />
-      <div className="flex w-12 items-center justify-center border-x border-dashed border-slate-300 bg-white/60">
-        <p className="rotate-180 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400 [writing-mode:vertical-rl]">
-          Gangway
-        </p>
+        {/* Stage + area tengah */}
+        <div className="flex w-40 shrink-0 flex-col items-stretch">
+          <div className="rounded-xl border-2 border-slate-400 bg-slate-200 px-3 py-2.5 text-center">
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-600">Stage</p>
+          </div>
+          <div className="flex flex-1 items-center justify-center border-x border-b border-dashed border-slate-300 py-4">
+            <p className="rotate-180 text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-400 [writing-mode:vertical-rl]">
+              Area Penonton
+            </p>
+          </div>
+        </div>
+
+        <PremiumCol booths={innerRight} />
+
+        <PremiumCol booths={outerRight} />
       </div>
-      <PremiumColumnStrip booths={colB} onBoothClick={onBoothClick} />
     </div>
   );
 }
@@ -1128,43 +1061,6 @@ function FestivalNorthZoneLayout({
         </div>
       </div>
     </div>
-  );
-}
-
-function VvipBoothCard({
-  booth,
-  onClick,
-}: {
-  booth: BoothMapBooth;
-  onClick: () => void;
-}) {
-  const isBooked = booth.status === "booked";
-  const boothNumber = extractBoothNumber(booth.code);
-
-  return (
-    <button
-      className="group flex min-h-[92px] flex-col justify-between rounded-none border border-slate-300 bg-white p-3 text-left shadow-none transition first:rounded-l-[20px] last:rounded-r-[20px] hover:z-10 hover:-translate-y-0.5 hover:border-primary-300 hover:bg-slate-50 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-100"
-      onClick={onClick}
-      type="button"
-    >
-      <div className="flex justify-end">
-        <span
-          className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
-            isBooked
-              ? "bg-slate-200 text-slate-700"
-              : "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"
-          }`}
-        >
-          {isBooked ? "Booked" : "Open"}
-        </span>
-      </div>
-
-      <div>
-        <p className="text-sm font-semibold tracking-[-0.03em] text-slate-950">
-          VVIP {boothNumber}
-        </p>
-      </div>
-    </button>
   );
 }
 
@@ -1399,7 +1295,7 @@ function resolveZonePriceGroupsFromRows(
 }
 
 function buildEditablePriceRows(zone: BoothMapZone) {
-  const groups = zone.slug === "vvip" ? ["sponsor", "forbis", "public"] : ["forbis", "public"];
+  const groups = ["forbis", "public"];
 
   return groups.flatMap((priceGroup) =>
     PRICE_PHASE_ORDER.map((pricePhase) => {

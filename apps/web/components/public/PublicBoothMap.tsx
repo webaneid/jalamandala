@@ -81,28 +81,6 @@ function extract(code: string) {
 
 type LayoutProps = { zone: PublicZoneData; selected: Set<string>; onSelect: (b: PublicBooth) => void }
 
-function VvipLayout({ zone, selected, onSelect }: LayoutProps) {
-  const sorted = [...zone.booths].sort((a, b) => extract(a.code) - extract(b.code))
-  const left = sorted.slice(0, 3)
-  const right = sorted.slice(3, 6)
-  return (
-    <div className="overflow-x-auto rounded-[30px] bg-slate-50 p-5 ring-1 ring-slate-200/90">
-      <div className="grid min-w-[680px] grid-cols-[1fr_96px_1fr] items-stretch gap-4">
-        <div className="grid grid-cols-3 gap-0">
-          {left.map((b) => <BoothCell key={b.id} booth={b} isSelected={selected.has(b.id)} onSelect={onSelect} className="first:rounded-l-[20px] last:rounded-r-[20px]" />)}
-        </div>
-        <div className="flex flex-col items-center justify-center rounded-[26px] border border-dashed border-slate-300/90 bg-white/60 text-center">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">Gangway</p>
-          <div className="mt-3 h-16 w-px bg-slate-300" />
-        </div>
-        <div className="grid grid-cols-3 gap-0">
-          {right.map((b) => <BoothCell key={b.id} booth={b} isSelected={selected.has(b.id)} onSelect={onSelect} className="first:rounded-l-[20px] last:rounded-r-[20px]" />)}
-        </div>
-      </div>
-    </div>
-  )
-}
-
 function VipLayout({ zone, selected, onSelect }: LayoutProps) {
   const sorted = [...zone.booths].sort((a, b) => extract(a.code) - extract(b.code))
   const rows = [sorted.slice(0, 6), sorted.slice(6, 12)]
@@ -128,48 +106,58 @@ function VipLayout({ zone, selected, onSelect }: LayoutProps) {
   )
 }
 
-function PremiumColumnStrip({ booths, selected, onSelect }: { booths: PublicBooth[]; selected: Set<string>; onSelect: (b: PublicBooth) => void }) {
-  const top = booths.slice(0, 3)
-  const bottom = booths.slice(3, 7)
+function PremiumCol({ booths, selected, onSelect }: { booths: PublicBooth[]; selected: Set<string>; onSelect: (b: PublicBooth) => void }) {
+  // booths already sorted high→low (top display first)
   return (
-    <div className="flex flex-col">
-      <div className="grid gap-0">
-        {top.map((b) => <BoothCell key={b.id} booth={b} isSelected={selected.has(b.id)} onSelect={onSelect} sizeClass="min-h-[64px] min-w-[80px]" className="first:rounded-t-[16px]" />)}
-      </div>
-      <div className="flex h-7 items-center px-2">
-        <div className="w-full border-b border-dashed border-slate-300" />
-      </div>
-      <div className="grid gap-0">
-        {bottom.map((b) => <BoothCell key={b.id} booth={b} isSelected={selected.has(b.id)} onSelect={onSelect} sizeClass="min-h-[64px] min-w-[80px]" className="last:rounded-b-[16px]" />)}
-      </div>
-    </div>
-  )
-}
-
-function PremiumSection({ colA, colB, selected, onSelect }: { colA: PublicBooth[]; colB: PublicBooth[]; selected: Set<string>; onSelect: (b: PublicBooth) => void }) {
-  return (
-    <div className="flex items-stretch">
-      <PremiumColumnStrip booths={colA} selected={selected} onSelect={onSelect} />
-      <div className="flex w-12 items-center justify-center border-x border-dashed border-slate-300 bg-white/60">
-        <p className="rotate-180 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400 [writing-mode:vertical-rl]">Gangway</p>
-      </div>
-      <PremiumColumnStrip booths={colB} selected={selected} onSelect={onSelect} />
+    <div className="flex flex-col gap-0">
+      {booths.map((b, i) => (
+        <BoothCell
+          key={b.id}
+          booth={b}
+          isSelected={selected.has(b.id)}
+          onSelect={onSelect}
+          sizeClass="min-h-[60px] min-w-[78px]"
+          className={`${i === 0 ? "rounded-t-[16px]" : ""} ${i === booths.length - 1 ? "rounded-b-[16px]" : ""}`}
+        />
+      ))}
     </div>
   )
 }
 
 function PremiumLayout({ zone, selected, onSelect }: LayoutProps) {
   const sorted = [...zone.booths].sort((a, b) => extract(a.code) - extract(b.code))
-  const col1 = sorted.slice(0, 7)
-  const col2 = sorted.slice(7, 14)
-  const col3 = sorted.slice(14, 21)
-  const col4 = sorted.slice(21, 28)
+  // P1-P8: kiri-dalam, P9-P16: kanan-dalam, P17-P24: kanan-luar, P25-P32: kiri-luar
+  // Tampil dari atas ke bawah: nomor besar dulu (P8→P1, P16→P9, dst)
+  const innerLeft  = sorted.slice(0, 8).reverse()
+  const innerRight = sorted.slice(8, 16).reverse()
+  const outerRight = sorted.slice(16, 24).reverse()
+  const outerLeft  = sorted.slice(24, 32).reverse()
+
   return (
     <div className="rounded-[30px] bg-slate-50 p-4 ring-1 ring-slate-200/90">
       <div className="overflow-x-auto">
-        <div className="flex min-w-[560px] justify-center gap-8">
-          <PremiumSection colA={col1} colB={col2} selected={selected} onSelect={onSelect} />
-          <PremiumSection colA={col3} colB={col4} selected={selected} onSelect={onSelect} />
+        <div className="flex min-w-[560px] items-start justify-center gap-2">
+          {/* Outer left */}
+          <PremiumCol booths={outerLeft} selected={selected} onSelect={onSelect} />
+
+          {/* Inner left */}
+          <PremiumCol booths={innerLeft} selected={selected} onSelect={onSelect} />
+
+          {/* Stage + area tengah */}
+          <div className="flex w-36 shrink-0 flex-col items-stretch gap-0">
+            <div className="rounded-xl border-2 border-slate-400 bg-slate-200 px-2 py-2 text-center">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-600">Stage</p>
+            </div>
+            <div className="flex flex-1 items-center justify-center border-x border-b border-dashed border-slate-300 py-4">
+              <p className="rotate-180 text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-400 [writing-mode:vertical-rl]">Area Penonton</p>
+            </div>
+          </div>
+
+          {/* Inner right */}
+          <PremiumCol booths={innerRight} selected={selected} onSelect={onSelect} />
+
+          {/* Outer right */}
+          <PremiumCol booths={outerRight} selected={selected} onSelect={onSelect} />
         </div>
       </div>
     </div>
@@ -260,7 +248,6 @@ function FestivalNorthLayout({ zone, selected, onSelect }: LayoutProps) {
 
 function ZoneMap({ zone, selected, onSelect }: LayoutProps) {
   switch (zone.slug) {
-    case "vvip": return <VvipLayout zone={zone} selected={selected} onSelect={onSelect} />
     case "vip": return <VipLayout zone={zone} selected={selected} onSelect={onSelect} />
     case "premium": return <PremiumLayout zone={zone} selected={selected} onSelect={onSelect} />
     case "festival-west": return <FestivalWestLayout zone={zone} selected={selected} onSelect={onSelect} />
@@ -393,11 +380,11 @@ export function PublicBoothMap({ zone, onConfirm }: Props) {
 
   if (zone.isVertical) {
     return (
-      <div className="relative">
-        <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-          {/* Sidebar: image + info */}
-          <div className="space-y-5">
-            <div className="aspect-video overflow-hidden rounded-2xl">{image}</div>
+      <div className="relative space-y-5">
+        {/* Info: image + price + facilities — compact horizontal strip */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
+          <div className="aspect-video w-full overflow-hidden rounded-2xl sm:w-48 sm:shrink-0">{image}</div>
+          <div className="space-y-3">
             {priceBlock}
             {zone.facilities.length > 0 && (
               <div>
@@ -410,12 +397,10 @@ export function PublicBoothMap({ zone, onConfirm }: Props) {
               </div>
             )}
           </div>
-
-          {/* Map */}
-          <div>
-            <ZoneMap zone={zone} selected={selectedIds} onSelect={handleSelect} />
-          </div>
         </div>
+
+        {/* Map — full width below */}
+        <ZoneMap zone={zone} selected={selectedIds} onSelect={handleSelect} />
 
         {selectedBooths.length > 0 && (
           <ConfirmationBar
