@@ -1094,7 +1094,7 @@ function VipBoothCard({
         className ?? "first:rounded-l-[20px] last:rounded-r-[20px]"
       }`}
       onClick={onClick}
-      style={{ backgroundColor: fill }}
+      style={{ background: fill }}
       type="button"
     >
       <div className="flex justify-end">
@@ -1132,7 +1132,7 @@ function GenericBoothCard({
     <button
       className="group absolute rounded-[14px] border border-slate-300 text-left shadow-[0_6px_16px_rgba(15,23,42,0.06)] transition hover:z-10 hover:-translate-y-0.5 hover:border-primary-300 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-100"
       onClick={onClick}
-      style={{ ...style, backgroundColor: fill }}
+      style={{ ...style, background: fill }}
       type="button"
     >
       <span
@@ -1158,20 +1158,19 @@ function resolveBoothFill(booth: {
   boothCategory: { slug: string };
   boothGroup: { slug: string };
   status: string;
-}) {
+}): string {
   if (booth.status === "booked") {
     switch (booth.boothGroup.slug) {
-      case "gontor":   return "#22c55e"; // hijau
-      case "fpag":     return "#fef08a"; // kuning
-      case "formaqin": return "#f97316"; // orange
-      default:         return "#9ca3af"; // abu-abu (forbis, general, sponsor, dll)
+      case "gontor":   return "linear-gradient(180deg,#86efac 0%,#22c55e 100%)";
+      case "fpag":     return "linear-gradient(180deg,#fef9c3 0%,#fef08a 100%)";
+      case "formaqin": return "linear-gradient(180deg,#fed7aa 0%,#f97316 100%)";
+      default:         return "linear-gradient(180deg,#e5e7eb 0%,#9ca3af 100%)";
     }
   }
-  // open
   switch (booth.boothCategory.slug) {
-    case "fnb_kitchen":  return "#bfdbfe"; // biru muda — F&B Kitchen
-    case "fnb_dry_food": return "#93c5fd"; // biru — F&B Dry Food
-    default:             return "#ffffff"; // putih
+    case "fnb_kitchen":  return "linear-gradient(180deg,#dbeafe 0%,#bfdbfe 100%)";
+    case "fnb_dry_food": return "linear-gradient(180deg,#eff6ff 0%,#93c5fd 100%)";
+    default:             return "linear-gradient(180deg,#ffffff 0%,#f1f5f9 100%)";
   }
 }
 
