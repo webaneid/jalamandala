@@ -51,7 +51,7 @@ async function notifyFinanceF1(req: {
       bank: req.destBankName,
       rekening: req.destAccountNumber,
       atas_nama: req.destAccountName,
-      link_review: `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.forbis2026.id'}/admin/keuangan/pencairan/${req.id}`,
+      link_review: `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.forbis.id'}/admin/keuangan/pencairan/${req.id}`,
     });
     if (!message) return;
 
@@ -251,7 +251,7 @@ export async function approveDisbursement(
         bank: req.destBankName,
         rekening: req.destAccountNumber,
         atas_nama: req.destAccountName,
-        link_portal: `${process.env.NEXT_PUBLIC_EXPO_URL ?? 'https://expo.forbis2026.id'}/vendor/pencairan`,
+        link_portal: `${process.env.NEXT_PUBLIC_EXPO_URL ?? 'https://expo.forbis.id'}/vendor/pencairan`,
       });
       if (message) void sendWhatsApp({ to: vendor.whatsapp, message, context: 'disbursement-v3' });
     })();

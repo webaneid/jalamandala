@@ -369,7 +369,7 @@ export async function createInvoiceFromBookedBooths(businessId: string) {
           due_date: dueDateFmt,
           payment_channel_label: channelLabel,
           payment_instruction: channelInstruction,
-          link_invoice: `${process.env.NEXT_PUBLIC_EXPO_URL ?? 'https://expo.forbis2026.id'}/invoice/${invoice.publicToken}`,
+          link_invoice: `${process.env.NEXT_PUBLIC_EXPO_URL ?? 'https://expo.forbis.id'}/invoice/${invoice.publicToken}`,
         })
         if (message) void sendWhatsApp({ to: business.participant!.whatsapp, message, context: 'invoice-issued' })
       })()
@@ -578,7 +578,7 @@ export async function markInvoiceAsPaid(payload: {
               })
             : null
 
-          const invoiceUrl = `${process.env.NEXT_PUBLIC_EXPO_URL ?? 'https://expo.forbis2026.id'}/invoice/${invoice.publicToken}`
+          const invoiceUrl = `${process.env.NEXT_PUBLIC_EXPO_URL ?? 'https://expo.forbis.id'}/invoice/${invoice.publicToken}`
 
           // P4
           if (ptcp?.whatsapp) {
@@ -973,7 +973,7 @@ export async function createManualInvoice(payload: {
           due_date: dueDateFmt,
           payment_channel_label: channelLabel,
           payment_instruction: channelInstruction,
-          link_invoice: `${process.env.NEXT_PUBLIC_EXPO_URL ?? 'https://expo.forbis2026.id'}/invoice/${invoice.publicToken}`,
+          link_invoice: `${process.env.NEXT_PUBLIC_EXPO_URL ?? 'https://expo.forbis.id'}/invoice/${invoice.publicToken}`,
         })
         if (message) void sendWhatsApp({ to: participant.whatsapp, message, context: 'invoice-issued' })
       })()

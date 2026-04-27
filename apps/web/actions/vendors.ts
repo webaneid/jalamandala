@@ -155,7 +155,7 @@ export async function createVendor(payload: {
         nama: payload.name.trim(),
         email: payload.email.trim(),
         password: payload.password,
-        link_portal: `${process.env.NEXT_PUBLIC_EXPO_URL ?? 'https://expo.forbis2026.id'}/vendor/login`,
+        link_portal: `${process.env.NEXT_PUBLIC_EXPO_URL ?? 'https://expo.forbis.id'}/vendor/login`,
       })
       if (message) void sendWhatsApp({ to: payload.whatsapp, message, context: 'vendor-created' })
     })()
