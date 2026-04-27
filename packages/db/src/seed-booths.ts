@@ -5,7 +5,6 @@ import { db, createTenantDb } from './client';
 import { expoEvents } from './schema/public';
 import {
   addonUnits,
-  boothBookings,
   boothFacilities,
   boothFacilityCatalog,
   boothCategories,
@@ -640,10 +639,6 @@ async function seedBoothCatalog() {
   const facilityRows = await tenantDb.query.boothFacilityCatalog.findMany({
     orderBy: (table) => [asc(table.sortOrder), asc(table.name)],
   });
-
-  await tenantDb.delete(boothFacilities);
-  await tenantDb.delete(boothBookings);
-  await tenantDb.delete(zonePriceRules);
 
   for (const zone of zoneRows) {
     // Sponsor hanya di zona VIP
