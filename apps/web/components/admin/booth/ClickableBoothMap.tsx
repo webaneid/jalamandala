@@ -1149,18 +1149,23 @@ function resolveBoothFill(booth: {
   boothGroup: { slug: string };
   status: string;
 }): string {
-  if (booth.status === "booked") {
-    switch (booth.boothGroup.slug) {
-      case "gontor":   return "linear-gradient(180deg,#86efac 0%,#22c55e 100%)";
-      case "fpag":     return "linear-gradient(180deg,#fef9c3 0%,#fef08a 100%)";
-      case "formaqin": return "linear-gradient(180deg,#fed7aa 0%,#f97316 100%)";
-      default:         return "linear-gradient(180deg,#e5e7eb 0%,#9ca3af 100%)";
-    }
+  // 1. GROUP — prioritas tertinggi, hanya yang ada di legenda
+  switch (booth.boothGroup.slug) {
+    case "gontor":   return "linear-gradient(180deg,#86efac 0%,#22c55e 100%)";
+    case "fpag":     return "linear-gradient(180deg,#fef9c3 0%,#fef08a 100%)";
+    case "formaqin": return "linear-gradient(180deg,#fed7aa 0%,#f97316 100%)";
   }
+
+  // 2. STATUS — booked (group tidak di legenda) → abu-abu
+  if (booth.status === "booked") {
+    return "linear-gradient(180deg,#e5e7eb 0%,#9ca3af 100%)";
+  }
+
+  // 3. CATEGORY — open, hanya yang ada di legenda
   switch (booth.boothCategory.slug) {
     case "fnb_kitchen":  return "linear-gradient(180deg,#dbeafe 0%,#bfdbfe 100%)";
     case "fnb_dry_food": return "linear-gradient(180deg,#eff6ff 0%,#93c5fd 100%)";
-    default:             return "linear-gradient(180deg,#ffffff 0%,#f1f5f9 100%)";
+    default:             return "linear-gradient(180deg,#ffffff 0%,#f8fafc 100%)";
   }
 }
 
