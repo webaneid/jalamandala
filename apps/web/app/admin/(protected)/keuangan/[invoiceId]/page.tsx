@@ -19,6 +19,7 @@ import {
 } from "@repo/db/schema/public";
 
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { DeleteInvoiceButton } from "@/components/admin/finance/DeleteInvoiceButton";
 import { InvoiceDetailActions } from "@/components/admin/finance/InvoiceDetailActions";
 import { PaymentProofPreviewButton } from "@/components/admin/finance/PaymentProofPreviewButton";
 import { Badge } from "@/components/ui/badge";
@@ -427,8 +428,13 @@ export default async function InvoiceDetailPage({
           title={invoice.invoiceNumber}
           description={business?.companyName ?? participant?.name ?? "Invoice"}
         />
-        <div className="shrink-0 pt-1">
+        <div className="flex shrink-0 items-center gap-2 pt-1">
           <StatusBadge status={invoice.status} />
+          <DeleteInvoiceButton
+            invoiceId={invoice.id}
+            invoiceNumber={invoice.invoiceNumber}
+            participantName={participant?.name ?? "Peserta"}
+          />
         </div>
       </div>
 

@@ -24,6 +24,7 @@ import {
 import {
   expoEvents,
   participantBusinesses,
+  participantTermsApprovals,
   participants,
   paymentChannels,
   qrisConfigs,
@@ -1424,5 +1425,61 @@ export async function getCashflowLedger() {
   } catch (error) {
     console.error("Error fetching cashflow ledger:", error);
     return { success: false, error: "Gagal mengambil data buku kas." };
+  }
+}
+
+export async function deleteInvoiceCompletely(invoiceId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const tenantDb = await createTenantDb(TENANT_SCHEMA);
+
+    // 1. Ambil invoice untuk dapat participantId dan orderId
+    const invoice = await tenantDb.query.invoices.findFirst({
+      where: eq(invoices.id, invoiceId),
+      columns: { id: true, orderId: true, participantId: true },
+    });
+
+    if (!invoice) {
+      return { success: false, error: "Invoice tidak ditemukan." };
+    }
+
+    const participantId = invoice.participantId;
+    const orderId = invoice.orderId;
+
+    // 2. Cari boothBookings milik peserta ini → ambil boothId untuk reset status
+    if (participantId) {
+      const bookings = await tenantDb.query.boothBookings.findMany({
+        where: eq(boothBookings.participantId, participantId),
+        columns: { id: true, boothId: true },
+      });
+      const boothIds = bookings.map((b) => b.boothId);
+
+      if (bookings.length > 0) {
+        await tenantDb.delete(boothBookings).where(eq(boothBookings.participantId, participantId));
+      }
+      if (boothIds.length > 0) {
+        await tenantDb.update(booths).set({ status: "open", updatedAt: new Date() }).where(inArray(booths.id, boothIds));
+      }
+    }
+
+    // 3. Hapus invoice (cascade → invoiceItems + invoicePayments)
+    await tenantDb.delete(invoices).where(eq(invoices.id, invoiceId));
+
+    // 4. Hapus order (cascade → orderItems) jika ada
+    if (orderId) {
+      await tenantDb.delete(orders).where(eq(orders.id, orderId));
+    }
+
+    // 5. Hapus data peserta di public schema
+    if (participantId) {
+      await db.delete(participantTermsApprovals).where(eq(participantTermsApprovals.participantId, participantId));
+      await db.delete(participantBusinesses).where(eq(participantBusinesses.participantId, participantId));
+      await db.delete(participants).where(eq(participants.id, participantId));
+    }
+
+    revalidatePath("/admin/keuangan");
+    return { success: true };
+  } catch (error) {
+    console.error("deleteInvoiceCompletely error:", error);
+    return { success: false, error: "Gagal menghapus data. Cek konsol server." };
   }
 }
