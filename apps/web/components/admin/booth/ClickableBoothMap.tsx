@@ -845,32 +845,36 @@ function VipZoneLayout({
   const sortedBooths = [...zone.booths].sort(
     (first, second) => extractBoothNumber(first.code) - extractBoothNumber(second.code)
   );
-  const rows = [sortedBooths.slice(0, 6), sortedBooths.slice(6, 12)];
+  // VIP7-12 di atas, VIP1-6 di bawah
+  const rows = [sortedBooths.slice(6, 12), sortedBooths.slice(0, 6)];
 
   return (
-    <div className="overflow-x-auto rounded-[30px] bg-slate-50 p-5 ring-1 ring-slate-200/90">
-      <div className="grid min-w-[980px] gap-5">
+    <div className="overflow-x-auto rounded-[30px] bg-slate-50 p-4 ring-1 ring-slate-200/90">
+      <div className="grid min-w-[540px] gap-3">
         {rows.map((row, rowIndex) => (
           <div
-            className="grid grid-cols-[1fr_96px_1fr] items-stretch gap-4"
+            className="grid grid-cols-[1fr_52px_1fr] items-stretch gap-2"
             key={`vip-row-${rowIndex + 1}`}
           >
             <div className="grid grid-cols-3 gap-0">
               {row.slice(0, 3).map((booth) => (
-                <VipBoothCard key={booth.id} booth={booth} onClick={() => onBoothClick(booth)} />
+                <VipBoothCard key={booth.id} booth={booth} onClick={() => onBoothClick(booth)}
+                  sizeClassName="min-h-[64px] min-w-[78px]"
+                  className="first:rounded-l-[14px] last:rounded-r-[14px]" />
               ))}
             </div>
 
-            <div className="flex flex-col items-center justify-center rounded-[26px] border border-dashed border-slate-300/90 bg-white/60 text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                Gangway
+            <div className="flex items-center justify-center rounded-[18px] border border-dashed border-slate-300/90 bg-white/60">
+              <p className="rotate-180 text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-400 [writing-mode:vertical-rl]">
+                Gang
               </p>
-              <div className="mt-3 h-16 w-px bg-slate-300" />
             </div>
 
             <div className="grid grid-cols-3 gap-0">
               {row.slice(3, 6).map((booth) => (
-                <VipBoothCard key={booth.id} booth={booth} onClick={() => onBoothClick(booth)} />
+                <VipBoothCard key={booth.id} booth={booth} onClick={() => onBoothClick(booth)}
+                  sizeClassName="min-h-[64px] min-w-[78px]"
+                  className="first:rounded-l-[14px] last:rounded-r-[14px]" />
               ))}
             </div>
           </div>
