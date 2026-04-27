@@ -807,7 +807,9 @@ function BoothCanvasLayout({
   zone: BoothMapZone;
 }) {
   return (
-    <div className="rounded-[28px] bg-slate-100/80 p-4 ring-1 ring-slate-200/80">
+    <div className="rounded-[28px] p-4 ring-1 ring-slate-200/80"
+      style={{ background: "linear-gradient(180deg, #f0fdf4 0%, #eff6ff 35%, #fff7ed 70%, #fefce8 100%)" }}
+    >
       <div className={viewport.wrapperClassName}>
         <div
           className="relative"
@@ -849,7 +851,9 @@ function VipZoneLayout({
   const rows = [sortedBooths.slice(6, 12), sortedBooths.slice(0, 6)];
 
   return (
-    <div className="overflow-x-auto rounded-[30px] bg-slate-50 p-4 ring-1 ring-slate-200/90">
+    <div className="overflow-x-auto rounded-[30px] p-4 ring-1 ring-slate-200/90"
+      style={{ background: "linear-gradient(180deg, #f0fdf4 0%, #eff6ff 35%, #fff7ed 70%, #fefce8 100%)" }}
+    >
       <div className="grid min-w-[540px] gap-3">
         {rows.map((row, rowIndex) => (
           <div
@@ -917,7 +921,9 @@ function PremiumZoneLayout({
   }
 
   return (
-    <div className="overflow-x-auto rounded-[30px] bg-slate-50 p-5 ring-1 ring-slate-200/90">
+    <div className="overflow-x-auto rounded-[30px] p-5 ring-1 ring-slate-200/90"
+      style={{ background: "linear-gradient(180deg, #f0fdf4 0%, #eff6ff 35%, #fff7ed 70%, #fefce8 100%)" }}
+    >
       <div className="flex min-w-[620px] flex-col gap-3">
         {/* Stage — berdiri sendiri di atas, tengah, kiri-kanan kosong */}
         <div className="flex items-center justify-center px-8">
@@ -978,7 +984,9 @@ function FestivalWestZoneLayout({
   }
 
   return (
-    <div className="rounded-[30px] bg-slate-50 p-5 ring-1 ring-slate-200/90">
+    <div className="rounded-[30px] p-5 ring-1 ring-slate-200/90"
+      style={{ background: "linear-gradient(180deg, #f0fdf4 0%, #eff6ff 35%, #fff7ed 70%, #fefce8 100%)" }}
+    >
       <div className="mx-auto max-h-[700px] w-[178px] overflow-y-auto rounded-[24px]">
         <div className="flex w-[178px] flex-col">
           <div className="self-end grid gap-0">
@@ -1035,7 +1043,9 @@ function FestivalNorthZoneLayout({
   function onDragEnd() { drag.current.active = false; }
 
   return (
-    <div className="rounded-[30px] bg-slate-50 p-5 ring-1 ring-slate-200/90">
+    <div className="rounded-[30px] p-5 ring-1 ring-slate-200/90"
+      style={{ background: "linear-gradient(180deg, #f0fdf4 0%, #eff6ff 35%, #fff7ed 70%, #fefce8 100%)" }}
+    >
       <div
         ref={scrollRef}
         className="mx-auto h-[172px] w-full max-w-[980px] cursor-grab overflow-x-auto overflow-y-hidden rounded-[24px] select-none active:cursor-grabbing"
@@ -1076,20 +1086,22 @@ function VipBoothCard({
   sizeClassName?: string;
 }) {
   const isBooked = booth.status === "booked";
+  const fill = resolveBoothFill(booth);
 
   return (
     <button
-      className={`group flex ${sizeClassName ?? "min-h-[92px] min-w-[92px]"} flex-col justify-between rounded-none border border-slate-300 bg-white p-3 text-left shadow-none transition hover:z-10 hover:-translate-y-0.5 hover:border-primary-300 hover:bg-slate-50 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-100 ${
+      className={`group flex ${sizeClassName ?? "min-h-[92px] min-w-[92px]"} flex-col justify-between rounded-none border border-slate-300 p-3 text-left shadow-none transition hover:z-10 hover:-translate-y-0.5 hover:border-primary-300 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-100 ${
         className ?? "first:rounded-l-[20px] last:rounded-r-[20px]"
       }`}
       onClick={onClick}
+      style={{ backgroundColor: fill }}
       type="button"
     >
       <div className="flex justify-end">
         <span
           className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
             isBooked
-              ? "bg-slate-200 text-slate-700"
+              ? "bg-white/60 text-slate-700"
               : "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"
           }`}
         >
@@ -1114,12 +1126,13 @@ function GenericBoothCard({
   style: React.CSSProperties;
 }) {
   const isBooked = booth.status === "booked";
+  const fill = resolveBoothFill(booth);
 
   return (
     <button
-      className="group absolute rounded-[14px] border border-slate-300 bg-white text-left shadow-[0_6px_16px_rgba(15,23,42,0.06)] transition hover:z-10 hover:-translate-y-0.5 hover:border-primary-300 hover:bg-slate-50 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-100"
+      className="group absolute rounded-[14px] border border-slate-300 text-left shadow-[0_6px_16px_rgba(15,23,42,0.06)] transition hover:z-10 hover:-translate-y-0.5 hover:border-primary-300 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-100"
       onClick={onClick}
-      style={style}
+      style={{ ...style, backgroundColor: fill }}
       type="button"
     >
       <span
@@ -1142,34 +1155,24 @@ function GenericBoothCard({
 }
 
 function resolveBoothFill(booth: {
-  boothGroup: {
-    slug: string;
-  };
-  notes: string | null;
+  boothCategory: { slug: string };
+  boothGroup: { slug: string };
   status: string;
 }) {
   if (booth.status === "booked") {
     switch (booth.boothGroup.slug) {
-      case "sponsor":
-        return "#fbbf24";
-      case "fpag":
-        return "#fef08a";
-      case "formaqin":
-        return "#7c3aed";
-      case "gontor":
-        return "#22c55e";
-      case "forbis":
-        return "#2563eb";
-      default:
-        return "#60a5fa";
+      case "gontor":   return "#22c55e"; // hijau
+      case "fpag":     return "#fef08a"; // kuning
+      case "formaqin": return "#f97316"; // orange
+      default:         return "#9ca3af"; // abu-abu (forbis, general, sponsor, dll)
     }
   }
-
-  if (booth.notes?.toLowerCase().includes("available highlight")) {
-    return "#bfdbfe";
+  // open
+  switch (booth.boothCategory.slug) {
+    case "fnb_kitchen":  return "#bfdbfe"; // biru muda — F&B Kitchen
+    case "fnb_dry_food": return "#93c5fd"; // biru — F&B Dry Food
+    default:             return "#ffffff"; // putih
   }
-
-  return "#ffffff";
 }
 
 function resolveBoothTextColor(booth: { status: string }) {

@@ -270,6 +270,20 @@ Kalau jumlah booth berubah, update `slice()` dan `grid-cols-N` di **dua tempat s
 
 Jangan lupa sesuaikan `min-w-[Npx]` di wrapper jika lebar total grid berubah signifikan.
 
+**Warna booth di admin (`/admin/booth`)** — `resolveBoothFill()` di `ClickableBoothMap.tsx`, berdasarkan kombinasi booth group + booth category + status:
+
+| Kondisi | Warna |
+|---------|-------|
+| Booked + Gontor | #22c55e (hijau) |
+| Booked + FPAG | #fef08a (kuning) |
+| Booked + Formaqin | #f97316 (orange) |
+| Booked (lainnya) | #9ca3af (abu-abu) |
+| Open + fnb_kitchen | #bfdbfe (biru muda) |
+| Open + fnb_dry_food | #93c5fd (biru) |
+| Open (default) | #ffffff (putih) |
+
+Background layout booth menggunakan gradient `linear-gradient(180deg, #f0fdf4 0%, #eff6ff 35%, #fff7ed 70%, #fefce8 100%)` — hanya di `/admin/booth`, tidak di halaman lain.
+
 **Halaman lain yang tidak perlu diubah saat jumlah booth berubah:**
 - `/admin/keuangan/tambah-tagihan` → `ManualInvoiceBuilder` sepenuhnya dinamis dari DB (`booths.findMany`), tidak ada hardcoded layout atau slice.
 - `/admin/booth` (booth management) → data dari DB, hanya layout visual yang hardcoded di `ClickableBoothMap`.

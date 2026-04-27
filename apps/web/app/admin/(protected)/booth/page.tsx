@@ -239,13 +239,15 @@ export default async function BoothPage() {
               <CardDescription>Warna dasar untuk renderer awal.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 pt-5">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Booked</p>
               <LegendRow color="#22c55e" label="Booked Gontor" />
-              <LegendRow color="#fbbf24" label="Booked Sponsor" />
               <LegendRow color="#fef08a" label="Booked FPAG" />
-              <LegendRow color="#7c3aed" label="Booked FORMAQIN" />
-              <LegendRow color="#60a5fa" label="Booked FORBIS / Umum" />
-              <LegendRow color="#bfdbfe" label="Open highlight" />
-              <LegendRow color="#ffffff" label="Open default" bordered />
+              <LegendRow color="#f97316" label="Booked Formaqin" />
+              <LegendRow color="#9ca3af" label="Booked (Umum / FORBIS / Sponsor)" />
+              <p className="pt-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Open</p>
+              <LegendRow color="#bfdbfe" label="Open · F&B Kitchen" />
+              <LegendRow color="#93c5fd" label="Open · F&B Dry Food" />
+              <LegendRow color="#ffffff" label="Open" bordered />
             </CardContent>
           </Card>
 
