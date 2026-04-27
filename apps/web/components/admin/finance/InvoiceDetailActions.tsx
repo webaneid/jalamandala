@@ -2,10 +2,11 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { CheckCheck, Loader2, Pencil, Wallet } from "lucide-react";
+import { CheckCheck, Loader2, Pencil, Wallet, XCircle } from "lucide-react";
 
 import {
   markInvoiceAsPaid,
+  rejectPaymentConfirmation,
   updateInvoicePaymentMethod,
   verifyPaymentConfirmation,
 } from "@/actions/finance";
@@ -76,6 +77,7 @@ function VerifyCard({ payment, invoiceId }: { payment: PendingPayment; invoiceId
   const router = useRouter();
   const [isPending, start] = React.useTransition();
   const [error, setError] = React.useState("");
+  const [confirmReject, setConfirmReject] = React.useState(false);
 
   function handleVerify() {
     setError("");
@@ -85,6 +87,19 @@ function VerifyCard({ payment, invoiceId }: { payment: PendingPayment; invoiceId
         setError(result.error ?? "Gagal memverifikasi.");
         return;
       }
+      router.refresh();
+    });
+  }
+
+  function handleReject() {
+    setError("");
+    start(async () => {
+      const result = await rejectPaymentConfirmation(payment.id);
+      if (!result.success) {
+        setError(result.error ?? "Gagal menolak.");
+        return;
+      }
+      setConfirmReject(false);
       router.refresh();
     });
   }
@@ -128,10 +143,54 @@ function VerifyCard({ payment, invoiceId }: { payment: PendingPayment; invoiceId
         <p className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">{error}</p>
       )}
 
-      <Button className="w-full gap-2" disabled={isPending} onClick={handleVerify} type="button">
-        {isPending ? <Loader2 className="size-4 animate-spin" /> : <CheckCheck className="size-4" />}
-        Verifikasi Pembayaran
-      </Button>
+      {confirmReject ? (
+        <div className="rounded-lg bg-red-50 border border-red-200 p-3 space-y-2">
+          <p className="text-sm font-semibold text-red-800">Tolak konfirmasi ini?</p>
+          <p className="text-xs text-red-600">
+            Jika invoice sudah lewat jatuh tempo, booth akan dilepas dan invoice kadaluarsa. Jika belum jatuh tempo, invoice kembali menunggu pembayaran.
+          </p>
+          <div className="flex gap-2 pt-1">
+            <Button
+              className="flex-1 gap-1.5 bg-red-600 hover:bg-red-700 text-white"
+              disabled={isPending}
+              onClick={handleReject}
+              size="sm"
+              type="button"
+            >
+              {isPending ? <Loader2 className="size-3 animate-spin" /> : <XCircle className="size-3" />}
+              Ya, Tolak
+            </Button>
+            <Button
+              className="flex-1"
+              disabled={isPending}
+              onClick={() => setConfirmReject(false)}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              Batal
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex gap-2">
+          <Button className="flex-1 gap-2" disabled={isPending} onClick={handleVerify} type="button">
+            {isPending ? <Loader2 className="size-4 animate-spin" /> : <CheckCheck className="size-4" />}
+            Verifikasi
+          </Button>
+          <Button
+            className="gap-1.5 border-red-200 text-red-600 hover:bg-red-50"
+            disabled={isPending}
+            onClick={() => setConfirmReject(true)}
+            size="default"
+            type="button"
+            variant="outline"
+          >
+            <XCircle className="size-4" />
+            Tolak
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import {
   Clock,
   XCircle,
   ImageIcon,
+  RefreshCcw,
 } from "lucide-react";
 
 import { getInvoiceByToken } from "@/actions/finance";
@@ -416,6 +417,30 @@ export default async function PublicInvoicePage({
                   Konfirmasi via WhatsApp
                 </a>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* ── BOOKING ULANG (expired) ── */}
+        {invoice.status === "expired" && (
+          <div className="bg-white rounded-2xl shadow-sm border border-orange-100 overflow-hidden print:hidden">
+            <div className="px-5 py-4 border-b border-orange-50">
+              <p className="text-sm font-bold text-orange-700">Invoice Telah Kadaluarsa</p>
+            </div>
+            <div className="p-5 space-y-3">
+              <p className="text-sm text-slate-600">
+                Invoice ini sudah melewati tanggal jatuh tempo. Booth yang tercantum telah dilepas dan bisa dipesan kembali oleh peserta lain.
+              </p>
+              <p className="text-sm text-slate-600">
+                Untuk mengikuti pameran, silakan lakukan booking booth baru dari awal.
+              </p>
+              <a
+                href={`/${event.slug}/booking`}
+                className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-primary hover:bg-primary/90 text-white text-sm font-semibold rounded-xl transition-colors"
+              >
+                <RefreshCcw className="w-4 h-4" />
+                Booking Booth Baru
+              </a>
             </div>
           </div>
         )}

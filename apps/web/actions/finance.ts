@@ -1,6 +1,6 @@
 "use server";
 
-import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, lt } from "drizzle-orm";
 import { getEligibilityRejectionReason } from "@/lib/booth-eligibility";
 import { revalidatePath } from "next/cache";
 import { sendWhatsApp } from "@/lib/whatsapp";
@@ -110,6 +110,171 @@ async function resolveInvoiceDueDays(): Promise<number> {
     return (event as any).invoiceDueDays ?? 1;
   } catch {
     return 1;
+  }
+}
+
+// ── Expiry helpers ──────────────────────────────────────────────────────────
+
+type TenantDb = Awaited<ReturnType<typeof createTenantDb>>;
+
+async function releaseBoothsForInvoice(
+  tenantDb: TenantDb,
+  invoiceId: string,
+  invoiceItemRows: Array<{ itemType: string; referenceId: string | null }>
+) {
+  const bookingIds = invoiceItemRows
+    .filter((i) => i.itemType === "booth_booking" && i.referenceId)
+    .map((i) => i.referenceId as string);
+
+  if (bookingIds.length === 0) return;
+
+  const linkedBookings = await tenantDb
+    .select({ boothId: boothBookings.boothId })
+    .from(boothBookings)
+    .where(inArray(boothBookings.id, bookingIds));
+
+  const boothIds = linkedBookings.map((b) => b.boothId).filter(Boolean) as string[];
+  if (boothIds.length > 0) {
+    await tenantDb
+      .update(booths)
+      .set({ status: "open", updatedAt: new Date() })
+      .where(inArray(booths.id, boothIds));
+  }
+}
+
+// Expire all waiting_for_payment invoices past their due date.
+// Does NOT expire waiting_confirmation (pending proof) — admin must resolve those manually.
+export async function expireOverdueInvoices(): Promise<void> {
+  try {
+    const tenantDb = await createTenantDb(TENANT_SCHEMA);
+    const now = new Date();
+
+    const overdueRows = await tenantDb.query.invoices.findMany({
+      where: and(eq(invoices.status, "waiting_for_payment"), lt(invoices.dueDate, now)),
+      with: { items: true },
+    });
+
+    for (const invoice of overdueRows) {
+      await releaseBoothsForInvoice(tenantDb, invoice.id, invoice.items);
+      await tenantDb
+        .update(invoices)
+        .set({ status: "expired", updatedAt: new Date() })
+        .where(eq(invoices.id, invoice.id));
+    }
+
+    if (overdueRows.length > 0) {
+      revalidatePath("/admin/keuangan");
+      revalidatePath("/admin/booth");
+    }
+  } catch (err) {
+    console.error("expireOverdueInvoices error:", err);
+  }
+}
+
+// Send WA reminder for invoices expiring within the next 22–26 hours.
+// Window-based dedup: ~4h window minimises duplicate sends.
+async function sendExpiryReminders(tenantDb: TenantDb): Promise<void> {
+  try {
+    const now = new Date();
+    const windowStart = new Date(now.getTime() + 22 * 60 * 60 * 1000);
+    const windowEnd = new Date(now.getTime() + 26 * 60 * 60 * 1000);
+
+    const soonExpiring = await tenantDb.query.invoices.findMany({
+      where: and(
+        eq(invoices.status, "waiting_for_payment"),
+        gte(invoices.dueDate, windowStart),
+        lt(invoices.dueDate, windowEnd)
+      ),
+    });
+
+    for (const invoice of soonExpiring) {
+      if (!invoice.participantId) continue;
+      void (async () => {
+        try {
+          const [participant, businessData] = await Promise.all([
+            db.query.participants.findFirst({
+              where: eq(participants.id, invoice.participantId!),
+            }),
+            invoice.businessId
+              ? db.query.participantBusinesses.findFirst({
+                  where: eq(participantBusinesses.id, invoice.businessId),
+                  columns: { companyName: true },
+                })
+              : Promise.resolve(null),
+          ]);
+          if (!participant?.whatsapp) return;
+
+          const dueDateFmt = invoice.dueDate ? fmtDate(invoice.dueDate) : "-";
+          const message = await renderWaTemplate(WA_KEYS.INVOICE_MAU_EXPIRED, {
+            nama: participant.name,
+            perusahaan: businessData?.companyName ?? participant.name,
+            company_name: businessData?.companyName ?? participant.name,
+            invoice_number: invoice.invoiceNumber,
+            total: fmtRp(invoice.grandTotal),
+            invoice_total: fmtRp(invoice.grandTotal),
+            jatuh_tempo: dueDateFmt,
+            due_date: dueDateFmt,
+            link_invoice: `${process.env.NEXT_PUBLIC_EXPO_URL ?? "https://expo.forbis.id"}/invoice/${invoice.publicToken}`,
+          });
+          if (message) void sendWhatsApp({ to: participant.whatsapp, message, context: "invoice-expiry-reminder" });
+        } catch {}
+      })();
+    }
+  } catch (err) {
+    console.error("sendExpiryReminders error:", err);
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+
+export async function rejectPaymentConfirmation(paymentId: string) {
+  try {
+    const tenantDb = await createTenantDb(TENANT_SCHEMA);
+
+    const payment = await tenantDb.query.invoicePayments.findFirst({
+      where: eq(invoicePayments.id, paymentId),
+    });
+
+    if (!payment) return { success: false, error: "Data pembayaran tidak ditemukan." };
+    if (payment.status !== "pending_verification") {
+      return { success: false, error: "Pembayaran tidak dalam status menunggu verifikasi." };
+    }
+
+    const invoice = await tenantDb.query.invoices.findFirst({
+      where: eq(invoices.id, payment.invoiceId),
+      with: { items: true },
+    });
+
+    if (!invoice) return { success: false, error: "Invoice tidak ditemukan." };
+
+    await tenantDb
+      .update(invoicePayments)
+      .set({ status: "rejected", updatedAt: new Date() })
+      .where(eq(invoicePayments.id, paymentId));
+
+    const now = new Date();
+    const isOverdue = invoice.dueDate != null && invoice.dueDate < now;
+
+    if (isOverdue) {
+      await releaseBoothsForInvoice(tenantDb, invoice.id, invoice.items);
+      await tenantDb
+        .update(invoices)
+        .set({ status: "expired", updatedAt: new Date() })
+        .where(eq(invoices.id, invoice.id));
+    } else {
+      await tenantDb
+        .update(invoices)
+        .set({ status: "waiting_for_payment", updatedAt: new Date() })
+        .where(eq(invoices.id, invoice.id));
+    }
+
+    revalidatePath("/admin/keuangan");
+    revalidatePath(`/invoice/${invoice.publicToken}`);
+    revalidatePath("/admin/booth");
+    return { success: true, expired: isOverdue };
+  } catch (error) {
+    console.error("rejectPaymentConfirmation error:", error);
+    return { success: false, error: "Gagal menolak konfirmasi pembayaran." };
   }
 }
 
@@ -1199,7 +1364,7 @@ export async function getInvoiceByToken(token: string) {
   try {
     const tenantDb = await createTenantDb(TENANT_SCHEMA);
 
-    const invoice = await tenantDb.query.invoices.findFirst({
+    let invoice = await tenantDb.query.invoices.findFirst({
       where: eq(invoices.publicToken, token),
       with: {
         items: true,
@@ -1208,6 +1373,23 @@ export async function getInvoiceByToken(token: string) {
     });
 
     if (!invoice) return null;
+
+    // Lazy expiry: if waiting_for_payment and past due, expire immediately
+    if (invoice.status === "waiting_for_payment" && invoice.dueDate && invoice.dueDate < new Date()) {
+      await releaseBoothsForInvoice(tenantDb, invoice.id, invoice.items);
+      await tenantDb
+        .update(invoices)
+        .set({ status: "expired", updatedAt: new Date() })
+        .where(eq(invoices.id, invoice.id));
+      invoice = { ...invoice, status: "expired" };
+      revalidatePath("/admin/keuangan");
+      revalidatePath("/admin/booth");
+    }
+
+    // Send H-1 reminder if expiry is 22-26h away and still waiting for payment
+    if (invoice.status === "waiting_for_payment") {
+      void sendExpiryReminders(tenantDb);
+    }
 
     // Gap #1: participant + business dari public DB
     const [participant, business] = await Promise.all([

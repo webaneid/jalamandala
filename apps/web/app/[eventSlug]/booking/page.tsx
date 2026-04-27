@@ -8,6 +8,7 @@ import { PublicTermsStep } from "@/components/public/PublicTermsStep"
 import { getCurrentParticipantSession } from "@/lib/participant-session"
 import { getPublicZoneForBooking, getPublicAddons, getEligibleZonesForBooking } from "@/lib/public-booth-data"
 import { getActiveTermsPage } from "@/actions/terms-approval"
+import { expireOverdueInvoices } from "@/actions/finance"
 import { db } from "@repo/db"
 import { participants, participantBusinesses } from "@repo/db/schema/public"
 
@@ -75,6 +76,9 @@ export default async function PublicBookingPage({
 
   const activeBusiness = businesses.find((b) => b.id === selectedBusinessId) ?? null
   const bookingBase = `/${eventSlug}/booking${zoneSlug ? `?zone=${encodeURIComponent(zoneSlug)}` : ""}`
+
+  // Release booths from expired invoices before showing available booths
+  void expireOverdueInvoices();
 
   const [allZones, termsPage] = await Promise.all([
     getEligibleZonesForBooking(

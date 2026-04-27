@@ -118,6 +118,21 @@ PIC: {{nama}}
 WA: {{rekening}}
 Invoice: {{invoice_number}}`,
   },
+  {
+    key: 'invoice_mau_expired',
+    title: 'Pengingat Invoice Hampir Kadaluarsa',
+    sortOrder: 10,
+    body: `⚠️ {{nama}}, invoice Anda akan *KADALUARSA besok*!
+
+No. Invoice: *{{invoice_number}}*
+Total: *{{total}}*
+Jatuh Tempo: {{jatuh_tempo}}
+
+Jika belum dibayar sebelum jatuh tempo, booth Anda akan *dilepas* dan harus melakukan booking ulang.
+
+Segera bayar sekarang:
+{{link_invoice}}`,
+  },
 ]
 
 async function seedWaTemplates() {
