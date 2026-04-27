@@ -807,9 +807,7 @@ function BoothCanvasLayout({
   zone: BoothMapZone;
 }) {
   return (
-    <div className="rounded-[28px] p-4 ring-1 ring-slate-200/80"
-      style={{ background: "linear-gradient(180deg, #f0fdf4 0%, #eff6ff 35%, #fff7ed 70%, #fefce8 100%)" }}
-    >
+    <div className="rounded-[28px] bg-slate-50 p-4 ring-1 ring-slate-200/80">
       <div className={viewport.wrapperClassName}>
         <div
           className="relative"
@@ -851,9 +849,7 @@ function VipZoneLayout({
   const rows = [sortedBooths.slice(6, 12), sortedBooths.slice(0, 6)];
 
   return (
-    <div className="overflow-x-auto rounded-[30px] p-4 ring-1 ring-slate-200/90"
-      style={{ background: "linear-gradient(180deg, #f0fdf4 0%, #eff6ff 35%, #fff7ed 70%, #fefce8 100%)" }}
-    >
+    <div className="overflow-x-auto rounded-[30px] bg-slate-50 p-4 ring-1 ring-slate-200/90">
       <div className="grid min-w-[540px] gap-3">
         {rows.map((row, rowIndex) => (
           <div
@@ -921,9 +917,7 @@ function PremiumZoneLayout({
   }
 
   return (
-    <div className="overflow-x-auto rounded-[30px] p-5 ring-1 ring-slate-200/90"
-      style={{ background: "linear-gradient(180deg, #f0fdf4 0%, #eff6ff 35%, #fff7ed 70%, #fefce8 100%)" }}
-    >
+    <div className="overflow-x-auto rounded-[30px] bg-slate-50 p-5 ring-1 ring-slate-200/90">
       <div className="flex min-w-[620px] flex-col gap-3">
         {/* Stage — berdiri sendiri di atas, tengah, kiri-kanan kosong */}
         <div className="flex items-center justify-center px-8">
@@ -984,9 +978,7 @@ function FestivalWestZoneLayout({
   }
 
   return (
-    <div className="rounded-[30px] p-5 ring-1 ring-slate-200/90"
-      style={{ background: "linear-gradient(180deg, #f0fdf4 0%, #eff6ff 35%, #fff7ed 70%, #fefce8 100%)" }}
-    >
+    <div className="rounded-[30px] bg-slate-50 p-5 ring-1 ring-slate-200/90">
       <div className="mx-auto max-h-[700px] w-[178px] overflow-y-auto rounded-[24px]">
         <div className="flex w-[178px] flex-col">
           <div className="self-end grid gap-0">
@@ -1043,9 +1035,7 @@ function FestivalNorthZoneLayout({
   function onDragEnd() { drag.current.active = false; }
 
   return (
-    <div className="rounded-[30px] p-5 ring-1 ring-slate-200/90"
-      style={{ background: "linear-gradient(180deg, #f0fdf4 0%, #eff6ff 35%, #fff7ed 70%, #fefce8 100%)" }}
-    >
+    <div className="rounded-[30px] bg-slate-50 p-5 ring-1 ring-slate-200/90">
       <div
         ref={scrollRef}
         className="mx-auto h-[172px] w-full max-w-[980px] cursor-grab overflow-x-auto overflow-y-hidden rounded-[24px] select-none active:cursor-grabbing"
