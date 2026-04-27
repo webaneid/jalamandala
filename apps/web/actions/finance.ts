@@ -104,6 +104,15 @@ async function resolveActiveEvent() {
   return firstEvent;
 }
 
+async function resolveInvoiceDueDays(): Promise<number> {
+  try {
+    const event = await resolveActiveEvent();
+    return (event as any).invoiceDueDays ?? 1;
+  } catch {
+    return 1;
+  }
+}
+
 async function resolvePaymentMethodOption(paymentMethodKey: string | null | undefined) {
   const normalizedKey = normalizeText(paymentMethodKey);
 
@@ -304,7 +313,7 @@ export async function createInvoiceFromBookedBooths(businessId: string) {
     const subtotal = insertedOrderItems.reduce((sum, item) => sum + item.subtotal, 0);
     const issueDate = new Date();
     const dueDate = new Date(issueDate);
-    dueDate.setDate(dueDate.getDate() + 1);
+    dueDate.setDate(dueDate.getDate() + await resolveInvoiceDueDays());
 
     const [invoice] = await tenantDb
       .insert(invoices)
@@ -642,6 +651,7 @@ export async function createManualInvoice(payload: {
     unitPrice: number;
     itemType: string;
   }>;
+  dueDays?: number;
 }) {
   try {
     const tenantDb = await createTenantDb(TENANT_SCHEMA);
@@ -864,7 +874,10 @@ export async function createManualInvoice(payload: {
     const subtotal = invoiceLineItems.reduce((sum, item) => sum + item.subtotal, 0);
     const issueDate = new Date();
     const dueDate = new Date(issueDate);
-    dueDate.setDate(dueDate.getDate() + 1);
+    const dueDays = payload.dueDays && payload.dueDays >= 1
+      ? Math.floor(payload.dueDays)
+      : await resolveInvoiceDueDays();
+    dueDate.setDate(dueDate.getDate() + dueDays);
 
     let orderId: string | null = null;
 

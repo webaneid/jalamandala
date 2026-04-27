@@ -474,3 +474,18 @@ export async function deleteMessageTemplate(id: string) {
     };
   }
 }
+
+export async function updateInvoiceDueDays(days: number) {
+  try {
+    const activeEvent = await resolveActiveEvent();
+    const safeDays = Math.max(1, Math.floor(days));
+    await db.update(expoEvents)
+      .set({ invoiceDueDays: safeDays, updatedAt: new Date() })
+      .where(eq(expoEvents.id, activeEvent.id));
+    revalidatePath("/admin/setting");
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating invoice due days:", error);
+    return { success: false, error: "Gagal menyimpan pengaturan." };
+  }
+}

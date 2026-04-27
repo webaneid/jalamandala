@@ -85,6 +85,7 @@ async function getEventSettingData() {
       financeWaNumbers: activeEvent.financeWaNumbers ?? [],
       leaderWaNumbers: activeEvent.leaderWaNumbers ?? [],
       eventTeamWaNumbers: activeEvent.eventTeamWaNumbers ?? [],
+      invoiceDueDays: activeEvent.invoiceDueDays ?? 1,
     },
     paymentChannels: activeEvent.paymentChannels
       .filter((channel) => channel.type === "bank_account")

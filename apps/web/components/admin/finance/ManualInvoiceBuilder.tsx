@@ -14,6 +14,7 @@ import { OptionAutocompleteSelect } from "@/components/forms/OptionAutocompleteS
 import { isBoothEligible } from "@/lib/booth-eligibility";
 
 type BuilderData = {
+  invoiceDueDays: number;
   addons: Array<{
     description: string | null;
     id: string;
@@ -36,7 +37,9 @@ type BuilderData = {
       startsAt: string | null;
     }>;
     status: string;
+    zoneColorCode: string | null;
     zoneName: string;
+    zoneSlug: string;
   }>;
   currentPricePhase: string;
   participants: Array<{
@@ -63,6 +66,8 @@ export function ManualInvoiceBuilder({ data }: { data: BuilderData }) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [error, setError] = React.useState("");
+  const [dueDays, setDueDays] = React.useState(data.invoiceDueDays ?? 1);
+  const [activeZone, setActiveZone] = React.useState<string>("all");
   const [participantId, setParticipantId] = React.useState("");
   const [businessId, setBusinessId] = React.useState("");
   const [selectedBoothIds, setSelectedBoothIds] = React.useState<string[]>([]);
@@ -209,6 +214,7 @@ export function ManualInvoiceBuilder({ data }: { data: BuilderData }) {
           ...item,
           itemType: "custom",
         })),
+        dueDays,
         participantId: participantId || undefined,
         selectedAddons: selectedAddonItems.map((addon) => ({
           addonId: addon.id,
@@ -268,54 +274,46 @@ export function ManualInvoiceBuilder({ data }: { data: BuilderData }) {
             />
           </FieldBlock>
 
-          <div className="md:col-span-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            Jatuh tempo otomatis <strong>1 hari</strong> sejak invoice diterbitkan. Jika belum dibayar, booth akan dikembalikan ke status tersedia dan harus booking ulang.
-          </div>
+          <FieldBlock label="Jatuh Tempo (hari)">
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={1}
+                max={90}
+                value={dueDays}
+                onChange={(e) => setDueDays(Math.max(1, parseInt(e.target.value) || 1))}
+                className="w-28"
+              />
+              <span className="text-sm text-muted-foreground">hari sejak terbit</span>
+            </div>
+          </FieldBlock>
         </CardContent>
       </Card>
 
       <Card className="border-white/80 bg-white/90">
-        <CardHeader>
-          <CardTitle>Pilih Booth</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {boothCatalog.map((booth) => {
-            const checked = selectedBoothIds.includes(booth.id);
-
-            return (
-              <label
-                key={booth.id}
-                className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${
-                  checked
-                    ? "border-primary/30 bg-primary/10"
-                    : "border-border/70 bg-white hover:border-primary/20"
-                }`}
-              >
-                <input
-                  checked={checked}
-                  className="mt-1"
-                  onChange={() => toggleBooth(booth.id)}
-                  type="checkbox"
-                />
-                <div className="min-w-0">
-                  <p className="font-medium text-foreground">
-                    {booth.code} • {booth.zoneName}
-                  </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Group booth: {booth.boothGroupName}
-                  </p>
-                  <p className="mt-1 text-sm font-medium text-primary-700">
-                    {formatRupiah(booth.price)} • {formatPriceGroupLabel(booth.priceGroup)}
-                  </p>
-                </div>
-              </label>
-            );
-          })}
-          {boothCatalog.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border/80 p-6 text-sm text-muted-foreground">
-              Tidak ada booth open yang bisa dipilih.
+        <CardHeader className="border-b border-border/60">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <CardTitle>Pilih Booth</CardTitle>
+              {selectedBoothIds.length > 0 && (
+                <p className="mt-0.5 text-sm text-primary-700 font-medium">{selectedBoothIds.length} booth dipilih</p>
+              )}
             </div>
-          ) : null}
+          </div>
+          {/* Zone filter tabs */}
+          <ZoneFilterTabs
+            booths={boothCatalog}
+            activeZone={activeZone}
+            onZoneChange={(z) => setActiveZone(z)}
+          />
+        </CardHeader>
+        <CardContent className="pt-5">
+          <BoothGrid
+            booths={boothCatalog}
+            activeZone={activeZone}
+            selectedBoothIds={selectedBoothIds}
+            onToggle={toggleBooth}
+          />
         </CardContent>
       </Card>
 
@@ -465,6 +463,164 @@ export function ManualInvoiceBuilder({ data }: { data: BuilderData }) {
         </Button>
       </div>
     </form>
+  );
+}
+
+type BoothItem = {
+  boothGroupName: string;
+  code: string;
+  id: string;
+  price: number;
+  priceGroup: string;
+  zoneColorCode: string | null;
+  zoneName: string;
+  zoneSlug: string;
+};
+
+function ZoneFilterTabs({
+  booths,
+  activeZone,
+  onZoneChange,
+}: {
+  booths: BoothItem[];
+  activeZone: string;
+  onZoneChange: (zone: string) => void;
+}) {
+  const zones = React.useMemo(() => {
+    const map = new Map<string, { name: string; slug: string; colorCode: string | null; count: number }>();
+    for (const b of booths) {
+      const existing = map.get(b.zoneSlug);
+      if (existing) { existing.count++; }
+      else { map.set(b.zoneSlug, { name: b.zoneName, slug: b.zoneSlug, colorCode: b.zoneColorCode, count: 1 }); }
+    }
+    return [...map.values()];
+  }, [booths]);
+
+  if (zones.length === 0) return null;
+
+  return (
+    <div className="mt-3 flex flex-wrap gap-2">
+      <button
+        type="button"
+        onClick={() => onZoneChange("all")}
+        className={`rounded-xl px-3 py-1.5 text-sm font-medium transition ${
+          activeZone === "all"
+            ? "bg-primary text-white"
+            : "border border-border/70 bg-white text-muted-foreground hover:bg-muted/50"
+        }`}
+      >
+        Semua ({booths.length})
+      </button>
+      {zones.map((zone) => (
+        <button
+          key={zone.slug}
+          type="button"
+          onClick={() => onZoneChange(zone.slug)}
+          className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-medium transition ${
+            activeZone === zone.slug
+              ? "bg-primary text-white"
+              : "border border-border/70 bg-white text-muted-foreground hover:bg-muted/50"
+          }`}
+        >
+          {zone.colorCode && (
+            <span
+              className="inline-block size-2.5 rounded-full flex-shrink-0"
+              style={{ backgroundColor: zone.colorCode }}
+            />
+          )}
+          {zone.name} ({zone.count})
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function BoothGrid({
+  booths,
+  activeZone,
+  selectedBoothIds,
+  onToggle,
+}: {
+  booths: BoothItem[];
+  activeZone: string;
+  selectedBoothIds: string[];
+  onToggle: (id: string) => void;
+}) {
+  const filtered = activeZone === "all" ? booths : booths.filter((b) => b.zoneSlug === activeZone);
+
+  // Group by zone for "all" view
+  const grouped = React.useMemo(() => {
+    if (activeZone !== "all") return null;
+    const map = new Map<string, { name: string; colorCode: string | null; booths: BoothItem[] }>();
+    for (const b of filtered) {
+      const existing = map.get(b.zoneSlug);
+      if (existing) { existing.booths.push(b); }
+      else { map.set(b.zoneSlug, { name: b.zoneName, colorCode: b.zoneColorCode, booths: [b] }); }
+    }
+    return [...map.values()];
+  }, [activeZone, filtered]);
+
+  if (filtered.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-border/80 p-6 text-center text-sm text-muted-foreground">
+        Tidak ada booth tersedia{activeZone !== "all" ? " di zona ini" : ""}.
+      </div>
+    );
+  }
+
+  if (grouped) {
+    return (
+      <div className="space-y-5">
+        {grouped.map((zone) => (
+          <div key={zone.name}>
+            <div className="mb-2 flex items-center gap-2">
+              {zone.colorCode && (
+                <span className="inline-block size-2.5 rounded-full" style={{ backgroundColor: zone.colorCode }} />
+              )}
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{zone.name}</p>
+            </div>
+            <BoothList booths={zone.booths} selectedBoothIds={selectedBoothIds} onToggle={onToggle} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return <BoothList booths={filtered} selectedBoothIds={selectedBoothIds} onToggle={onToggle} />;
+}
+
+function BoothList({
+  booths,
+  selectedBoothIds,
+  onToggle,
+}: {
+  booths: BoothItem[];
+  selectedBoothIds: string[];
+  onToggle: (id: string) => void;
+}) {
+  return (
+    <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+      {booths.map((booth) => {
+        const checked = selectedBoothIds.includes(booth.id);
+        return (
+          <label
+            key={booth.id}
+            className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${
+              checked ? "border-primary/30 bg-primary/10" : "border-border/70 bg-white hover:border-primary/20"
+            }`}
+          >
+            <input checked={checked} className="mt-1" onChange={() => onToggle(booth.id)} type="checkbox" />
+            <div className="min-w-0">
+              <p className="font-semibold text-foreground">{booth.code}</p>
+              <p className="text-xs text-muted-foreground">{booth.boothGroupName}</p>
+              <p className="mt-1 text-sm font-medium text-primary-700">
+                {formatRupiah(booth.price)} · {formatPriceGroupLabel(booth.priceGroup)}
+              </p>
+            </div>
+          </label>
+        );
+      })}
+    </div>
   );
 }
 

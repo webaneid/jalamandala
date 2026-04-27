@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { asc, eq } from "drizzle-orm";
 
 import { createTenantDb, db } from "@repo/db";
-import { participantBusinesses, participants } from "@repo/db/schema/public";
+import { expoEvents, participantBusinesses, participants } from "@repo/db/schema/public";
 import { booths, eventAddons } from "@repo/db/schema/tenant";
 
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
@@ -54,7 +54,13 @@ async function getManualInvoiceBuilderData() {
     }))
   );
 
+  const activeEvent = await db.query.expoEvents.findFirst({
+    where: eq(expoEvents.isActive, true),
+    columns: { invoiceDueDays: true },
+  });
+
   return {
+    invoiceDueDays: activeEvent?.invoiceDueDays ?? 1,
     addons: addonRows.map((addon) => ({
       description: addon.description,
       id: addon.id,
@@ -77,7 +83,9 @@ async function getManualInvoiceBuilderData() {
         startsAt: rule.startsAt ? rule.startsAt.toISOString() : null,
       })),
       status: booth.status,
+      zoneColorCode: booth.zone.colorCode,
       zoneName: booth.zone.name,
+      zoneSlug: booth.zone.slug,
     })),
     currentPricePhase,
     participants: participantRows.map((participant) => ({

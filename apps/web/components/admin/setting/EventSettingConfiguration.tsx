@@ -8,6 +8,7 @@ import {
   deleteMessageTemplate,
   deletePaymentChannel,
   updateEventProfile,
+  updateInvoiceDueDays,
   upsertMessageTemplate,
   upsertPaymentChannel,
   upsertQrisConfig,
@@ -48,6 +49,7 @@ type EventSettingData = {
     financeWaNumbers: string[];
     leaderWaNumbers: string[];
     eventTeamWaNumbers: string[];
+    invoiceDueDays: number;
   };
   paymentChannels: Array<{
     accountName: string | null;
@@ -132,6 +134,9 @@ export function EventSettingConfiguration({
   const [qrisDecodeLoading, setQrisDecodeLoading] = React.useState(false);
   const [templateError, setTemplateError] = React.useState("");
   const [whatsappError, setWhatsappError] = React.useState("");
+  const [dueDaysValue, setDueDaysValue] = React.useState(String(data?.event.invoiceDueDays ?? 1));
+  const [dueDaysError, setDueDaysError] = React.useState("");
+  const [dueDaysSaved, setDueDaysSaved] = React.useState(false);
   const [pricePhaseError, setPricePhaseError] = React.useState("");
   const [pricePhaseForm, setPricePhaseForm] = React.useState(() => {
     const phases: PricePhase[] = ["early_bird", "pre_sale", "regular"];
@@ -741,6 +746,55 @@ export function EventSettingConfiguration({
 
         {activeTab === "payment" ? (
           <div className="space-y-4">
+            {/* Jatuh Tempo Invoice */}
+            <Card className="border-white/80 bg-white/90">
+              <CardHeader className="border-b border-border/60">
+                <CardTitle>Jatuh Tempo Invoice</CardTitle>
+                <CardDescription>
+                  Batas waktu pembayaran sejak invoice diterbitkan. Jika terlewat, booth dikembalikan ke status tersedia.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-5">
+                <div className="flex items-end gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="due-days">Masa berlaku (hari)</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="due-days"
+                        type="number"
+                        min={1}
+                        max={30}
+                        value={dueDaysValue}
+                        onChange={(e) => { setDueDaysValue(e.target.value); setDueDaysSaved(false); setDueDaysError(""); }}
+                        className="w-28"
+                      />
+                      <span className="text-sm text-muted-foreground">hari sejak terbit</span>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    disabled={isSaving}
+                    onClick={() => {
+                      const days = parseInt(dueDaysValue, 10);
+                      if (!days || days < 1) { setDueDaysError("Minimal 1 hari."); return; }
+                      setDueDaysError("");
+                      startSaving(async () => {
+                        const res = await updateInvoiceDueDays(days);
+                        if (!res.success) { setDueDaysError(res.error ?? "Gagal."); return; }
+                        setDueDaysSaved(true);
+                        setTimeout(() => setDueDaysSaved(false), 3000);
+                      });
+                    }}
+                  >
+                    {isSaving ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+                    Simpan
+                  </Button>
+                  {dueDaysSaved && <span className="text-sm text-emerald-600">Tersimpan ✓</span>}
+                </div>
+                {dueDaysError && <p className="mt-2 text-sm text-destructive">{dueDaysError}</p>}
+              </CardContent>
+            </Card>
+
             <Card className="border-white/80 bg-white/90">
               <CardHeader className="border-b border-border/60">
                 <div className="flex items-center justify-between gap-3">
