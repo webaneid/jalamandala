@@ -58,7 +58,7 @@ export function ForbisMemberSearch({
       <Search className="pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2 text-muted-foreground/70" />
       <input
         autoComplete="off"
-        className="h-11 w-full rounded-2xl border border-input bg-background px-3 pl-9 pr-9 text-sm shadow-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary/40 focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+        className="h-11 w-full rounded-2xl border border-white/12 bg-white/8 px-3 pl-9 pr-9 text-sm text-white shadow-sm outline-none transition-colors placeholder:text-white/30 focus:border-[#00adee]/50 disabled:cursor-not-allowed disabled:opacity-50"
         disabled={disabled}
         onBlur={() => { window.setTimeout(() => setIsOpen(false), 150); }}
         onChange={(e) => {
