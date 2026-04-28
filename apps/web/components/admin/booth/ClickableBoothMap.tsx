@@ -284,6 +284,7 @@ export function ClickableBoothMap({
         {zones.map((zone) => {
           const viewport = resolveViewport(zone);
           const booked = zone.booths.filter((booth) => booth.status === "booked").length;
+          const reserved = zone.booths.filter((booth) => booth.status === "reserved").length;
           const open = zone.booths.filter((booth) => booth.status === "open").length;
           const facilities = resolveZoneFacilities(zone);
           const priceGroups = resolveZonePriceGroups(zone);
@@ -326,6 +327,8 @@ export function ClickableBoothMap({
                   <div className="flex items-center gap-3 text-sm text-muted-foreground">
                     <span>Open {open}</span>
                     <MoveRight className="size-4" />
+                    {reserved > 0 && <span className="text-amber-600">Reserved {reserved}</span>}
+                    {reserved > 0 && <MoveRight className="size-4" />}
                     <span>Terisi {booked}</span>
                   </div>
                 </div>
@@ -1076,6 +1079,7 @@ function VipBoothCard({
   sizeClassName?: string;
 }) {
   const isBooked = booth.status === "booked";
+  const isReserved = booth.status === "reserved";
   const fill = resolveBoothFill(booth);
 
   return (
@@ -1092,10 +1096,12 @@ function VipBoothCard({
           className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
             isBooked
               ? "bg-white/60 text-slate-700"
+              : isReserved
+              ? "bg-amber-100 text-amber-800 ring-1 ring-amber-200"
               : "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"
           }`}
         >
-          {isBooked ? "Booked" : "Open"}
+          {isBooked ? "Booked" : isReserved ? "Reserved" : "Open"}
         </span>
       </div>
 
@@ -1116,6 +1122,7 @@ function GenericBoothCard({
   style: React.CSSProperties;
 }) {
   const isBooked = booth.status === "booked";
+  const isReserved = booth.status === "reserved";
   const fill = resolveBoothFill(booth);
 
   return (
@@ -1129,10 +1136,12 @@ function GenericBoothCard({
         className={`absolute right-1.5 top-1.5 rounded-full px-2 py-0.5 text-[8px] font-semibold ${
           isBooked
             ? "bg-slate-200 text-slate-700"
+            : isReserved
+            ? "bg-amber-100 text-amber-800 ring-1 ring-amber-200"
             : "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"
         }`}
       >
-        {isBooked ? "Booked" : "Open"}
+        {isBooked ? "Booked" : isReserved ? "Reserved" : "Open"}
       </span>
 
       <div className="absolute bottom-1.5 left-2">
@@ -1156,7 +1165,10 @@ function resolveBoothFill(booth: {
     case "formaqin": return "linear-gradient(180deg,#fed7aa 0%,#f97316 100%)";
   }
 
-  // 2. STATUS — booked (group tidak di legenda) → abu-abu
+  // 2. STATUS — reserved → amber, booked → abu-abu
+  if (booth.status === "reserved") {
+    return "linear-gradient(180deg,#fef3c7 0%,#fcd34d 100%)";
+  }
   if (booth.status === "booked") {
     return "linear-gradient(180deg,#e5e7eb 0%,#9ca3af 100%)";
   }
@@ -1170,7 +1182,9 @@ function resolveBoothFill(booth: {
 }
 
 function resolveBoothTextColor(booth: { status: string }) {
-  return booth.status === "booked" ? "#dc2626" : "#0f172a";
+  if (booth.status === "booked") return "#dc2626";
+  if (booth.status === "reserved") return "#92400e";
+  return "#0f172a";
 }
 
 function resolveViewport(zone: BoothMapZone) {
