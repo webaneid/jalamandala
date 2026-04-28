@@ -181,6 +181,21 @@ Aturan penting:
 
 **Hapus invoice (admin):** `deleteInvoiceCompletely(invoiceId)` di `actions/finance.ts` — hapus invoice + order + booth bookings (reset booths ke `open`) + terms approvals. Participant dan businesses **tidak dihapus** — tetap ada di sistem. Tombol ada di halaman detail invoice (`/admin/keuangan/{id}`), requires konfirmasi ketik "HAPUS".
 
+### Kelebihan Bayar (Overpayment)
+
+**Belum diimplementasi — ini desain yang disepakati, eksekusi setelah membaca ini.**
+
+Jika `totalPaid > grandTotal`, selisihnya harus bisa dikembalikan ke peserta. Alur yang disepakati:
+
+1. **Deteksi** — saat `verifyPaymentConfirmation()` atau `markInvoiceAsPaid()`, hitung `overpaymentAmount = totalPaid - grandTotal`. Jika > 0, simpan ke field `overpayment_amount` di tabel `invoices`.
+2. **Tampilan** — di halaman detail invoice (`/admin/keuangan/{id}`), jika `overpaymentAmount > 0` tampilkan banner "Kelebihan Bayar: Rp X" + tombol **"Kembalikan Kelebihan"**.
+3. **Pengembalian** — tombol tersebut memanggil action yang membuat `disbursementRequest` baru secara otomatis (amount = selisih, deskripsi dan `referenceInvoiceId` terisi otomatis). Admin lalu approve + konfirmasi transfer di halaman `/admin/keuangan/pencairan` seperti biasa.
+4. **Cashflow** — cash_in dari pembayaran sudah tercatat penuh. Cash_out dari pencairan pengembalian akan tercatat saat disbursement diproses — saldo cashflow tetap balance dan auditable.
+
+**Schema yang perlu ditambah:** kolom `overpayment_amount numeric(12,2) default 0` di tabel `invoices` (tenant schema). Tambahkan via `db:provision:tenant`.
+
+**File yang akan disentuh:** `actions/finance.ts` (verifyPaymentConfirmation, markInvoiceAsPaid), halaman detail invoice, `packages/db/src/provision-tenant.ts`.
+
 ## Alur Pendaftaran Peserta (End-to-End)
 
 ### Ringkasan Alur
