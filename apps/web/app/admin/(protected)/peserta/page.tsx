@@ -1,3 +1,4 @@
+import { requireRoles } from "@/lib/admin-auth";
 import Link from "next/link";
 import { FileDown, UserPlus, SlidersHorizontal, Search } from "lucide-react";
 
@@ -15,6 +16,7 @@ export const metadata = {
 };
 
 export default async function PesertaPage() {
+  await requireRoles(["admin", "finance"]);
   const participants = await getParticipants();
   const needBusinessCount = participants.filter(
     (participant) =>

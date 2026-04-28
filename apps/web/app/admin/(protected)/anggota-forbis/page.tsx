@@ -1,3 +1,4 @@
+import { requireRoles } from "@/lib/admin-auth";
 import { and, asc, count, eq, ilike, or } from "drizzle-orm";
 import { BookUser, Search } from "lucide-react";
 
@@ -21,6 +22,7 @@ export const metadata = {
 };
 
 export default async function AnggotaForbisPage({ searchParams }: Props) {
+  await requireRoles(["admin"]);
   const { q } = await searchParams;
   const query = q?.trim() ?? "";
 

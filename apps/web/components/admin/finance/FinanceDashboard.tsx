@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Eye, Loader2, Pencil, Plus, Wallet, X } from "lucide-react";
+import { Eye, Loader2, Pencil, Plus, Search, Wallet, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -116,6 +116,55 @@ export function FinanceDashboard({ data }: { data: FinanceDashboardData }) {
   const [paymentMethodEditor, setPaymentMethodEditor] =
     React.useState<PaymentMethodEditorState>(null);
   const [markPaidEditor, setMarkPaidEditor] = React.useState<MarkPaidEditorState>(null);
+
+  const [invoiceSearch, setInvoiceSearch] = React.useState("");
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = React.useState("all");
+  const [invoiceMethodFilter, setInvoiceMethodFilter] = React.useState("all");
+  const [showSuggestions, setShowSuggestions] = React.useState(false);
+  const searchRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const searchLower = invoiceSearch.toLowerCase();
+  const suggestions = React.useMemo(() => {
+    if (!searchLower) return [];
+    const seen = new Set<string>();
+    const result: string[] = [];
+    for (const inv of data.invoices) {
+      for (const candidate of [inv.companyName, inv.participantName, inv.invoiceNumber]) {
+        if (candidate && candidate.toLowerCase().includes(searchLower) && !seen.has(candidate)) {
+          seen.add(candidate);
+          result.push(candidate);
+          if (result.length >= 6) return result;
+        }
+      }
+    }
+    return result;
+  }, [data.invoices, searchLower]);
+
+  const filteredInvoices = React.useMemo(() => {
+    return data.invoices.filter((inv) => {
+      const matchesStatus = invoiceStatusFilter === "all" || inv.status === invoiceStatusFilter;
+      const matchesMethod =
+        invoiceMethodFilter === "all" ||
+        (invoiceMethodFilter === "none" && !inv.paymentChannelKey) ||
+        inv.paymentChannelKey === invoiceMethodFilter;
+      const matchesSearch =
+        !searchLower ||
+        inv.companyName.toLowerCase().includes(searchLower) ||
+        inv.participantName.toLowerCase().includes(searchLower) ||
+        inv.invoiceNumber.toLowerCase().includes(searchLower);
+      return matchesStatus && matchesMethod && matchesSearch;
+    });
+  }, [data.invoices, searchLower, invoiceStatusFilter, invoiceMethodFilter]);
 
   function createInvoice(businessId: string) {
     setBookingError("");
@@ -271,7 +320,7 @@ export function FinanceDashboard({ data }: { data: FinanceDashboardData }) {
 
       {activeTab === "invoices" ? (
         <Card className="border-white/80 bg-white/90">
-          <CardHeader className="border-b border-border/60 flex flex-row items-center justify-between">
+          <CardHeader className="border-b border-border/60 space-y-4">
             <div>
               <CardTitle>Invoice & Payment</CardTitle>
               <CardDescription className="mt-1.5">
@@ -279,6 +328,85 @@ export function FinanceDashboard({ data }: { data: FinanceDashboardData }) {
                 pembayaran sudah masuk.
               </CardDescription>
             </div>
+            <div className="flex flex-wrap gap-2">
+              <div ref={searchRef} className="relative flex-1 min-w-[220px]">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  className="pl-9 rounded-xl h-9"
+                  placeholder="Cari nama perusahaan, peserta, atau no. invoice…"
+                  value={invoiceSearch}
+                  onChange={(e) => {
+                    setInvoiceSearch(e.target.value);
+                    setShowSuggestions(true);
+                  }}
+                  onFocus={() => setShowSuggestions(true)}
+                />
+                {invoiceSearch && (
+                  <button
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    onClick={() => { setInvoiceSearch(""); setShowSuggestions(false); }}
+                    type="button"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                )}
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="absolute top-full left-0 z-20 mt-1 w-full overflow-hidden rounded-2xl border border-border/80 bg-white shadow-lg">
+                    {suggestions.map((s) => (
+                      <button
+                        key={s}
+                        className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm hover:bg-primary-50 hover:text-primary-800"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setInvoiceSearch(s);
+                          setShowSuggestions(false);
+                        }}
+                        type="button"
+                      >
+                        <Search className="size-3.5 shrink-0 text-muted-foreground" />
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <select
+                className="h-9 rounded-xl border border-input bg-white px-3 text-sm outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-100"
+                value={invoiceStatusFilter}
+                onChange={(e) => setInvoiceStatusFilter(e.target.value)}
+              >
+                <option value="all">Semua status</option>
+                <option value="waiting_for_payment">Menunggu Pembayaran</option>
+                <option value="waiting_confirmation">Menunggu Konfirmasi</option>
+                <option value="paid">Lunas</option>
+                <option value="expired">Kedaluwarsa</option>
+                <option value="cancelled">Dibatalkan</option>
+              </select>
+              <select
+                className="h-9 rounded-xl border border-input bg-white px-3 text-sm outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-100"
+                value={invoiceMethodFilter}
+                onChange={(e) => setInvoiceMethodFilter(e.target.value)}
+              >
+                <option value="all">Semua metode bayar</option>
+                <option value="none">Belum dipilih</option>
+                {data.paymentMethods.map((m) => (
+                  <option key={m.key} value={m.key}>{m.label}</option>
+                ))}
+              </select>
+            </div>
+            {(invoiceSearch || invoiceStatusFilter !== "all" || invoiceMethodFilter !== "all") && (
+              <p className="text-xs text-muted-foreground">
+                Menampilkan {filteredInvoices.length} dari {data.invoices.length} invoice
+                {" "}
+                <button
+                  className="text-primary-600 underline underline-offset-2 hover:text-primary-800"
+                  onClick={() => { setInvoiceSearch(""); setInvoiceStatusFilter("all"); setInvoiceMethodFilter("all"); }}
+                  type="button"
+                >
+                  Reset filter
+                </button>
+              </p>
+            )}
           </CardHeader>
           <CardContent className="pt-5">
             <Table>
@@ -294,7 +422,7 @@ export function FinanceDashboard({ data }: { data: FinanceDashboardData }) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.invoices.map((invoice) => (
+                {filteredInvoices.map((invoice) => (
                   <TableRow key={invoice.id}>
                     <TableCell className="font-medium text-primary-950">
                       <div>{invoice.invoiceNumber}</div>
@@ -381,8 +509,11 @@ export function FinanceDashboard({ data }: { data: FinanceDashboardData }) {
                     </TableCell>
                   </TableRow>
                 ))}
-                {data.invoices.length === 0 ? (
-                  <EmptyRow colSpan={7} label="Belum ada invoice." />
+                {filteredInvoices.length === 0 ? (
+                  <EmptyRow
+                    colSpan={7}
+                    label={data.invoices.length === 0 ? "Belum ada invoice." : "Tidak ada invoice yang cocok dengan filter."}
+                  />
                 ) : null}
               </TableBody>
             </Table>

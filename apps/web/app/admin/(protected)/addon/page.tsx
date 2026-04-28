@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import { requireRoles } from "@/lib/admin-auth";
 import { createTenantDb } from "@repo/db";
 import { inArray } from "drizzle-orm";
 
@@ -92,6 +93,7 @@ export const metadata = {
 };
 
 export default async function AddonPage() {
+  await requireRoles([]);
   const [{ addons, units }, marginReport] = await Promise.all([
     getAddonConfiguration(),
     getMarginReport(),

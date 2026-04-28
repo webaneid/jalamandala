@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import { requireRoles } from "@/lib/admin-auth";
 import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 import Link from "next/link";
 import { Clock3, ReceiptText, Wallet, Waypoints } from "lucide-react";
@@ -218,6 +219,7 @@ export const metadata = {
 };
 
 export default async function KeuanganPage() {
+  await requireRoles(["finance"]);
   const data = await getFinancePageData();
 
   return (

@@ -1,3 +1,4 @@
+import { requireRoles } from "@/lib/admin-auth";
 import { TambahPesertaClient } from "@/components/admin/peserta/TambahPesertaClient";
 import { getBoothFormOptions } from "@/lib/booth-form-options";
 
@@ -7,6 +8,7 @@ export const metadata = {
 };
 
 export default async function TambahPesertaPage() {
+  await requireRoles(["admin", "finance"]);
   const { boothCategories, boothGroups } = await getBoothFormOptions();
 
   return (

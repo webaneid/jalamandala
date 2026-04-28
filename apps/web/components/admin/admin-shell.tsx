@@ -27,100 +27,134 @@ import { Button } from "@/components/ui/button"
 import { authClient } from "@/lib/auth-client"
 import { cn } from "@/lib/utils"
 
-const primaryNavigation = [
+type NavItem = {
+  href: string
+  label: string
+  description: string
+  icon: React.ElementType
+  roles: string[] // empty = all admin roles
+}
+
+type SecondaryNavItem = {
+  href: string
+  label: string
+  roles: string[] // empty = all admin roles
+}
+
+const primaryNavigation: NavItem[] = [
   {
     href: "/admin",
     label: "Overview & Analytics",
     description: "Ringkasan funnel registrasi, invoice, dan booth.",
     icon: LayoutDashboard,
+    roles: [],
   },
   {
     href: "/admin/booth",
     label: "Peta & Booth",
-    description: "Editor area, zona, dan ketersediaan booth.",
+    description: "Lihat area, zona, dan ketersediaan booth.",
     icon: Map,
+    roles: [],
   },
   {
     href: "/admin/peserta",
     label: "Data Pendaftar",
     description: "Verifikasi, pencarian, dan input manual peserta.",
     icon: Users,
+    roles: ["super_admin", "admin", "finance"],
   },
   {
     href: "/admin/keuangan",
     label: "Keuangan",
     description: "Invoice, status pembayaran, dan tindak lanjut.",
     icon: Wallet,
+    roles: ["super_admin", "finance"],
   },
   {
     href: "/admin/agenda",
     label: "Agenda Event",
     description: "Run-down kegiatan, sesi, dan panggung event.",
     icon: CalendarDays,
+    roles: ["super_admin", "event_crew"],
   },
   {
     href: "/admin/setting",
     label: "Setting Event",
     description: "Konfigurasi event, timeline, channel pembayaran, dan pesan.",
     icon: Settings2,
+    roles: ["super_admin", "admin", "event_crew"],
   },
   {
     href: "/admin/laman",
     label: "Laman Event",
     description: "Landing page, S&K, dan informasi publik lainnya.",
     icon: FileText,
+    roles: ["super_admin", "admin"],
   },
   {
     href: "/admin/anggota-forbis",
     label: "Anggota FORBIS",
     description: "Database referensi anggota FORBIS untuk auto-populate form.",
     icon: BookUser,
+    roles: ["super_admin", "admin"],
   },
   {
     href: "/admin/vendor",
     label: "Vendor",
     description: "Kelola akun vendor booth dan add-on beserta penugasan mereka.",
     icon: Store,
+    roles: ["super_admin", "admin", "finance"],
   },
   {
     href: "/admin/pengguna",
     label: "Pengguna & Role",
     description: "Kelola akun dan hak akses pengguna sistem.",
     icon: UserCog,
+    roles: ["super_admin"],
   },
   {
     href: "/admin/media",
     label: "Media Library",
     description: "Kelola semua gambar, dokumen, dan file aset sistem.",
     icon: Images,
+    roles: ["super_admin"],
   },
 ]
 
-const secondaryNavigation = [
+const secondaryNavigation: SecondaryNavItem[] = [
   {
     href: "/admin/addon",
     label: "Konfigurasi Add-on",
+    roles: ["super_admin"],
   },
   {
     href: "/admin/peserta/tambah",
     label: "Tambah Peserta",
+    roles: ["super_admin", "admin", "finance"],
   },
   {
     href: "/admin/keuangan/pencairan",
     label: "Pencairan Dana",
+    roles: ["super_admin", "finance"],
   },
 ]
+
+function canAccessNav(itemRoles: string[], userRoles: string[]): boolean {
+  if (itemRoles.length === 0) return true
+  return userRoles.some((r) => itemRoles.includes(r))
+}
 
 function isActivePath(pathname: string, href: string) {
   return href === "/admin" ? pathname === href : pathname.startsWith(href)
 }
 
-export function AdminShell({ children }: { children: React.ReactNode }) {
+export function AdminShell({ children, userRoles }: { children: React.ReactNode; userRoles: string[] }) {
   const pathname = usePathname()
   const router = useRouter()
   const { data: session } = authClient.useSession()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
+  const isSuperAdmin = userRoles.includes("super_admin")
 
   useEffect(() => {
     setMobileOpen(false)
@@ -139,7 +173,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-transparent text-foreground">
       <div className="flex min-h-screen">
         <aside className="hidden w-[296px] border-r border-border/80 bg-white/68 px-4 py-4 backdrop-blur-xl lg:flex lg:flex-col">
-          <SidebarContent pathname={pathname} onLogout={handleLogout} />
+          <SidebarContent pathname={pathname} onLogout={handleLogout} userRoles={userRoles} isSuperAdmin={isSuperAdmin} />
         </aside>
 
         {mobileOpen ? (
@@ -164,7 +198,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               <X className="size-4.5" />
             </button>
           </div>
-          <SidebarContent pathname={pathname} onLogout={handleLogout} />
+          <SidebarContent pathname={pathname} onLogout={handleLogout} userRoles={userRoles} isSuperAdmin={isSuperAdmin} />
         </aside>
 
         <div className="flex min-h-screen flex-1 flex-col">
@@ -218,7 +252,20 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   )
 }
 
-function SidebarContent({ pathname, onLogout }: { pathname: string; onLogout: () => void }) {
+function SidebarContent({
+  pathname,
+  onLogout,
+  userRoles,
+  isSuperAdmin,
+}: {
+  pathname: string
+  onLogout: () => void
+  userRoles: string[]
+  isSuperAdmin: boolean
+}) {
+  const visiblePrimary = primaryNavigation.filter((item) => canAccessNav(item.roles, userRoles))
+  const visibleSecondary = secondaryNavigation.filter((item) => canAccessNav(item.roles, userRoles))
+
   return (
     <>
       <div className="rounded-[28px] border border-border/80 bg-card p-4 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
@@ -250,9 +297,8 @@ function SidebarContent({ pathname, onLogout }: { pathname: string; onLogout: ()
             Navigasi Utama
           </p>
           <div className="space-y-1.5">
-            {primaryNavigation.map((item) => {
+            {visiblePrimary.map((item) => {
               const active = isActivePath(pathname, item.href)
-
               return (
                 <Link
                   key={item.href}
@@ -268,39 +314,41 @@ function SidebarContent({ pathname, onLogout }: { pathname: string; onLogout: ()
                     <item.icon className="size-4.5" />
                     <span className="font-medium">{item.label}</span>
                   </span>
-                  {active ? (
-                    <ChevronRight className="size-4 text-primary" />
-                  ) : null}
+                  {active ? <ChevronRight className="size-4 text-primary" /> : null}
                 </Link>
               )
             })}
           </div>
         </div>
 
-        <div>
-          <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-            Shortcut
-          </p>
-          <div className="space-y-1.5">
-            {secondaryNavigation.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex min-h-12 items-center justify-between rounded-2xl border border-transparent bg-white/48 px-4 text-sm text-foreground transition hover:border-border/90 hover:bg-white/82"
-              >
-                <span className="font-medium">{item.label}</span>
-                <ChevronRight className="size-4 text-muted-foreground" />
-              </Link>
-            ))}
+        {visibleSecondary.length > 0 && (
+          <div>
+            <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+              Shortcut
+            </p>
+            <div className="space-y-1.5">
+              {visibleSecondary.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="flex min-h-12 items-center justify-between rounded-2xl border border-transparent bg-white/48 px-4 text-sm text-foreground transition hover:border-border/90 hover:bg-white/82"
+                >
+                  <span className="font-medium">{item.label}</span>
+                  <ChevronRight className="size-4 text-muted-foreground" />
+                </Link>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </nav>
 
       <div className="mt-4 grid gap-2">
-        <Button variant="outline" className="min-h-12 justify-between rounded-2xl bg-white/80">
-          Ganti Event
-          <ChevronDown className="size-4" />
-        </Button>
+        {isSuperAdmin && (
+          <Button variant="outline" className="min-h-12 justify-between rounded-2xl bg-white/80">
+            Ganti Event
+            <ChevronDown className="size-4" />
+          </Button>
+        )}
         <Button
           variant="outline"
           className="min-h-12 justify-between rounded-2xl bg-white/80 hover:border-destructive/40 hover:bg-destructive/5 hover:text-destructive"

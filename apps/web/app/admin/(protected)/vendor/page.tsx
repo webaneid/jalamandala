@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import { requireRoles } from "@/lib/admin-auth";
 import { asc, eq } from "drizzle-orm";
 
 import { createTenantDb, db } from "@repo/db";
@@ -37,6 +38,7 @@ export const metadata = {
 };
 
 export default async function VendorPage() {
+  await requireRoles(["admin", "finance"]);
   const eventId = await getActiveEventId();
   const { zones: zoneOptions, addons: addonOptions } = await getZonesAndAddons();
   const vendorList = eventId ? await getVendors(eventId) : [];

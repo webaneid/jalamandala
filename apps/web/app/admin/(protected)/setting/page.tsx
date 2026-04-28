@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import { requireRoles } from "@/lib/admin-auth";
 import { createTenantDb, db } from "@repo/db";
 import { expoEvents } from "@repo/db/schema/public";
 import { zonePriceRules } from "@repo/db/schema/tenant";
@@ -139,6 +140,7 @@ export const metadata = {
 };
 
 export default async function SettingPage() {
+  await requireRoles(["event_crew", "admin"]);
   const [data, pricePhaseSchedules] = await Promise.all([
     getEventSettingData(),
     getPricePhaseSchedules(),

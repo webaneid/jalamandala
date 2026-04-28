@@ -1,3 +1,4 @@
+import { requireRoles } from "@/lib/admin-auth";
 import { UserCheck } from "lucide-react";
 
 import { getUsers } from "@/actions/users";
@@ -23,6 +24,7 @@ export const metadata = {
 };
 
 export default async function PenggunaPage() {
+  await requireRoles([]);
   const users = await getUsers();
 
   return (

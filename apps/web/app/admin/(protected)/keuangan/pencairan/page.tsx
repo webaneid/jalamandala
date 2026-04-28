@@ -1,8 +1,7 @@
-import { headers } from 'next/headers';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
 
-import { auth } from '@/lib/auth';
+import { requireRoles } from '@/lib/admin-auth';
 import { getDisbursements } from '@/actions/disbursements';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { Button } from '@/components/ui/button';
@@ -14,7 +13,7 @@ export const metadata = {
 };
 
 export default async function PencairanPage() {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const access = await requireRoles(["finance"]);
   const result = await getDisbursements();
   const rows = result.success ? result.data : [];
 
@@ -36,8 +35,8 @@ export default async function PencairanPage() {
 
       <DisbursementList
         rows={rows}
-        currentUserId={session?.user.id ?? ''}
-        currentUserName={session?.user.name ?? ''}
+        currentUserId={access.userId}
+        currentUserName={access.userName}
       />
     </div>
   );

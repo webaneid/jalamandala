@@ -1,3 +1,4 @@
+import { requireRoles } from "@/lib/admin-auth";
 import { asc, eq } from "drizzle-orm";
 import { FileText } from "lucide-react";
 
@@ -74,6 +75,7 @@ export const metadata = {
 };
 
 export default async function LamanPage() {
+  await requireRoles(["admin"]);
   const data = await getPagesData();
 
   if (!data) {

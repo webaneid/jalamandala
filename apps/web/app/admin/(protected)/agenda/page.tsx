@@ -1,3 +1,4 @@
+import { requireRoles } from "@/lib/admin-auth";
 import { asc, eq } from "drizzle-orm";
 import { CalendarDays } from "lucide-react";
 
@@ -92,6 +93,7 @@ export const metadata = {
 };
 
 export default async function AgendaPage() {
+  await requireRoles(["event_crew"]);
   const data = await getAgendaPageData();
 
   if (!data) {
