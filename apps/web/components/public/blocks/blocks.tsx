@@ -1,3 +1,4 @@
+import { GalleryGridClient } from "./GalleryGridClient";
 import Link from "next/link";
 import { getPaidParticipantBusinessLogos, getPublishedEventAgendas, getPublicTenantZones } from "@/actions/public-pages";
 import { PublicContainer } from "@/components/public/ui/PublicContainer";
@@ -788,6 +789,87 @@ export function FooterInfoBlock({ payload, event }: { payload: any; event: any }
           <p className="text-xs text-white/30">
             &copy; {new Date().getFullYear()} {event?.name || "Event"}. Hak Cipta Dilindungi.
           </p>
+        </div>
+      </PublicContainer>
+    </section>
+  );
+}
+
+// ── Image Banner Block ───────────────────────���────────────────────────────────
+
+export function ImageBannerBlock({ payload }: { payload: any }) {
+  const p = normalizePayload(payload);
+  const assetId: string | null = p?.assetId ?? null;
+  const altText: string = p?.altText ?? "";
+  const caption: string = p?.caption ?? "";
+
+  if (!assetId) return null;
+
+  return (
+    <section className="w-full">
+      <img
+        src={`/api/media/${assetId}`}
+        alt={altText}
+        className="w-full object-cover"
+        style={{ maxHeight: p?.maxHeight ? `${p.maxHeight}px` : undefined }}
+      />
+      {caption && (
+        <div className="px-4 py-2 text-center text-xs text-white/40">{caption}</div>
+      )}
+    </section>
+  );
+}
+
+// ── Gallery Block ───────────────────────────���───────────────────���─────────────
+
+export function GalleryBlock({ payload }: { payload: any }) {
+  const p = normalizePayload(payload);
+  const images: Array<{ assetId: string; caption?: string }> = p?.images ?? [];
+  if (!images.length) return null;
+
+  return (
+    <section className="py-10">
+      <PublicContainer>
+        {p?.title && (
+          <h2 className="mb-6 text-center text-2xl font-bold tracking-tight text-white">{p.title}</h2>
+        )}
+        <GalleryGridClient images={images} />
+      </PublicContainer>
+    </section>
+  );
+}
+
+
+// ── Video Embed Block ���─────────────────────��───────────────────────────��──────
+
+export function VideoEmbedBlock({ payload }: { payload: any }) {
+  const p = normalizePayload(payload);
+  const youtubeUrl: string = p?.youtubeUrl ?? "";
+  if (!youtubeUrl) return null;
+
+  // Extract video ID from various YouTube URL formats
+  const videoId = youtubeUrl.match(
+    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/
+  )?.[1];
+  if (!videoId) return null;
+
+  return (
+    <section className="py-10">
+      <PublicContainer>
+        {p?.title && (
+          <h2 className="mb-6 text-center text-2xl font-bold tracking-tight text-white">{p.title}</h2>
+        )}
+        {p?.description && (
+          <p className="mb-6 text-center text-white/60">{p.description}</p>
+        )}
+        <div className="mx-auto max-w-3xl overflow-hidden rounded-2xl" style={{ aspectRatio: "16/9" }}>
+          <iframe
+            src={`https://www.youtube.com/embed/${videoId}?rel=0`}
+            title={p?.title ?? "Video"}
+            className="h-full w-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
         </div>
       </PublicContainer>
     </section>

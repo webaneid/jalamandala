@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
       });
     });
 
-    const message = `Halo ${agent.greetingName}, saya ingin bertanya tentang pendaftaran booth FORBIS National Economic Summit 2026. Boleh dibantu? 🙏`;
+    const message = `Assalamu'alaikum ${agent.greetingName}, saya ingin bertanya tentang pendaftaran booth FORBIS National Economic Summit 2026. Boleh dibantu? 🙏`;
     const url = `https://wa.me/${agent.waNumber}?text=${encodeURIComponent(message)}`;
 
     return NextResponse.redirect(url);

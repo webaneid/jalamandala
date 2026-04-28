@@ -1,16 +1,19 @@
 import type { Block } from "@/components/admin/pages/BlockEditor";
-import { 
-  HeroBlock, 
-  ProblemStatementBlock, 
-  HighlightCardsBlock, 
+import {
+  HeroBlock,
+  ProblemStatementBlock,
+  HighlightCardsBlock,
   MomentumBannerBlock,
-  AgendaPreviewBlock, 
+  AgendaPreviewBlock,
   LogoSliderBlock,
   TenantZonesBlock,
-  CtaBannerBlock, 
-  TenantCtaBlock, 
-  FaqBlock, 
-  FooterInfoBlock 
+  CtaBannerBlock,
+  TenantCtaBlock,
+  FaqBlock,
+  FooterInfoBlock,
+  ImageBannerBlock,
+  GalleryBlock,
+  VideoEmbedBlock,
 } from "./blocks";
 
 const BLOCK_REGISTRY: Record<string, React.FC<any>> = {
@@ -25,6 +28,9 @@ const BLOCK_REGISTRY: Record<string, React.FC<any>> = {
   tenant_cta: TenantCtaBlock,
   faq: FaqBlock,
   footer_info: FooterInfoBlock,
+  image_banner: ImageBannerBlock,
+  gallery: GalleryBlock,
+  video_embed: VideoEmbedBlock,
 };
 
 export function LandingRenderer({ blocks, event }: { blocks: Block[], event: any }) {

@@ -279,7 +279,7 @@ export function WaRotatorDashboard({
           </CardHeader>
           <CardContent className="pt-4">
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-              Halo <strong>{agents.find((a) => a.isActive)?.greetingName ?? "[Nama Sapaan]"}</strong>, saya ingin bertanya tentang pendaftaran booth FORBIS National Economic Summit 2026. Boleh dibantu? 🙏
+              Assalamu'alaikum <strong>{agents.find((a) => a.isActive)?.greetingName ?? "[Nama Sapaan]"}</strong>, saya ingin bertanya tentang pendaftaran booth FORBIS National Economic Summit 2026. Boleh dibantu? 🙏
             </div>
             <p className="mt-2 text-xs text-muted-foreground">Nama sapaan berubah sesuai giliran agen yang dipilih sistem.</p>
           </CardContent>

@@ -24,6 +24,9 @@ const BLOCK_TYPES = [
   { value: "tenant_cta", label: "Tenant CTA" },
   { value: "faq", label: "FAQ" },
   { value: "footer_info", label: "Footer Info" },
+  { value: "image_banner", label: "Image Banner (Full Width)" },
+  { value: "gallery", label: "Gallery (3 Kolom)" },
+  { value: "video_embed", label: "Video YouTube" },
 ];
 
 export function BlockEditor({

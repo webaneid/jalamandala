@@ -507,6 +507,21 @@ export function BlockForm({ type, payload, eventSlug, onChange }: Props) {
         </div>
       );
 
+    case "image_banner":
+      return (
+        <ImageBannerForm payload={payload} onChange={onChange} />
+      );
+
+    case "gallery":
+      return (
+        <GalleryForm payload={payload} onChange={onChange} />
+      );
+
+    case "video_embed":
+      return (
+        <VideoEmbedForm payload={payload} onChange={onChange} />
+      );
+
     default:
       return (
         <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm">
@@ -523,4 +538,107 @@ export function BlockForm({ type, payload, eventSlug, onChange }: Props) {
         </div>
       );
   }
+}
+
+// ── Image Banner Form ─────────────────────────────────────────────────────────
+
+function ImageBannerForm({ payload, onChange }: { payload: any; onChange: (p: any) => void }) {
+  function update(key: string, value: any) { onChange({ ...payload, [key]: value }); }
+  return (
+    <div className="space-y-4">
+      <div className="space-y-1.5">
+        <Label>Gambar *</Label>
+        <MediaPicker
+          value={payload?.assetId ? { id: payload.assetId, url: `/api/media/${payload.assetId}`, objectKey: "", fileName: "", mimeType: "image/*" } : null}
+          onChange={(v) => update("assetId", v?.id ?? null)}
+          accept="image"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label>Alt Text</Label>
+        <Input value={payload?.altText ?? ""} onChange={(e) => update("altText", e.target.value)} placeholder="Deskripsi gambar untuk aksesibilitas" />
+      </div>
+      <div className="space-y-1.5">
+        <Label>Keterangan (opsional)</Label>
+        <Input value={payload?.caption ?? ""} onChange={(e) => update("caption", e.target.value)} placeholder="Caption di bawah gambar" />
+      </div>
+      <div className="space-y-1.5">
+        <Label>Tinggi Maksimal (px, opsional)</Label>
+        <Input type="number" value={payload?.maxHeight ?? ""} onChange={(e) => update("maxHeight", e.target.value ? Number(e.target.value) : undefined)} placeholder="contoh: 500 (kosongkan = penuh)" className="max-w-32" />
+      </div>
+    </div>
+  );
+}
+
+// ── Gallery Form ──────────────────────────────────────────────────────────────
+
+function GalleryForm({ payload, onChange }: { payload: any; onChange: (p: any) => void }) {
+  const images: Array<{ assetId: string; caption?: string }> = payload?.images ?? [];
+
+  function updateTitle(title: string) { onChange({ ...payload, title }); }
+  function addImage(assetId: string) { onChange({ ...payload, images: [...images, { assetId }] }); }
+  function removeImage(i: number) { onChange({ ...payload, images: images.filter((_, idx) => idx !== i) }); }
+  function updateCaption(i: number, caption: string) {
+    const next = images.map((img, idx) => idx === i ? { ...img, caption } : img);
+    onChange({ ...payload, images: next });
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-1.5">
+        <Label>Judul Section (opsional)</Label>
+        <Input value={payload?.title ?? ""} onChange={(e) => updateTitle(e.target.value)} placeholder="contoh: Galeri Kegiatan" />
+      </div>
+      <div className="space-y-3">
+        <Label>Foto ({images.length})</Label>
+        {images.map((img, i) => (
+          <div key={i} className="flex gap-3 items-start rounded-xl border p-3">
+            <img src={`/api/media/${img.assetId}`} className="size-16 rounded-lg object-cover shrink-0" alt="" />
+            <div className="flex-1 space-y-2">
+              <Input
+                value={img.caption ?? ""}
+                onChange={(e) => updateCaption(i, e.target.value)}
+                placeholder="Keterangan foto (opsional)"
+                className="text-sm"
+              />
+            </div>
+            <Button type="button" variant="ghost" size="sm" onClick={() => removeImage(i)} className="text-red-400 hover:text-red-600 shrink-0">
+              <Trash2 className="size-4" />
+            </Button>
+          </div>
+        ))}
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Tambah Foto</Label>
+          <MediaPicker
+            value={null}
+            onChange={(v) => { if (v?.id) addImage(v.id); }}
+            accept="image"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Video Embed Form ──────────────────────────────────────────────────────────
+
+function VideoEmbedForm({ payload, onChange }: { payload: any; onChange: (p: any) => void }) {
+  function update(key: string, value: any) { onChange({ ...payload, [key]: value }); }
+  return (
+    <div className="space-y-4">
+      <div className="space-y-1.5">
+        <Label>URL YouTube *</Label>
+        <Input value={payload?.youtubeUrl ?? ""} onChange={(e) => update("youtubeUrl", e.target.value)} placeholder="https://www.youtube.com/watch?v=..." />
+        <p className="text-xs text-muted-foreground">Mendukung format: youtube.com/watch, youtu.be, youtube.com/shorts</p>
+      </div>
+      <div className="space-y-1.5">
+        <Label>Judul Section (opsional)</Label>
+        <Input value={payload?.title ?? ""} onChange={(e) => update("title", e.target.value)} placeholder="contoh: Profil Acara" />
+      </div>
+      <div className="space-y-1.5">
+        <Label>Deskripsi (opsional)</Label>
+        <Input value={payload?.description ?? ""} onChange={(e) => update("description", e.target.value)} placeholder="Teks kecil di bawah judul" />
+      </div>
+    </div>
+  );
 }
