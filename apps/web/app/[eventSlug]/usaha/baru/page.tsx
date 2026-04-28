@@ -54,13 +54,13 @@ export default async function UsahaBaruPage({ params, searchParams }: Props) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Tambah Usaha</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <h1 className="text-2xl font-bold text-white">Tambah Usaha</h1>
+        <p className="mt-1 text-sm text-white/60">
           Isi data usaha yang akan didaftarkan untuk pameran.
         </p>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
         <QuickBusinessForm
           boothCategories={boothCategories}
           defaultValues={forbisMemberDefaults}
