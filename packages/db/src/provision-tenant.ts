@@ -629,6 +629,31 @@ async function provisionTenantSchema() {
       ADD COLUMN IF NOT EXISTS reference_disbursement_id uuid
     `);
 
+    // ── WhatsApp Rotator ────────────────────────────────────────────────────────
+    await sql.unsafe(`
+      CREATE TABLE IF NOT EXISTS "${schemaName}".wa_rotator_agents (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        event_id uuid NOT NULL,
+        name text NOT NULL,
+        greeting_name text NOT NULL,
+        wa_number text NOT NULL,
+        is_active boolean NOT NULL DEFAULT true,
+        sort_order integer NOT NULL DEFAULT 0,
+        total_clicks integer NOT NULL DEFAULT 0,
+        created_at timestamp NOT NULL DEFAULT now(),
+        updated_at timestamp NOT NULL DEFAULT now()
+      )
+    `);
+    await sql.unsafe(`
+      CREATE TABLE IF NOT EXISTS "${schemaName}".wa_rotator_clicks (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        agent_id uuid NOT NULL REFERENCES "${schemaName}".wa_rotator_agents(id) ON DELETE CASCADE,
+        event_id uuid NOT NULL,
+        source text NOT NULL DEFAULT 'public_bottom_nav',
+        clicked_at timestamp NOT NULL DEFAULT now()
+      )
+    `);
+
     console.log(`Tenant schema ready: ${schemaName}`);
   } finally {
     await sql.end();

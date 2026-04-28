@@ -13,6 +13,7 @@ import {
   LogOut,
   Map,
   Menu,
+  MessageCircle,
   Settings2,
   Sparkles,
   Store,
@@ -103,6 +104,13 @@ const primaryNavigation: NavItem[] = [
     label: "Vendor",
     description: "Kelola akun vendor booth dan add-on beserta penugasan mereka.",
     icon: Store,
+    roles: ["super_admin", "admin", "finance"],
+  },
+  {
+    href: "/admin/whatsapp-rotator",
+    label: "WhatsApp Rotator",
+    description: "Distribusi chat CS ke tim secara bergiliran dan presisi.",
+    icon: MessageCircle,
     roles: ["super_admin", "admin", "finance"],
   },
   {
