@@ -21,14 +21,15 @@ export function MediaUploadZone({ onUploaded }: Props) {
       Array.from(files).map(async (file) => {
         if (file.size > 5 * 1024 * 1024) throw new Error(`${file.name}: maks 5MB`);
         const dataUrl = await readFileAsDataUrl(file);
-        const isPublic = file.type.startsWith("image/") && /^(event|qris|channel)/.test(file.name);
-        const folder = file.type.startsWith("image/") ? "private/participant-logos" : "private/documents";
+        const isImage = file.type.startsWith("image/");
+        const folder = isImage ? "public/media" : "private/documents";
+        const visibility = isImage ? "public" : "private";
         const result = await uploadMediaAssetAction({
           dataUrl,
           contentType: file.type,
           fileName: file.name,
           folder,
-          visibility: "private",
+          visibility,
         });
         if (!result.success) throw new Error(result.error);
       })

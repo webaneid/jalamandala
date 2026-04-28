@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { FileText, Grid3X3, HardDrive, Image, LayoutList, Loader2, Lock, Search, Trash2 } from "lucide-react";
-import { listMediaAssets, deleteOrphanAssetsAction, type MediaAssetRow, type StorageStats } from "@/actions/media";
+import { listMediaAssets, deleteOrphanAssetsAction, applyBucketPolicyAction, type MediaAssetRow, type StorageStats } from "@/actions/media";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,6 +61,8 @@ function formatBytes(b: number) {
 function StorageDashboard({ stats, onCleanup }: { stats: StorageStats; onCleanup: () => void }) {
   const [cleaning, setCleaning] = React.useState(false);
   const [cleanResult, setCleanResult] = React.useState<string | null>(null);
+  const [applyingPolicy, setApplyingPolicy] = React.useState(false);
+  const [policyResult, setPolicyResult] = React.useState<string | null>(null);
 
   async function handleCleanup() {
     setCleaning(true);
@@ -73,6 +75,14 @@ function StorageDashboard({ stats, onCleanup }: { stats: StorageStats; onCleanup
     } else {
       setCleanResult(result.error ?? "Gagal cleanup.");
     }
+  }
+
+  async function handleApplyPolicy() {
+    setApplyingPolicy(true);
+    setPolicyResult(null);
+    const result = await applyBucketPolicyAction();
+    setApplyingPolicy(false);
+    setPolicyResult(result.success ? "Bucket policy berhasil diperbarui." : (result.error ?? "Gagal apply policy."));
   }
 
   return (
@@ -128,6 +138,27 @@ function StorageDashboard({ stats, onCleanup }: { stats: StorageStats; onCleanup
 
       {cleanResult && (
         <p className="text-sm text-muted-foreground">{cleanResult}</p>
+      )}
+
+      <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+        <p className="flex-1 text-sm text-slate-700">
+          Apply bucket policy MinIO — wajib dijalankan setelah perubahan konfigurasi storage.
+        </p>
+        <Button
+          size="sm"
+          variant="outline"
+          className="shrink-0"
+          disabled={applyingPolicy}
+          onClick={handleApplyPolicy}
+          type="button"
+        >
+          {applyingPolicy ? <Loader2 className="size-3.5 animate-spin" /> : null}
+          Apply Policy
+        </Button>
+      </div>
+
+      {policyResult && (
+        <p className="text-sm text-muted-foreground">{policyResult}</p>
       )}
     </div>
   );

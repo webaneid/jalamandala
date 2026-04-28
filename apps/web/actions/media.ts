@@ -9,6 +9,7 @@ import {
   attachMediaUsage,
   createMediaAsset,
   deleteMinioObjectByUrl,
+  initMediaBucketPolicy,
   type CreateMediaAssetPayload,
 } from "@/lib/minio-storage";
 
@@ -171,6 +172,15 @@ export async function deleteOrphanAssetsAction(): Promise<{ success: boolean; de
     return { success: true, deleted };
   } catch (err) {
     return { success: false, deleted: 0, error: err instanceof Error ? err.message : "Gagal cleanup." };
+  }
+}
+
+export async function applyBucketPolicyAction(): Promise<{ success: boolean; error?: string }> {
+  try {
+    await initMediaBucketPolicy();
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Gagal apply policy." };
   }
 }
 

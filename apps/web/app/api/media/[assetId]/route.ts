@@ -1,45 +1,21 @@
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
+import { headers } from "next/headers";
 import { type NextRequest, NextResponse } from "next/server";
-import { getCookieCache, getSessionCookie } from "better-auth/cookies";
 
 import { auth } from "@/lib/auth";
 import { createTenantDb } from "@repo/db";
 import { db } from "@repo/db";
 import { invoices } from "@repo/db/schema/tenant";
-import { mediaAssets, session as authSessions, userRoles } from "@repo/db/schema/public";
+import { mediaAssets, userRoles } from "@repo/db/schema/public";
 import { generatePresignedGetUrl } from "@/lib/minio-storage";
 
 const ADMIN_MEDIA_ROLES = new Set(["super_admin", "admin", "finance", "event_crew"]);
 const TENANT_SCHEMA = process.env.TENANT_SCHEMA ?? "expo_forbis2026";
-async function resolveSessionUserId(request: NextRequest) {
-  const primarySession = await auth.api.getSession({ headers: request.headers });
-  if (primarySession?.user?.id) {
-    return primarySession.user.id;
-  }
 
-  const cookieSession = getSessionCookie(request.headers);
-  const token = cookieSession?.split(".")[0]?.trim();
-  if (token) {
-    const sessionRecord = await db.query.session.findFirst({
-      where: and(eq(authSessions.token, token), gt(authSessions.expiresAt, new Date())),
-      columns: {
-        userId: true,
-      },
-    });
-
-    if (sessionRecord?.userId) {
-      return sessionRecord.userId;
-    }
-  }
-
-  const cookieCache = await getCookieCache(request.headers, {
-    secret: process.env.BETTER_AUTH_SECRET,
-  }) as { user?: { id?: string } } | null;
-  if (cookieCache?.user?.id) {
-    return cookieCache.user.id;
-  }
-
-  return null;
+async function resolveSessionUserId() {
+  const reqHeaders = await headers();
+  const session = await auth.api.getSession({ headers: reqHeaders });
+  return session?.user?.id ?? null;
 }
 
 export async function GET(
@@ -72,7 +48,7 @@ export async function GET(
     }
   }
 
-  const sessionUserId = await resolveSessionUserId(request);
+  const sessionUserId = await resolveSessionUserId();
   if (!sessionUserId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

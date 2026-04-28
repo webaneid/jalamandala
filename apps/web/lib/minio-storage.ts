@@ -172,7 +172,11 @@ async function setBucketPublicReadPolicy() {
         Effect: "Allow",
         Principal: { AWS: ["*"] },
         Action: ["s3:GetObject"],
-        Resource: [`arn:aws:s3:::${bucket}/public/*`],
+        Resource: [
+          `arn:aws:s3:::${bucket}/public/*`,
+          `arn:aws:s3:::${bucket}/participant-logos/*`,
+          `arn:aws:s3:::${bucket}/private/participant-logos/*`,
+        ],
       },
     ],
   })
@@ -407,19 +411,16 @@ export async function uploadParticipantBusinessLogo(payload: {
     contentType: payload.contentType,
     dataUrl: payload.dataUrl,
     fileName: payload.fileName,
-    folder: "private/participant-logos",
-    visibility: "private",
+    folder: "participant-logos",
+    visibility: "public",
     ownerBusinessId: payload.ownerBusinessId,
     ownerParticipantId: payload.ownerParticipantId,
   })
 
-  const { baseUrl, bucket } = getMinioConfig()
-  const objectUrl = new URL(`/${bucket}/${asset.objectKey}`, baseUrl)
-
   return {
     assetId: asset.id,
     objectKey: asset.objectKey,
-    url: objectUrl.toString(),
+    url: asset.publicUrl ?? "",
   }
 }
 
