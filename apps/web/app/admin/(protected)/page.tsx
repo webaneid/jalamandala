@@ -1,16 +1,18 @@
 import Link from "next/link"
+import { count, eq, sql } from "drizzle-orm"
 import {
   ArrowRight,
   ChartColumnIncreasing,
-  ClipboardCheck,
   LayoutGrid,
   ReceiptText,
   Users,
 } from "lucide-react"
 
+import { db, createTenantDb } from "@repo/db"
+import { participants, expoEvents } from "@repo/db/schema/public"
+import { invoices, booths } from "@repo/db/schema/tenant"
 import { AdminMetricCard } from "@/components/admin/admin-metric-card"
 import { AdminPageHeader } from "@/components/admin/admin-page-header"
-import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
 import {
   Card,
@@ -19,32 +21,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { cn } from "@/lib/utils"
+import { ArrowRight as ArrowRightIcon } from "lucide-react"
 
-const funnelData = [
-  { label: "Draft formulir", value: 34, tone: "bg-slate-100 text-slate-700" },
-  { label: "Invoice terbit", value: 48, tone: "bg-amber-50 text-amber-700" },
-  { label: "Sudah bayar", value: 31, tone: "bg-emerald-50 text-emerald-700" },
-  { label: "E-pass terbit", value: 26, tone: "bg-primary-50 text-primary-700" },
-]
+const TENANT_SCHEMA = process.env.TENANT_SCHEMA ?? "expo_forbis2026"
 
-const recentActivity = [
-  {
-    title: "Invoice INV-FORBIS-0048 dibuka",
-    detail: "PT Maju Bersama memilih skema pembayaran penuh untuk booth B-12.",
-    time: "8 menit lalu",
-  },
-  {
-    title: "Peserta baru masuk dari formulir publik",
-    detail: "Nabila Rahmah mengirim pendaftaran kategori food & beverage.",
-    time: "21 menit lalu",
-  },
-  {
-    title: "Verifikasi pembayaran berhasil",
-    detail: "Tim finance menandai invoice INV-FORBIS-0041 sebagai lunas.",
-    time: "43 menit lalu",
-  },
-]
+const fmt = (n: number) =>
+  new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+    notation: n >= 1_000_000 ? "compact" : "standard",
+  }).format(n)
 
 const quickActions = [
   {
@@ -64,18 +51,81 @@ const quickActions = [
   },
 ]
 
-
 export const metadata = {
   title: "Dashboard",
-};
+}
 
-export default function AdminDashboardPage() {
+export default async function AdminDashboardPage() {
+  const tenantDb = await createTenantDb(TENANT_SCHEMA)
+
+  const [
+    event,
+    totalParticipants,
+    invoiceCounts,
+    boothCounts,
+    revenueRow,
+    recentInvoices,
+  ] = await Promise.all([
+    db.query.expoEvents.findFirst({
+      where: eq(expoEvents.schemaName, TENANT_SCHEMA),
+      columns: { name: true },
+    }),
+    db.select({ totalParticipants: count() }).from(participants).then((r) => r[0]?.totalParticipants ?? 0),
+    tenantDb
+      .select({ status: invoices.status, cnt: count() })
+      .from(invoices)
+      .groupBy(invoices.status),
+    tenantDb
+      .select({ status: booths.status, cnt: count() })
+      .from(booths)
+      .groupBy(booths.status),
+    tenantDb
+      .select({ total: sql<string>`coalesce(sum(grand_total),0)` })
+      .from(invoices)
+      .where(sql`status != 'cancelled'`),
+    tenantDb.query.invoices.findMany({
+      columns: { invoiceNumber: true, status: true, grandTotal: true, createdAt: true },
+      orderBy: (t, { desc }) => [desc(t.createdAt)],
+      limit: 5,
+    }),
+  ])
+
+  const eventName = event?.name ?? "Expo"
+
+  const activeInvoices = invoiceCounts
+    .filter((r: { status: string; cnt: number }) => ["waiting_for_payment", "waiting_confirmation"].includes(r.status))
+    .reduce((s: number, r: { cnt: number }) => s + Number(r.cnt), 0)
+  const paidInvoices = invoiceCounts.find((r: { status: string }) => r.status === "paid")?.cnt ?? 0
+  const totalInvoices = invoiceCounts.reduce((s: number, r: { cnt: number }) => s + Number(r.cnt), 0)
+
+  const openBooths = boothCounts.find((r: { status: string }) => r.status === "open")?.cnt ?? 0
+  const totalBooths = boothCounts.reduce((s: number, r: { cnt: number }) => s + Number(r.cnt), 0)
+  const soldBooths = totalBooths - Number(openBooths)
+
+  const revenue = Number(revenueRow[0]?.total ?? 0)
+
+  const funnelData = [
+    { label: "Peserta terdaftar", value: Number(totalParticipants), tone: "bg-slate-100 text-slate-700" },
+    { label: "Invoice terbit", value: totalInvoices, tone: "bg-amber-50 text-amber-700" },
+    { label: "Sudah bayar", value: Number(paidInvoices), tone: "bg-emerald-50 text-emerald-700" },
+    { label: "Booth terisi", value: soldBooths, tone: "bg-primary-50 text-primary-700" },
+  ]
+  const funnelMax = Math.max(...funnelData.map((d) => d.value), 1)
+
+  const statusLabel: Record<string, string> = {
+    waiting_for_payment: "Menunggu bayar",
+    waiting_confirmation: "Menunggu konfirmasi",
+    paid: "Lunas",
+    expired: "Kedaluwarsa",
+    cancelled: "Dibatalkan",
+  }
+
   return (
     <div className="space-y-6">
       <AdminPageHeader
         eyebrow="Overview"
         badge="Superadmin"
-        title="Dashboard kontrol FORBIS Expo"
+        title={`Dashboard kontrol ${eventName}`}
         description="Pantau pendaftar, invoice, booth, dan progres operasional event dalam satu dashboard."
         actions={
           <>
@@ -100,36 +150,28 @@ export default function AdminDashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <AdminMetricCard
-          label="Total Pendaftar"
-          value="152"
-          detail="Gabungan pendaftar publik dan input manual panitia untuk event aktif."
+          label="Total Peserta"
+          value={String(totalParticipants)}
+          detail="Total peserta terdaftar di sistem."
           icon={Users}
-          trend="up"
-          trendLabel="+18 minggu ini"
         />
         <AdminMetricCard
           label="Invoice Aktif"
-          value="48"
-          detail="Invoice yang telah diterbitkan dan masih menunggu pembayaran."
+          value={String(activeInvoices)}
+          detail="Invoice menunggu pembayaran atau konfirmasi."
           icon={ReceiptText}
-          trend="down"
-          trendLabel="9 melewati jatuh tempo"
         />
         <AdminMetricCard
-          label="Booth Terjual"
-          value="72 / 100"
-          detail="Posisi okupansi seluruh zona pameran hingga hari ini."
+          label="Booth Terisi"
+          value={`${soldBooths} / ${totalBooths}`}
+          detail={`${openBooths} booth masih tersedia.`}
           icon={LayoutGrid}
-          trend="up"
-          trendLabel="72% terisi"
         />
         <AdminMetricCard
-          label="Potensi Pendapatan"
-          value="Rp184,5 jt"
-          detail="Nilai total invoice terbit dari booth, add-on, dan penyesuaian biaya."
+          label="Total Pendapatan"
+          value={fmt(revenue)}
+          detail="Nilai total invoice aktif dan lunas."
           icon={ChartColumnIncreasing}
-          trend="up"
-          trendLabel="+Rp32 jt pekan ini"
         />
       </div>
 
@@ -138,8 +180,7 @@ export default function AdminDashboardPage() {
           <CardHeader className="border-b border-border/60">
             <CardTitle>Funnel Registrasi Tenant</CardTitle>
             <CardDescription>
-              Struktur ini disiapkan untuk mengikuti alur sederhana: daftar,
-              invoice, bayar, e-pass.
+              Alur pendaftaran: daftar, invoice, bayar, booth terisi.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5 pt-5">
@@ -153,14 +194,14 @@ export default function AdminDashboardPage() {
                     <p className="text-sm font-medium text-muted-foreground">
                       {item.label}
                     </p>
-                    <Badge className={cn("ring-1 ring-inset", item.tone)}>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${item.tone}`}>
                       {item.value}
-                    </Badge>
+                    </span>
                   </div>
                   <div className="mt-4 h-2 overflow-hidden rounded-full bg-primary-50">
                     <div
-                      className="h-full rounded-full bg-primary"
-                      style={{ width: `${Math.max(item.value, 12)}%` }}
+                      className="h-full rounded-full bg-primary transition-all"
+                      style={{ width: `${Math.round((item.value / funnelMax) * 100)}%` }}
                     />
                   </div>
                 </div>
@@ -174,7 +215,7 @@ export default function AdminDashboardPage() {
                     Operasional Event
                   </p>
                   <h2 className="text-2xl font-semibold tracking-tight text-primary-900">
-                    Kontrol utama FORBIS Expo
+                    Kontrol utama {eventName}
                   </h2>
                   <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
                     Gunakan area ini untuk memantau progres registrasi, pembayaran,
@@ -199,42 +240,36 @@ export default function AdminDashboardPage() {
         <div className="grid gap-4">
           <Card className="border-white/80 bg-white/90">
             <CardHeader className="border-b border-border/60">
-              <CardTitle>Aktivitas Terbaru</CardTitle>
-              <CardDescription>
-                Timeline operasional yang akan jadi pusat monitoring panitia.
-              </CardDescription>
+              <CardTitle>Invoice Terbaru</CardTitle>
+              <CardDescription>5 invoice terakhir yang masuk ke sistem.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-5 pt-5">
-              {recentActivity.map((item, index) => (
-                <div key={item.title} className="flex gap-4">
-                  <div className="flex flex-col items-center">
-                    <div className="mt-1 flex size-10 items-center justify-center rounded-2xl bg-primary-50 text-primary-700 ring-1 ring-primary-100">
-                      <ClipboardCheck className="size-4" />
+            <CardContent className="space-y-3 pt-5">
+              {recentInvoices.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Belum ada invoice.</p>
+              ) : (
+                recentInvoices.map((inv) => (
+                  <Link
+                    key={inv.invoiceNumber}
+                    href={`/admin/keuangan?q=${inv.invoiceNumber}`}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/20 px-3 py-2.5 hover:border-primary/30 hover:bg-primary-50/40 transition-colors"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-primary-900">{inv.invoiceNumber}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {statusLabel[inv.status] ?? inv.status} · {fmt(inv.grandTotal)}
+                      </p>
                     </div>
-                    {index < recentActivity.length - 1 ? (
-                      <div className="mt-2 h-full w-px bg-border" />
-                    ) : null}
-                  </div>
-                  <div className="space-y-1 pb-4">
-                    <p className="font-medium text-primary-900">{item.title}</p>
-                    <p className="text-sm leading-6 text-muted-foreground">
-                      {item.detail}
-                    </p>
-                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                      {item.time}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                    <ArrowRightIcon className="size-3.5 shrink-0 text-muted-foreground" />
+                  </Link>
+                ))
+              )}
             </CardContent>
           </Card>
 
           <Card className="border-white/80 bg-white/90">
             <CardHeader className="border-b border-border/60">
               <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>
-                Shortcut kerja harian untuk panitia inti.
-              </CardDescription>
+              <CardDescription>Shortcut kerja harian untuk panitia inti.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 pt-5">
               {quickActions.map((item) => (
