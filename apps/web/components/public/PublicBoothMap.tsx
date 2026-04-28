@@ -277,7 +277,7 @@ function ConfirmationBar({
 }) {
   const total = zone.price * booths.length
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 px-4 pb-4 sm:px-6">
+    <div className="fixed inset-x-0 bottom-0 z-[70] px-4 pb-4 sm:px-6">
       <div className="mx-auto max-w-2xl overflow-hidden rounded-2xl border border-primary-200 bg-white shadow-2xl shadow-primary-900/10 ring-1 ring-primary-100">
         <div className="flex items-start justify-between gap-4 bg-primary-50 px-5 py-4">
           <div>
@@ -287,14 +287,14 @@ function ConfirmationBar({
             <p className="mt-1 font-semibold text-slate-900">
               {booths.map((b) => b.code).join(", ")}
             </p>
-            <p className="mt-0.5 text-xl font-bold text-primary-700">{fmt(total)}</p>
+            <p className="mt-0.5 text-xl font-bold text-primary-600">{fmt(total)}</p>
             {zone.pricePhase !== "free" && (
               <p className="text-xs text-slate-500">
                 {fmt(zone.price)} × {booths.length} booth · Harga {PHASE_LABEL[zone.pricePhase] ?? zone.pricePhase}
               </p>
             )}
           </div>
-          <button className="mt-0.5 rounded-xl p-2 text-slate-400 hover:bg-primary-100 hover:text-primary-700" onClick={onClear} type="button">
+          <button className="mt-0.5 rounded-xl p-2 text-slate-400 hover:bg-primary-100 hover:text-primary-600" onClick={onClear} type="button">
             <svg className="size-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -372,7 +372,7 @@ export function PublicBoothMap({ zone, onConfirm }: Props) {
   const priceBlock = (
     <div>
       <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Harga Stand</p>
-      <p className="mt-1 text-3xl font-bold text-primary-700">{fmt(zone.price)}</p>
+      <p className="mt-1 text-3xl font-bold text-primary-600">{fmt(zone.price)}</p>
       {zone.pricePhase !== "free" && (
         <p className="text-sm text-slate-500">Fase: {PHASE_LABEL[zone.pricePhase] ?? zone.pricePhase}</p>
       )}
