@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { eq, inArray, sum } from "drizzle-orm";
 import { createTenantDb, db } from "@repo/db";
 import { expoEvents } from "@repo/db/schema/public";
-import { booths, zones } from "@repo/db/schema/tenant";
+import { booths, invoices, zones } from "@repo/db/schema/tenant";
 import { sendWhatsApp } from "@/lib/whatsapp";
 
 const TENANT_SCHEMA = process.env.TENANT_SCHEMA ?? "expo_forbis2026";
@@ -53,7 +53,30 @@ export async function GET(req: NextRequest) {
       lines.push(`${zone.name}: ${booked + reserved} terjual / ${total} total (${sisa} sisa)`);
     }
 
-    const message = `📊 *Laporan Booth Harian*\n${fmtDate}\n\n${lines.join("\n")}\n\n*Total: ${bookedAll} / ${totalAll} (${totalAll - bookedAll} sisa)*`;
+    // Keuangan
+    const [paidRow, pendingRow] = await Promise.all([
+      tenantDb.select({ total: sum(invoices.grandTotal) }).from(invoices).where(eq(invoices.status, "paid")),
+      tenantDb.select({ total: sum(invoices.grandTotal) }).from(invoices).where(inArray(invoices.status, ["waiting_for_payment", "waiting_confirmation"])),
+    ]);
+    const totalPaid = Number(paidRow[0]?.total ?? 0);
+    const totalPending = Number(pendingRow[0]?.total ?? 0);
+
+    const fmtIDR = (n: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
+
+    const message = [
+      `📊 *Laporan Harian FORBIS Summit*`,
+      fmtDate,
+      ``,
+      `🏪 *Status Booth*`,
+      ...lines,
+      ``,
+      `*Total Booth: ${bookedAll} / ${totalAll} (${totalAll - bookedAll} sisa)*`,
+      ``,
+      `💰 *Keuangan*`,
+      `Terbayar (Paid): ${fmtIDR(totalPaid)}`,
+      `Pending (Belum Lunas): ${fmtIDR(totalPending)}`,
+      `Total Potensi: ${fmtIDR(totalPaid + totalPending)}`,
+    ].join("\n");
 
     for (const number of leaderNumbers) {
       await sendWhatsApp({ to: number, message, context: "pimpinan-report" });
