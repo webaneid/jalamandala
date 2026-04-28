@@ -202,6 +202,7 @@ export function ParticipantForm({
                       onChange={field.onChange}
                       onSelect={applyForbisMember}
                       value={field.value}
+                      variant="light"
                     />
                   ) : (
                     <Input disabled={isIdentityLocked} placeholder="Masukkan nama lengkap sesuai identitas" {...field} />

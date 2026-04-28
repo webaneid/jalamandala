@@ -12,6 +12,7 @@ type ForbisMemberSearchProps = {
   onSelect: (member: ForbisMemberOption) => void;
   placeholder?: string;
   value: string;
+  variant?: "dark" | "light";
 };
 
 export function ForbisMemberSearch({
@@ -20,6 +21,7 @@ export function ForbisMemberSearch({
   onSelect,
   placeholder = "Ketik nama untuk cari anggota FORBIS",
   value,
+  variant = "dark",
 }: ForbisMemberSearchProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
@@ -58,7 +60,10 @@ export function ForbisMemberSearch({
       <Search className="pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2 text-muted-foreground/70" />
       <input
         autoComplete="off"
-        className="h-11 w-full rounded-2xl border border-white/12 bg-white/8 px-3 pl-9 pr-9 text-sm text-white shadow-sm outline-none transition-colors placeholder:text-white/30 focus:border-[#00adee]/50 disabled:cursor-not-allowed disabled:opacity-50"
+        className={variant === "light"
+          ? "h-11 w-full rounded-2xl border border-input bg-white px-3 pl-9 pr-9 text-sm text-foreground shadow-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary-400 focus:ring-2 focus:ring-primary-100 disabled:cursor-not-allowed disabled:opacity-50"
+          : "h-11 w-full rounded-2xl border border-white/12 bg-white/8 px-3 pl-9 pr-9 text-sm text-white shadow-sm outline-none transition-colors placeholder:text-white/30 focus:border-[#00adee]/50 disabled:cursor-not-allowed disabled:opacity-50"
+        }
         disabled={disabled}
         onBlur={() => { window.setTimeout(() => setIsOpen(false), 150); }}
         onChange={(e) => {
