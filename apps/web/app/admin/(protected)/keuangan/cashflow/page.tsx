@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { getCashflowLedger } from "@/actions/finance";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

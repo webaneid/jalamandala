@@ -751,6 +751,7 @@ export async function markInvoiceAsPaid(payload: {
     }
 
     revalidatePath("/admin/keuangan");
+    revalidatePath("/admin/keuangan/cashflow");
     revalidatePath("/admin/booth");
 
     // P4 + E1 — async, tidak blok response
@@ -1411,6 +1412,7 @@ export async function verifyPaymentConfirmation(paymentId: string) {
     }
 
     revalidatePath("/admin/keuangan");
+    revalidatePath("/admin/keuangan/cashflow");
     revalidatePath(`/invoice/${invoice.publicToken}`);
 
     if (isFullyPaid && invoice.participantId) {
