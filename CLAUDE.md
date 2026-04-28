@@ -167,6 +167,25 @@ WA dikirim via GoWA. Config diambil dari DB (`whatsappConfigs` tabel, via `/admi
 
 **Link invoice di WA** menggunakan `NEXT_PUBLIC_EXPO_URL` env var. Wajib di-set di production agar link tidak pakai fallback.
 
+## Cron Jobs
+
+Tiga endpoint cron di `apps/web/app/api/cron/`. Semua diamankan dengan query param `?secret=CRON_SECRET` (env var `CRON_SECRET`).
+
+| Endpoint | Jadwal | Penerima | Isi Pesan |
+|----------|--------|----------|-----------|
+| `/api/cron/pimpinan-report` | Tiap hari (pagi) | `expoEvents.leaderWaNumbers` | Rekap booth per zona (terjual/total/sisa) + ringkasan keuangan (terbayar, pending, total potensi) |
+| `/api/cron/finance-unpaid` | Tiap hari | `expoEvents.financeWaNumbers` | Daftar invoice belum lunas + menunggu verifikasi, lengkap dengan nama perusahaan, nominal, jatuh tempo |
+| `/api/cron/tim-acara-rundown` | Tiap malam | `expoEvents.eventTeamWaNumbers` | Rundown agenda besok (waktu, judul, venue, pembicara) |
+
+**Nomor penerima** disimpan di tabel `expoEvents` sebagai array string (field `leaderWaNumbers`, `financeWaNumbers`, `eventTeamWaNumbers`). Diatur dari DB — tidak hardcode di kode.
+
+**Format pesan** hardcode di masing-masing route handler, tidak menggunakan tabel `messageTemplates`.
+
+**Cara trigger manual (test):**
+```
+GET https://app.forbis.id/api/cron/pimpinan-report?secret=<CRON_SECRET>
+```
+
 ## Invoice & Payment Flow
 
 Status invoice: `waiting_for_payment` → `waiting_confirmation` (user submit bukti) → `paid` (admin verifikasi) / `expired` / `cancelled`
