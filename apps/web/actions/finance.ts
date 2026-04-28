@@ -1708,9 +1708,10 @@ export async function getCashflowLedger() {
   try {
     const tenantDb = await createTenantDb(TENANT_SCHEMA);
     
-    const entries = await tenantDb.query.cashflowLedger.findMany({
-      orderBy: (table, { desc }) => [desc(table.transactionDate)],
-    });
+    const entries = await tenantDb
+      .select()
+      .from(cashflowLedger)
+      .orderBy(desc(cashflowLedger.transactionDate));
 
     return { success: true, data: entries };
   } catch (error) {
