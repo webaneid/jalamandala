@@ -3,10 +3,10 @@
 
 // Mapping: org slug → booth group slug yang boleh dipesan
 const BOOTH_GROUP_ACCESS: Record<string, string[]> = {
-  forbis: ["general", "forbis"],
+  forbis: ["general", "forbis", "vip-b"],
   fpag: ["fpag"],
   formaqin: ["formaqin"],
-  general: ["general"],
+  general: ["general", "vip-b"],
   gontor: ["gontor"],
   sponsor: ["sponsor"],
 };

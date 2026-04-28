@@ -36,7 +36,7 @@ type BoothSeed = {
 
 const PRICE_PHASES = ['early_bird', 'pre_sale', 'regular'] as const;
 
-const DEFAULT_PRICE_RULES = {
+const DEFAULT_PRICE_RULES: Record<string, Record<string, number>> = {
   forbis: {
     early_bird: 7_500_000,
     pre_sale: 9_000_000,
@@ -52,7 +52,12 @@ const DEFAULT_PRICE_RULES = {
     pre_sale: 30_000_000,
     regular: 30_000_000,
   },
-} as const;
+  vip_b: {
+    early_bird: 7_500_000,
+    pre_sale: 9_000_000,
+    regular: 10_000_000,
+  },
+};
 
 const BOOTH_WIDTH = 84;
 const BOOTH_HEIGHT = 42;
@@ -223,6 +228,13 @@ const boothGroupSeeds = [
     defaultPriceGroup: null,
     sortOrder: 6,
   },
+  {
+    slug: 'vip-b',
+    name: 'VIP B',
+    description: 'Booth VIP baris kedua (VIP7–VIP12), harga flat semua tipe peserta.',
+    defaultPriceGroup: 'vip_b',
+    sortOrder: 7,
+  },
 ];
 
 const boothCategorySeeds = [
@@ -267,11 +279,13 @@ function buildVipSeeds() {
 
   rows.forEach((codes, rowIndex) => {
     const y = startY + rowIndex * rowHeight;
+    const boothGroupSlug = rowIndex === 1 ? 'vip-b' : 'general';
 
     codes.slice(0, 3).forEach((code, index) => {
       seeds.push(
         createBoothSeed('vip', code, rowIndex * 6 + index + 1, leftX + index * BOOTH_WIDTH, y, {
           description: 'Booth VIP di Area Aligard.',
+          boothGroupSlug,
         })
       );
     });
@@ -280,6 +294,7 @@ function buildVipSeeds() {
       seeds.push(
         createBoothSeed('vip', code, rowIndex * 6 + index + 4, rightX + index * BOOTH_WIDTH, y, {
           description: 'Booth VIP di Area Aligard.',
+          boothGroupSlug,
         })
       );
     });
@@ -641,9 +656,9 @@ async function seedBoothCatalog() {
   });
 
   for (const zone of zoneRows) {
-    // Sponsor hanya di zona VIP
+    // Sponsor dan vip_b hanya di zona VIP
     const priceGroups = zone.slug === 'vip'
-      ? (['forbis', 'public', 'sponsor'] as const)
+      ? (['forbis', 'public', 'sponsor', 'vip_b'] as const)
       : (['forbis', 'public'] as const);
 
     for (const priceGroup of priceGroups) {

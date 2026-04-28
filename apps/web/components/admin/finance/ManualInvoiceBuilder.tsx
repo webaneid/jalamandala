@@ -693,6 +693,7 @@ function formatPriceGroupLabel(value: string) {
   if (value === "forbis") return "Harga Forbis";
   if (value === "public") return "Harga Umum";
   if (value === "sponsor") return "Harga Sponsor";
+  if (value === "vip_b") return "Harga VIP B";
   return value;
 }
 

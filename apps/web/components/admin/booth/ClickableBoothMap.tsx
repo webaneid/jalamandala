@@ -1215,6 +1215,8 @@ function formatPriceGroup(priceGroup: string) {
       return "Umum";
     case "sponsor":
       return "Sponsor";
+    case "vip_b":
+      return "VIP B";
     default:
       return priceGroup;
   }
@@ -1246,7 +1248,7 @@ function resolveZoneFacilities(zone: BoothMapZone) {
 }
 
 const PRICE_PHASE_ORDER = ["early_bird", "pre_sale", "regular"];
-const PRICE_GROUP_ORDER = ["sponsor", "forbis", "public"];
+const PRICE_GROUP_ORDER = ["sponsor", "vip_b", "forbis", "public"];
 
 function resolveZonePriceGroups(zone: BoothMapZone) {
   return resolveZonePriceGroupsFromRows(
@@ -1292,9 +1294,9 @@ function resolveZonePriceGroupsFromRows(
 }
 
 function buildEditablePriceRows(zone: BoothMapZone) {
-  // Sponsor hanya di zona VIP
+  // Sponsor dan vip_b hanya di zona VIP
   const groups = zone.slug === "vip"
-    ? ["forbis", "public", "sponsor"]
+    ? ["forbis", "public", "sponsor", "vip_b"]
     : ["forbis", "public"];
 
   return groups.flatMap((priceGroup) =>
