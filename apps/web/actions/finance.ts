@@ -1744,11 +1744,9 @@ export async function deleteInvoiceCompletely(invoiceId: string): Promise<{ succ
       await tenantDb.delete(orders).where(eq(orders.id, orderId));
     }
 
-    // 5. Hapus data peserta di public schema
+    // 5. Hapus terms approvals terkait invoice ini saja — participant + businesses tetap ada
     if (participantId) {
       await db.delete(participantTermsApprovals).where(eq(participantTermsApprovals.participantId, participantId));
-      await db.delete(participantBusinesses).where(eq(participantBusinesses.participantId, participantId));
-      await db.delete(participants).where(eq(participants.id, participantId));
     }
 
     revalidatePath("/admin/keuangan");

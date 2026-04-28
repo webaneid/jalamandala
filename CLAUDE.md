@@ -179,7 +179,7 @@ Aturan penting:
 - Admin verifikasi melalui `verifyPaymentConfirmation()` di `actions/finance.ts`.
 - `getInvoiceByToken` di `actions/finance.ts` adalah fungsi utama untuk halaman invoice publik — returns invoice, participant, business, items (enriched), payments (dengan `proofAssetId`), event, paymentChannels, qrisConfig.
 
-**Hapus invoice (admin):** `deleteInvoiceCompletely(invoiceId)` di `actions/finance.ts` — hapus invoice + order + booth bookings (reset booths ke `open`) + participant + businesses + terms approvals. Tombol ada di halaman detail invoice (`/admin/keuangan/{id}`), requires konfirmasi ketik "HAPUS".
+**Hapus invoice (admin):** `deleteInvoiceCompletely(invoiceId)` di `actions/finance.ts` — hapus invoice + order + booth bookings (reset booths ke `open`) + terms approvals. Participant dan businesses **tidak dihapus** — tetap ada di sistem. Tombol ada di halaman detail invoice (`/admin/keuangan/{id}`), requires konfirmasi ketik "HAPUS".
 
 ## Alur Pendaftaran Peserta (End-to-End)
 
