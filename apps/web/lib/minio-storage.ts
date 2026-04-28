@@ -110,10 +110,15 @@ async function signedFetch(url: URL, method: string, options: SignedFetchOptions
     `x-amz-date:${amzDate}`,
   ].join("\n")
   const signedHeaders = "host;x-amz-content-sha256;x-amz-date"
+  const canonicalQueryString = Array.from(url.searchParams.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join("&")
+
   const canonicalRequest = [
     method,
     canonicalizePath(url.pathname),
-    "",
+    canonicalQueryString,
     `${canonicalHeaders}\n`,
     signedHeaders,
     payloadHash,
