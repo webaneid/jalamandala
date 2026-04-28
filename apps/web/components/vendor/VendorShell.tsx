@@ -36,7 +36,7 @@ export function VendorShell({ children, vendorName, vendorType, userName }: Prop
 
   return (
     <div
-      className="relative min-h-screen text-white"
+      className="public-dark relative min-h-screen text-white"
       style={{
         background: 'linear-gradient(135deg, #050e1f 0%, #0a1f48 30%, #071630 55%, #040c1a 100%)',
       }}

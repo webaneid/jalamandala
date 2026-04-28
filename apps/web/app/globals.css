@@ -103,12 +103,12 @@
     font: inherit;
   }
 
-  /* Override browser autofill on dark inputs */
-  input:-webkit-autofill,
-  input:-webkit-autofill:hover,
-  input:-webkit-autofill:focus,
-  textarea:-webkit-autofill,
-  select:-webkit-autofill {
+  /* Override browser autofill — hanya di halaman dark (public + vendor) */
+  .public-dark input:-webkit-autofill,
+  .public-dark input:-webkit-autofill:hover,
+  .public-dark input:-webkit-autofill:focus,
+  .public-dark textarea:-webkit-autofill,
+  .public-dark select:-webkit-autofill {
     -webkit-text-fill-color: white;
     -webkit-box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0.08) inset;
     box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0.08) inset;
