@@ -381,7 +381,7 @@ function resolvePriceFromRules(
 
   const now = new Date();
 
-  // Find active phase by date range
+  // Find active phase by date range for this price group
   for (const phase of ["early_bird", "pre_sale", "regular"] as const) {
     const rule = priceRules.find(
       (r) => r.priceGroup === priceGroup && r.pricePhase === phase
@@ -399,7 +399,23 @@ function resolvePriceFromRules(
     }
   }
 
-  // Fallback: regular price
+  // Price group tidak punya date ranges sendiri (misal vip_b) —
+  // ikut fase aktif dari price group lain yang punya jadwal di zona yang sama
+  let activePhase: "early_bird" | "pre_sale" | "regular" = "regular";
+  for (const phase of ["early_bird", "pre_sale", "regular"] as const) {
+    const anyRule = priceRules.find((r) => r.pricePhase === phase && (r.startsAt || r.endsAt));
+    if (!anyRule) continue;
+    const afterStart = !anyRule.startsAt || now >= anyRule.startsAt;
+    const beforeEnd = !anyRule.endsAt || now < anyRule.endsAt;
+    if (afterStart && beforeEnd) { activePhase = phase; break; }
+  }
+
+  const phaseRule = priceRules.find(
+    (r) => r.priceGroup === priceGroup && r.pricePhase === activePhase
+  );
+  if (phaseRule) return { phase: activePhase, price: phaseRule.price };
+
+  // Last resort: regular
   const regularRule = priceRules.find(
     (r) => r.priceGroup === priceGroup && r.pricePhase === "regular"
   );
