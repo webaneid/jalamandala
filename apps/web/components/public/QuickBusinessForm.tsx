@@ -103,7 +103,7 @@ export function QuickBusinessForm({ boothCategories, defaultValues, eventSlug, n
       {/* Logo */}
       <div className="flex items-center gap-5">
         <button
-          className="relative size-20 shrink-0 overflow-hidden rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 transition hover:border-primary focus:outline-none"
+          className="relative size-20 shrink-0 overflow-hidden rounded-2xl border-2 border-dashed border-white/20 bg-white/8 transition hover:border-white/40 focus:outline-none"
           disabled={isSubmitting}
           onClick={() => fileRef.current?.click()}
           type="button"
@@ -111,7 +111,7 @@ export function QuickBusinessForm({ boothCategories, defaultValues, eventSlug, n
           {logo ? (
             <Image alt="logo preview" className="object-cover" fill sizes="80px" src={logo.previewUrl} />
           ) : (
-            <span className="flex flex-col items-center justify-center gap-1 text-slate-400">
+            <span className="flex flex-col items-center justify-center gap-1 text-white/40">
               <svg className="size-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
                 <path d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5M12 3.75v8.25M8.25 8.25L12 4.5l3.75 3.75" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -119,8 +119,8 @@ export function QuickBusinessForm({ boothCategories, defaultValues, eventSlug, n
             </span>
           )}
         </button>
-        <div className="text-sm text-slate-500">
-          <p className="font-medium text-slate-700">Logo Perusahaan</p>
+        <div className="text-sm text-white/50">
+          <p className="font-medium text-white/80">Logo Perusahaan</p>
           <p>Opsional · Maks 5 MB (JPG/PNG)</p>
           {logo && (
             <button
@@ -138,7 +138,7 @@ export function QuickBusinessForm({ boothCategories, defaultValues, eventSlug, n
       {/* Nama Perusahaan */}
       <FieldShell id="companyName" label="Nama Perusahaan" required>
         <Input
-          className="h-11 rounded-2xl"
+          className="h-11 rounded-2xl border-white/12 bg-white/8 text-white placeholder:text-white/30 focus-visible:border-[#00adee]/50"
           disabled={isSubmitting}
           id="companyName"
           onChange={(e) => setCompanyName(e.target.value)}
@@ -150,7 +150,7 @@ export function QuickBusinessForm({ boothCategories, defaultValues, eventSlug, n
       {/* Nama di Booth */}
       <FieldShell hint="Nama yang tampil di papan booth saat pameran." id="boothName" label="Nama di Booth" required>
         <Input
-          className="h-11 rounded-2xl"
+          className="h-11 rounded-2xl border-white/12 bg-white/8 text-white placeholder:text-white/30 focus-visible:border-[#00adee]/50"
           disabled={isSubmitting || sameBoothName}
           id="boothName"
           onChange={(e) => setBoothName(e.target.value)}
@@ -171,7 +171,7 @@ export function QuickBusinessForm({ boothCategories, defaultValues, eventSlug, n
       {/* Jenis Produk untuk Expo */}
       <FieldShell id="categorySlug" label="Jenis Produk untuk Expo" required>
         <select
-          className="h-11 w-full rounded-2xl border border-border bg-white px-3 text-sm disabled:opacity-50"
+          className="h-11 w-full rounded-2xl border border-white/12 bg-white/8 px-3 text-sm text-white disabled:opacity-50"
           disabled={isSubmitting}
           id="categorySlug"
           onChange={(e) => setCategorySlug(e.target.value)}
