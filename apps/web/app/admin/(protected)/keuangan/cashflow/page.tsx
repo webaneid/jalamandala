@@ -126,7 +126,16 @@ export default async function CashflowPage() {
                     {formatDate(entry.transactionDate)}
                   </TableCell>
                   <TableCell className="font-medium">
-                    <span>{entry.description}</span>
+                    {entry.referenceInvoiceId ? (
+                      <Link
+                        href={`/admin/keuangan/${entry.referenceInvoiceId}`}
+                        className="hover:text-primary hover:underline underline-offset-2"
+                      >
+                        {entry.description}
+                      </Link>
+                    ) : (
+                      <span>{entry.description}</span>
+                    )}
                     {entry.referenceDisbursementId && (
                       <Link
                         href={`/admin/keuangan/pencairan/${entry.referenceDisbursementId}`}
