@@ -183,18 +183,19 @@ Aturan penting:
 
 ### Kelebihan Bayar (Overpayment)
 
-**Belum diimplementasi — ini desain yang disepakati, eksekusi setelah membaca ini.**
+**Sudah diimplementasi.**
 
-Jika `totalPaid > grandTotal`, selisihnya harus bisa dikembalikan ke peserta. Alur yang disepakati:
+Jika `totalPaid > grandTotal`, selisihnya bisa dikembalikan ke peserta lewat alur Pencairan Dana:
 
-1. **Deteksi** — saat `verifyPaymentConfirmation()` atau `markInvoiceAsPaid()`, hitung `overpaymentAmount = totalPaid - grandTotal`. Jika > 0, simpan ke field `overpayment_amount` di tabel `invoices`.
-2. **Tampilan** — di halaman detail invoice (`/admin/keuangan/{id}`), jika `overpaymentAmount > 0` tampilkan banner "Kelebihan Bayar: Rp X" + tombol **"Kembalikan Kelebihan"**.
-3. **Pengembalian** — tombol tersebut memanggil action yang membuat `disbursementRequest` baru secara otomatis (amount = selisih, deskripsi dan `referenceInvoiceId` terisi otomatis). Admin lalu approve + konfirmasi transfer di halaman `/admin/keuangan/pencairan` seperti biasa.
-4. **Cashflow** — cash_in dari pembayaran sudah tercatat penuh. Cash_out dari pencairan pengembalian akan tercatat saat disbursement diproses — saldo cashflow tetap balance dan auditable.
+1. **Deteksi** — saat `verifyPaymentConfirmation()` atau `markInvoiceAsPaid()` di `actions/finance.ts`, hitung `overpaymentAmount = totalPaid - grandTotal`. Jika > 0, simpan ke kolom `overpayment_amount` di tabel `invoices`.
+2. **Tampilan** — di halaman detail invoice (`/admin/keuangan/{id}`), jika `invoice.overpaymentAmount > 0` tampilkan `<OverpaymentBanner>` (amber banner + tombol "Kembalikan Kelebihan").
+3. **Pengembalian** — banner membuka modal isi rekening tujuan, lalu memanggil `createOverpaymentDisbursement()` yang membuat `disbursementRequest` otomatis (purposeType `"refund"`, status `"submitted"`). Admin approve + transfer di `/admin/keuangan/pencairan` seperti biasa.
+4. **Peringatan input manual** — di `InvoiceDetailActions.tsx`, saat admin isi jumlah bayar > grandTotal, muncul teks peringatan kuning "Kelebihan: Rp X — akan dicatat sebagai kelebihan bayar."
+5. **Cashflow** — cash_in tercatat penuh saat pembayaran. Cash_out tercatat saat disbursement ditransfer. Saldo tetap auditable.
 
-**Schema yang perlu ditambah:** kolom `overpayment_amount numeric(12,2) default 0` di tabel `invoices` (tenant schema). Tambahkan via `db:provision:tenant`.
+**Schema:** kolom `overpayment_amount integer default 0` di tabel `invoices` (tenant). Sudah ada di `packages/db/src/schema/tenant/finance.ts` dan provision script (`packages/db/src/provision-tenant.ts`).
 
-**File yang akan disentuh:** `actions/finance.ts` (verifyPaymentConfirmation, markInvoiceAsPaid), halaman detail invoice, `packages/db/src/provision-tenant.ts`.
+**File utama:** `actions/finance.ts`, `components/admin/finance/OverpaymentBanner.tsx`, `components/admin/finance/InvoiceDetailActions.tsx`, halaman `[invoiceId]/page.tsx`.
 
 ## Alur Pendaftaran Peserta (End-to-End)
 

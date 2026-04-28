@@ -21,6 +21,7 @@ import {
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { DeleteInvoiceButton } from "@/components/admin/finance/DeleteInvoiceButton";
 import { InvoiceDetailActions } from "@/components/admin/finance/InvoiceDetailActions";
+import { OverpaymentBanner } from "@/components/admin/finance/OverpaymentBanner";
 import { PaymentProofPreviewButton } from "@/components/admin/finance/PaymentProofPreviewButton";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -209,6 +210,7 @@ async function getInvoiceDetail(invoiceId: string) {
       taxAmount: invoice.taxAmount,
       grandTotal: invoice.grandTotal,
       paidAt: invoice.paidAt,
+      overpaymentAmount: invoice.overpaymentAmount ?? 0,
       paymentChannelLabel: invoice.paymentChannelLabel,
       paymentChannelKey: invoice.paymentChannelType === "bank_account" && invoice.paymentChannelId
         ? `bank:${invoice.paymentChannelId}`
@@ -437,6 +439,15 @@ export default async function InvoiceDetailPage({
           />
         </div>
       </div>
+
+      {invoice.overpaymentAmount > 0 && (
+        <OverpaymentBanner
+          invoiceId={invoice.id}
+          invoiceNumber={invoice.invoiceNumber}
+          overpaymentAmount={invoice.overpaymentAmount}
+          participantName={participant?.name ?? ""}
+        />
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Kolom kiri: detail + items + histori */}

@@ -520,6 +520,7 @@ async function provisionTenantSchema() {
     await sql.unsafe(`ALTER TABLE "${schemaName}".invoices ADD COLUMN IF NOT EXISTS recipient_email text`);
     await sql.unsafe(`ALTER TABLE "${schemaName}".invoices ADD COLUMN IF NOT EXISTS public_token uuid DEFAULT gen_random_uuid()`);
     await sql.unsafe(`ALTER TABLE "${schemaName}".invoices ADD COLUMN IF NOT EXISTS proof_of_transfer_url text`);
+    await sql.unsafe(`ALTER TABLE "${schemaName}".invoices ADD COLUMN IF NOT EXISTS overpayment_amount integer DEFAULT 0`);
 
     await sql.unsafe(
       `CREATE UNIQUE INDEX IF NOT EXISTS invoices_public_token_unique ON "${schemaName}".invoices (public_token)`

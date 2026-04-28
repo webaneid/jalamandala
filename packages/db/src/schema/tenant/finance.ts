@@ -49,6 +49,7 @@ export const invoices = pgTable(
     proofOfTransferUrl: text('proof_of_transfer_url'),
     status: text('status').default('waiting_for_payment').notNull(),
     paidAt: timestamp('paid_at'),
+    overpaymentAmount: integer('overpayment_amount').default(0),
     notes: text('notes'),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),

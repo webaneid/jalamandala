@@ -314,6 +314,11 @@ function AdminActionsCard({
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">Jumlah Transfer (tagihan: {formatCurrency(invoice.grandTotal)})</label>
                 <Input min={1} onChange={(e) => setAmount(e.target.value)} type="number" value={amount} />
+                {Number(amount) > invoice.grandTotal && (
+                  <p className="text-xs text-amber-700 font-medium">
+                    Kelebihan: {formatCurrency(Number(amount) - invoice.grandTotal)} — akan dicatat sebagai kelebihan bayar.
+                  </p>
+                )}
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">Tanggal & Jam Transfer (WIB)</label>

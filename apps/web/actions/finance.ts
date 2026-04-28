@@ -1,6 +1,7 @@
 "use server";
 
 import { and, asc, desc, eq, gte, inArray, isNull, lt } from "drizzle-orm";
+import { getAdminSession } from "@/lib/admin-auth";
 import { getEligibilityRejectionReason } from "@/lib/booth-eligibility";
 import { revalidatePath } from "next/cache";
 import { sendWhatsApp } from "@/lib/whatsapp";
@@ -14,6 +15,7 @@ import {
   booths,
   boothBookings,
   cashflowLedger,
+  disbursementRequests,
   eventAddons,
   invoices,
   invoiceItems,
@@ -698,6 +700,7 @@ export async function markInvoiceAsPaid(payload: {
       .reduce((s, p) => s + p.amount, 0);
     const totalPaid = prevPaid + paymentAmount;
     const isFullyPaid = totalPaid >= invoice.grandTotal;
+    const overpaymentAmount = isFullyPaid ? Math.max(0, totalPaid - invoice.grandTotal) : 0;
 
     await tenantDb
       .update(invoices)
@@ -707,6 +710,7 @@ export async function markInvoiceAsPaid(payload: {
         paymentChannelLabel: paymentMethod.label,
         paymentChannelType: paymentMethod.type,
         status: isFullyPaid ? "paid" : "waiting_for_payment",
+        overpaymentAmount,
         updatedAt: new Date(),
       })
       .where(eq(invoices.id, invoice.id));
@@ -1359,6 +1363,7 @@ export async function verifyPaymentConfirmation(paymentId: string) {
       .reduce((s, p) => s + p.amount, 0);
     const totalPaid = prevVerified + payment.amount;
     const isFullyPaid = totalPaid >= invoice.grandTotal;
+    const overpaymentAmount = isFullyPaid ? Math.max(0, totalPaid - invoice.grandTotal) : 0;
 
     await tenantDb.insert(cashflowLedger).values({
       amount: payment.amount,
@@ -1378,6 +1383,7 @@ export async function verifyPaymentConfirmation(paymentId: string) {
           paymentChannelLabel: payment.paymentChannelLabel,
           paymentChannelType: payment.paymentChannelType,
           status: "paid",
+          overpaymentAmount,
           updatedAt: new Date(),
         })
         .where(eq(invoices.id, invoice.id));
@@ -1773,5 +1779,58 @@ export async function deleteInvoiceCompletely(invoiceId: string): Promise<{ succ
   } catch (error) {
     console.error("deleteInvoiceCompletely error:", error);
     return { success: false, error: "Gagal menghapus data. Cek konsol server." };
+  }
+}
+
+export async function createOverpaymentDisbursement(payload: {
+  invoiceId: string;
+  destBankName: string;
+  destAccountNumber: string;
+  destAccountName: string;
+  notes?: string;
+}): Promise<{ success: boolean; error?: string; disbursementId?: string }> {
+  try {
+    const access = await getAdminSession();
+    const tenantDb = await createTenantDb(TENANT_SCHEMA);
+
+    const invoice = await tenantDb.query.invoices.findFirst({
+      where: eq(invoices.id, payload.invoiceId),
+      columns: { overpaymentAmount: true, invoiceNumber: true, status: true },
+    });
+
+    if (!invoice) return { success: false, error: "Invoice tidak ditemukan." };
+    if (!invoice.overpaymentAmount || invoice.overpaymentAmount <= 0) {
+      return { success: false, error: "Tidak ada kelebihan bayar pada invoice ini." };
+    }
+
+    const activeEvent = await resolveActiveEvent();
+    const eventId = activeEvent.id;
+
+    const inserted = await tenantDb
+      .insert(disbursementRequests)
+      .values({
+        requestedBy: access.userId,
+        requestedByName: access.userName,
+        purposeType: "refund",
+        purposeDescription: `Pengembalian kelebihan bayar Invoice ${invoice.invoiceNumber}`,
+        requestedAmount: invoice.overpaymentAmount,
+        destBankName: payload.destBankName.trim(),
+        destAccountNumber: payload.destAccountNumber.trim(),
+        destAccountName: payload.destAccountName.trim(),
+        notes: payload.notes?.trim() || null,
+        status: "submitted",
+        eventId,
+      })
+      .returning({ id: disbursementRequests.id });
+
+    const created = inserted[0];
+    if (!created) return { success: false, error: "Gagal membuat permohonan pencairan." };
+
+    revalidatePath(`/admin/keuangan/${payload.invoiceId}`);
+    revalidatePath("/admin/keuangan/pencairan");
+    return { success: true, disbursementId: created.id };
+  } catch (error) {
+    console.error("createOverpaymentDisbursement error:", error);
+    return { success: false, error: "Gagal membuat permohonan. Cek konsol server." };
   }
 }
