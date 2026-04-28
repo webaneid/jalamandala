@@ -583,7 +583,7 @@ async function seedBoothCatalog() {
           boothCategoryId: boothCategory.id,
           name: booth.name,
           description: booth.description,
-          status: booth.status,
+          // status sengaja tidak di-update — jaga status reserved/booked yang sudah ada
           sortOrder: booth.sortOrder,
           x: booth.x,
           y: booth.y,
