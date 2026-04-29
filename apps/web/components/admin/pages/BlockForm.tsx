@@ -48,20 +48,31 @@ export function BlockForm({ type, payload, eventSlug, onChange }: Props) {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Teks Tombol (CTA Text)</Label>
-              <Input 
-                value={payload.cta_text || ""} 
-                onChange={(e) => update("cta_text", e.target.value)} 
+              <Input
+                value={payload.cta_text || ""}
+                onChange={(e) => update("cta_text", e.target.value)}
                 placeholder="Contoh: Daftar Sekarang"
               />
             </div>
             <div className="space-y-1.5">
               <Label>Link Tombol (CTA Link)</Label>
-              <Input 
-                value={payload.cta_link || ""} 
-                onChange={(e) => update("cta_link", e.target.value)} 
+              <Input
+                value={payload.cta_link || ""}
+                onChange={(e) => update("cta_link", e.target.value)}
                 placeholder="Contoh: /daftar atau https://..."
               />
             </div>
+          </div>
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            Jika <strong>Link Tombol</strong> dikosongkan, tombol akan otomatis mengarah ke <strong>WA Rotator</strong> (CS agent aktif).
+          </div>
+          <div className="space-y-1.5">
+            <Label>Label Tombol WA (jika link kosong)</Label>
+            <Input
+              value={payload.wa_label || ""}
+              onChange={(e) => update("wa_label", e.target.value)}
+              placeholder="Hubungi Kami via WhatsApp"
+            />
           </div>
           {type === "hero" && (
             <div className="space-y-4">
@@ -112,14 +123,13 @@ export function BlockForm({ type, payload, eventSlug, onChange }: Props) {
       );
 
     case "problem_statement":
-    case "tenant_cta":
       return (
         <div className="space-y-4">
           <div className="space-y-1.5">
             <Label>Judul (Title) *</Label>
-            <Input 
-              value={payload.title || ""} 
-              onChange={(e) => update("title", e.target.value)} 
+            <Input
+              value={payload.title || ""}
+              onChange={(e) => update("title", e.target.value)}
             />
           </div>
           <div className="space-y-1.5">
@@ -130,18 +140,48 @@ export function BlockForm({ type, payload, eventSlug, onChange }: Props) {
               onChange={(e) => update("description", e.target.value)}
             />
           </div>
-          {type === "tenant_cta" && (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Teks Tombol</Label>
-                <Input value={payload.cta_text || ""} onChange={(e) => update("cta_text", e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Link Tombol</Label>
-                <Input value={payload.cta_link || ""} onChange={(e) => update("cta_link", e.target.value)} />
-              </div>
+        </div>
+      );
+
+    case "tenant_cta":
+      return (
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>Judul (Title) *</Label>
+            <Input
+              value={payload.title || ""}
+              onChange={(e) => update("title", e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Deskripsi (Description)</Label>
+            <textarea
+              className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              value={payload.description || ""}
+              onChange={(e) => update("description", e.target.value)}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Teks Tombol</Label>
+              <Input value={payload.cta_text || ""} onChange={(e) => update("cta_text", e.target.value)} placeholder="Contoh: Daftar Sekarang" />
             </div>
-          )}
+            <div className="space-y-1.5">
+              <Label>Link Tombol</Label>
+              <Input value={payload.cta_link || ""} onChange={(e) => update("cta_link", e.target.value)} placeholder="Contoh: /daftar atau https://..." />
+            </div>
+          </div>
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            Jika <strong>Link Tombol</strong> dikosongkan, tombol akan otomatis mengarah ke <strong>WA Rotator</strong> (CS agent aktif).
+          </div>
+          <div className="space-y-1.5">
+            <Label>Label Tombol WA (jika link kosong)</Label>
+            <Input
+              value={payload.wa_label || ""}
+              onChange={(e) => update("wa_label", e.target.value)}
+              placeholder="Hubungi Kami via WhatsApp"
+            />
+          </div>
         </div>
       );
 

@@ -11,6 +11,7 @@ const FALLBACK_MESSAGE = "Halo, saya ingin bertanya tentang pendaftaran booth FO
 
 export async function GET(req: NextRequest) {
   try {
+    const source = req.nextUrl.searchParams.get("source") ?? "public_bottom_nav";
     const tenantDb = await createTenantDb(TENANT_SCHEMA);
 
     const event = await db.query.expoEvents.findFirst({
@@ -44,7 +45,7 @@ export async function GET(req: NextRequest) {
       await tx.insert(waRotatorClicks).values({
         agentId: agent.id,
         eventId: event.id,
-        source: "public_bottom_nav",
+        source,
       });
     });
 
