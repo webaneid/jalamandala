@@ -351,8 +351,8 @@ export function BusinessForm({
                   value={logoAsset}
                   onChange={setLogoAsset}
                   accept="image"
-                  folder="private/participant-logos"
-                  visibility="private"
+                  folder="public/participant-logos"
+                  visibility="public"
                   placeholder="Pilih atau upload logo usaha..."
                 />
               </FormControl>

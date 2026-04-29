@@ -6,6 +6,7 @@ import { invoices } from "@repo/db/schema/tenant";
 import { boothCategories, booths, zonePriceRules, zones } from "@repo/db/schema/tenant";
 import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { PRICE_PHASE_LABELS, resolveCurrentPricePhase, type PricePhase } from "@/lib/price-phase";
+import { generatePresignedGetUrl } from "@/lib/minio-storage";
 
 const TENANT_SCHEMA = process.env.TENANT_SCHEMA ?? "expo_forbis2026";
 
@@ -186,6 +187,7 @@ export async function getPaidParticipantBusinessLogos(limit = 40) {
       brandName: participantBusinesses.brandName,
       logoAssetId: participantBusinesses.logoAssetId,
       publicUrl: mediaAssets.publicUrl,
+      objectKey: mediaAssets.objectKey,
       altText: mediaAssets.altText,
     })
     .from(participantBusinesses)
@@ -196,7 +198,7 @@ export async function getPaidParticipantBusinessLogos(limit = 40) {
   return rows.map((row) => ({
     id: row.logoAssetId!,
     label: row.brandName || row.companyName,
-    url: row.publicUrl ?? `/api/media/${row.logoAssetId}`,
+    url: row.publicUrl ?? (row.objectKey ? generatePresignedGetUrl(row.objectKey, 3600 * 6) : null) ?? `/api/media/${row.logoAssetId}`,
     alt: row.altText || row.brandName || row.companyName,
     source: "paid_participant_business" as const,
   }));
@@ -340,6 +342,7 @@ export async function getPaidTenantDirectory() {
       productTags: participantBusinesses.productTags,
       logoAssetId: participantBusinesses.logoAssetId,
       logoPublicUrl: mediaAssets.publicUrl,
+      logoObjectKey: mediaAssets.objectKey,
     })
     .from(participantBusinesses)
     .leftJoin(mediaAssets, eq(mediaAssets.id, participantBusinesses.logoAssetId))
@@ -356,6 +359,8 @@ export async function getPaidTenantDirectory() {
     companyPhone: r.companyPhone ?? null,
     companyWhatsapp: r.companyWhatsapp ?? null,
     productTags: r.productTags ?? null,
-    logoUrl: r.logoPublicUrl ?? (r.logoAssetId ? `/api/media/${r.logoAssetId}` : null),
+    logoUrl: r.logoPublicUrl
+      ?? (r.logoObjectKey ? generatePresignedGetUrl(r.logoObjectKey, 3600 * 6) : null)
+      ?? null,
   }));
 }
