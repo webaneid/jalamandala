@@ -160,6 +160,9 @@ refund_amount         integer DEFAULT 0      -- nominal yang dikembalikan ke pes
 -- WA Reminder
 next_reminder_at      timestamptz            -- kapan reminder berikutnya harus dikirim
 last_reminder_sent_at timestamptz
+
+-- CS Follow Up H-1
+cs_notified_h1        boolean DEFAULT false  -- sudah kirim notif ke CS H-1 sebelum balance_due_date?
 ```
 
 ### 4B. Perubahan Tabel `invoicePayments` (tenant schema)
@@ -296,7 +299,56 @@ https://expo.forbis.id/invoice/[public_token]
 
 ---
 
-## 8. Perubahan UI
+## 8. Notifikasi CS — H-1 Deadline Pelunasan
+
+Satu hari sebelum `balance_due_date`, sistem mengirim WA ke tim CS agar mereka bisa proaktif follow up peserta untuk negosiasi pelunasan.
+
+### Penerima
+
+Nomor CS diambil dari tabel `wa_rotator_agents` (tenant schema) — semua agen dengan `isActive = true`. Ini tabel yang sama yang dipakai untuk routing WA publik (bottom nav). Tidak perlu field baru di `expoEvents` — cukup query `wa_rotator_agents` saat cron berjalan.
+
+Jika tidak ada agen aktif di rotator → skip notifikasi CS (log warning).
+
+### Trigger
+
+Cron `payment-reminders` yang sudah berjalan setiap 30 menit juga mengecek:
+- Status invoice = `dp_paid`
+- `balance_due_date` jatuh antara **sekarang + 23 jam** s/d **sekarang + 25 jam** (window ±1 jam untuk menghindari kirim dua kali)
+- Belum pernah kirim notif H-1 ini (`cs_notified_h1 = false`)
+
+Setelah terkirim, set `cs_notified_h1 = true` di tabel `invoices` agar tidak dikirim ulang.
+
+Kolom baru di `invoices` (sudah ada di bagian 4A):
+```sql
+cs_notified_h1  boolean DEFAULT false  -- flag agar tidak kirim dua kali
+```
+
+Tidak ada perubahan di `expoEvents` — nomor CS sudah ada di `wa_rotator_agents`.
+
+### Template WA ke CS
+
+```
+⏰ *Reminder Follow Up Pelunasan — H-1*
+
+Peserta berikut memiliki deadline pelunasan *besok*:
+
+Nama Peserta : [participant_name]
+No. Invoice  : [invoice_number]
+Booth Dipesan: [booth_codes] — Zona [zone_name]
+DP Dibayar   : [dp_amount_paid]
+Sisa Lunas   : [grandTotal - dp_amount_paid]
+Deadline     : [balance_due_date] WIB
+WA Peserta   : [participant_whatsapp]
+
+Segera hubungi untuk follow up pelunasan atau negosiasi perpanjangan.
+Detail: https://app.forbis.id/admin/keuangan/[invoice_id]
+```
+
+Jika ada beberapa invoice jatuh tempo di hari yang sama, dikirim **satu pesan yang berisi semua** (bukan per-invoice terpisah), dipisah dengan baris `---`.
+
+---
+
+## 10. Perubahan UI
 
 ### 8A. Halaman Invoice Publik (`/invoice/[token]`)
 
@@ -324,7 +376,7 @@ Saat admin verifikasi payment, sistem harus:
 
 ---
 
-## 9. File Implementasi
+## 11. File Implementasi
 
 ### Yang perlu dibuat baru:
 
@@ -348,7 +400,7 @@ Saat admin verifikasi payment, sistem harus:
 
 ---
 
-## 10. Urutan Implementasi
+## 12. Urutan Implementasi
 
 1. **Schema & provision** — tambah kolom ke `invoices` + `invoicePayments`, jalankan `db:provision:tenant`
 2. **`verifyPaymentConfirmation`** — deteksi DP vs full, set status yang benar
@@ -361,7 +413,7 @@ Saat admin verifikasi payment, sistem harus:
 
 ---
 
-## 11. Aturan Bisnis Kritis (Tidak Boleh Dilanggar)
+## 13. Aturan Bisnis Kritis (Tidak Boleh Dilanggar)
 
 - DP minimum **50%**. Sistem **otomatis tolak** verifikasi jika amount < 50% grandTotal.
 - Refund ke peserta selalu **50% dari nominal DP yang sudah terbayar**, bukan 50% dari grandTotal.
