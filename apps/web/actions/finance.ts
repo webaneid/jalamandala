@@ -1088,6 +1088,9 @@ export async function createManualInvoice(payload: {
       ? Math.floor(payload.dueDays)
       : await resolveInvoiceDueDays();
     dueDate.setDate(dueDate.getDate() + dueDays);
+    const nextReminderAt = new Date(issueDate.getTime() + 2 * 24 * 60 * 60 * 1000);
+    const dpMinimumPercent = 50;
+    const dpAmount = Math.ceil(subtotal * dpMinimumPercent / 100);
 
     let orderId: string | null = null;
 
@@ -1137,6 +1140,9 @@ export async function createManualInvoice(payload: {
         status: "waiting_for_payment",
         subtotal,
         taxAmount: 0,
+        nextReminderAt,
+        dpMinimumPercent,
+        dpAmount,
       })
       .returning();
 
