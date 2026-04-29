@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm';
-import { integer, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { boolean, integer, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 export const orders = pgTable('orders', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -51,6 +51,31 @@ export const invoices = pgTable(
     paidAt: timestamp('paid_at'),
     overpaymentAmount: integer('overpayment_amount').default(0),
     notes: text('notes'),
+
+    // DP / Installment
+    paymentType: text('payment_type').default('full').notNull(),         // 'full' | 'installment'
+    dpMinimumPercent: integer('dp_minimum_percent').default(50).notNull(),
+    dpAmount: integer('dp_amount').default(0).notNull(),
+    dpPaidAt: timestamp('dp_paid_at'),
+    balanceDueDate: timestamp('balance_due_date'),
+    reservationExtendedUntil: timestamp('reservation_extended_until'),
+    extendedByUserId: text('extended_by_user_id'),
+    extendedByName: text('extended_by_name'),
+    extendedAt: timestamp('extended_at'),
+    extensionNotes: text('extension_notes'),
+
+    // Pembatalan
+    cancelledByUserId: text('cancelled_by_user_id'),
+    cancelledByName: text('cancelled_by_name'),
+    cancelledAt: timestamp('cancelled_at'),
+    cancellationReason: text('cancellation_reason'),
+    refundAmount: integer('refund_amount').default(0),
+
+    // WA Reminder
+    nextReminderAt: timestamp('next_reminder_at'),
+    lastReminderSentAt: timestamp('last_reminder_sent_at'),
+    csNotifiedH1: boolean('cs_notified_h1').default(false),
+
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
   },
@@ -91,6 +116,7 @@ export const invoicePayments = pgTable('invoice_payments', {
   referenceNumber: text('reference_number'),
   senderName: text('sender_name'),
   proofAssetId: uuid('proof_asset_id'),
+  paymentSequence: text('payment_sequence').default('full').notNull(), // 'full' | 'dp' | 'balance'
   notes: text('notes'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),

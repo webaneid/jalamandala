@@ -522,6 +522,26 @@ async function provisionTenantSchema() {
     await sql.unsafe(`ALTER TABLE "${schemaName}".invoices ADD COLUMN IF NOT EXISTS proof_of_transfer_url text`);
     await sql.unsafe(`ALTER TABLE "${schemaName}".invoices ADD COLUMN IF NOT EXISTS overpayment_amount integer DEFAULT 0`);
 
+    // DP / Installment columns
+    await sql.unsafe(`ALTER TABLE "${schemaName}".invoices ADD COLUMN IF NOT EXISTS payment_type text NOT NULL DEFAULT 'full'`);
+    await sql.unsafe(`ALTER TABLE "${schemaName}".invoices ADD COLUMN IF NOT EXISTS dp_minimum_percent integer NOT NULL DEFAULT 50`);
+    await sql.unsafe(`ALTER TABLE "${schemaName}".invoices ADD COLUMN IF NOT EXISTS dp_amount integer NOT NULL DEFAULT 0`);
+    await sql.unsafe(`ALTER TABLE "${schemaName}".invoices ADD COLUMN IF NOT EXISTS dp_paid_at timestamp`);
+    await sql.unsafe(`ALTER TABLE "${schemaName}".invoices ADD COLUMN IF NOT EXISTS balance_due_date timestamp`);
+    await sql.unsafe(`ALTER TABLE "${schemaName}".invoices ADD COLUMN IF NOT EXISTS reservation_extended_until timestamp`);
+    await sql.unsafe(`ALTER TABLE "${schemaName}".invoices ADD COLUMN IF NOT EXISTS extended_by_user_id text`);
+    await sql.unsafe(`ALTER TABLE "${schemaName}".invoices ADD COLUMN IF NOT EXISTS extended_by_name text`);
+    await sql.unsafe(`ALTER TABLE "${schemaName}".invoices ADD COLUMN IF NOT EXISTS extended_at timestamp`);
+    await sql.unsafe(`ALTER TABLE "${schemaName}".invoices ADD COLUMN IF NOT EXISTS extension_notes text`);
+    await sql.unsafe(`ALTER TABLE "${schemaName}".invoices ADD COLUMN IF NOT EXISTS cancelled_by_user_id text`);
+    await sql.unsafe(`ALTER TABLE "${schemaName}".invoices ADD COLUMN IF NOT EXISTS cancelled_by_name text`);
+    await sql.unsafe(`ALTER TABLE "${schemaName}".invoices ADD COLUMN IF NOT EXISTS cancelled_at timestamp`);
+    await sql.unsafe(`ALTER TABLE "${schemaName}".invoices ADD COLUMN IF NOT EXISTS cancellation_reason text`);
+    await sql.unsafe(`ALTER TABLE "${schemaName}".invoices ADD COLUMN IF NOT EXISTS refund_amount integer DEFAULT 0`);
+    await sql.unsafe(`ALTER TABLE "${schemaName}".invoices ADD COLUMN IF NOT EXISTS next_reminder_at timestamp`);
+    await sql.unsafe(`ALTER TABLE "${schemaName}".invoices ADD COLUMN IF NOT EXISTS last_reminder_sent_at timestamp`);
+    await sql.unsafe(`ALTER TABLE "${schemaName}".invoices ADD COLUMN IF NOT EXISTS cs_notified_h1 boolean DEFAULT false`);
+
     await sql.unsafe(
       `CREATE UNIQUE INDEX IF NOT EXISTS invoices_public_token_unique ON "${schemaName}".invoices (public_token)`
     );
@@ -562,6 +582,7 @@ async function provisionTenantSchema() {
     await sql.unsafe(`ALTER TABLE "${schemaName}".invoice_payments ADD COLUMN IF NOT EXISTS sender_name text`);
     await sql.unsafe(`ALTER TABLE "${schemaName}".invoice_payments ADD COLUMN IF NOT EXISTS proof_asset_id uuid`);
     await sql.unsafe(`ALTER TABLE "${schemaName}".invoice_payments DROP COLUMN IF EXISTS proof_url`);
+    await sql.unsafe(`ALTER TABLE "${schemaName}".invoice_payments ADD COLUMN IF NOT EXISTS payment_sequence text NOT NULL DEFAULT 'full'`);
 
     await sql.unsafe(`
       CREATE TABLE IF NOT EXISTS cashflow_ledger (
