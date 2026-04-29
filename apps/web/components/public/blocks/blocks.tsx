@@ -8,6 +8,7 @@ import { getCurrentParticipantSession } from "@/lib/participant-session";
 import { db } from "@repo/db";
 import { mediaAssets } from "@repo/db/schema/public";
 import { inArray, isNull, and, eq } from "drizzle-orm";
+import { generatePresignedGetUrl } from "@/lib/minio-storage";
 
 function normalizePayload<T = any>(payload: T): any {
   if (typeof payload === "string") {
@@ -804,12 +805,13 @@ export function FooterInfoBlock({ payload, event }: { payload: any; event: any }
 
 // ── Image Banner Block ────────────────────────────────────────────────────────
 
-async function resolvePublicUrl(assetId: string): Promise<string | null> {
+async function resolveAssetSrc(assetId: string): Promise<string | null> {
   const asset = await db.query.mediaAssets.findFirst({
     where: and(eq(mediaAssets.id, assetId), isNull(mediaAssets.deletedAt)),
     columns: { publicUrl: true, objectKey: true },
   });
-  return asset?.publicUrl ?? null;
+  if (!asset) return null;
+  return asset.publicUrl ?? generatePresignedGetUrl(asset.objectKey, 86400);
 }
 
 export async function ImageBannerBlock({ payload }: { payload: any }) {
@@ -818,12 +820,11 @@ export async function ImageBannerBlock({ payload }: { payload: any }) {
   const altText: string = p?.altText ?? "";
   const caption: string = p?.caption ?? "";
 
-  // Use stored url if it's a full URL, otherwise resolve from DB
   let src: string | null = null;
   if (p?.url && p.url.startsWith("http")) {
     src = p.url;
   } else if (assetId) {
-    src = await resolvePublicUrl(assetId);
+    src = await resolveAssetSrc(assetId);
   }
 
   if (!src) return null;
@@ -858,11 +859,11 @@ export async function GalleryBlock({ payload }: { payload: any }) {
   const urlMap = new Map<string, string>();
   if (needsLookup.length > 0) {
     const rows = await db
-      .select({ id: mediaAssets.id, publicUrl: mediaAssets.publicUrl })
+      .select({ id: mediaAssets.id, publicUrl: mediaAssets.publicUrl, objectKey: mediaAssets.objectKey })
       .from(mediaAssets)
       .where(and(inArray(mediaAssets.id, needsLookup), isNull(mediaAssets.deletedAt)));
     for (const row of rows) {
-      if (row.publicUrl) urlMap.set(row.id, row.publicUrl);
+      urlMap.set(row.id, row.publicUrl ?? generatePresignedGetUrl(row.objectKey, 86400));
     }
   }
 
