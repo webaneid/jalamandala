@@ -144,13 +144,15 @@ async function releaseBoothsForInvoice(
   }
 }
 
-// Expire all waiting_for_payment invoices past their due date.
-// Does NOT expire waiting_confirmation (pending proof) — admin must resolve those manually.
+// Expire overdue invoices and mark dp_paid past balance_due_date as balance_overdue.
+// Does NOT touch waiting_confirmation / dp_waiting_confirmation / balance_waiting_confirmation —
+// those have pending proofs and must be resolved manually by admin.
 export async function expireOverdueInvoices(): Promise<void> {
   try {
     const tenantDb = await createTenantDb(TENANT_SCHEMA);
     const now = new Date();
 
+    // 1. waiting_for_payment past due_date → expired, release booths
     const overdueRows = await tenantDb.query.invoices.findMany({
       where: and(eq(invoices.status, "waiting_for_payment"), lt(invoices.dueDate, now)),
       with: { items: true },
@@ -161,6 +163,19 @@ export async function expireOverdueInvoices(): Promise<void> {
       await tenantDb
         .update(invoices)
         .set({ status: "expired", updatedAt: new Date() })
+        .where(eq(invoices.id, invoice.id));
+    }
+
+    // 2. dp_paid past balance_due_date → balance_overdue (booth stays reserved)
+    const balanceOverdueRows = await tenantDb.query.invoices.findMany({
+      where: and(eq(invoices.status, "dp_paid"), lt(invoices.balanceDueDate, now)),
+      columns: { id: true },
+    });
+
+    for (const invoice of balanceOverdueRows) {
+      await tenantDb
+        .update(invoices)
+        .set({ status: "balance_overdue", updatedAt: new Date() })
         .where(eq(invoices.id, invoice.id));
     }
 
