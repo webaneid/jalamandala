@@ -1,3 +1,4 @@
+import { ZonePreviewButton } from "@/components/public/ZonePreviewModal";
 import { GalleryGridClient } from "./GalleryGridClient";
 import Link from "next/link";
 import { getPaidParticipantBusinessLogos, getPublishedEventAgendas, getPublicTenantZones } from "@/actions/public-pages";
@@ -98,7 +99,7 @@ function Section({
   id?: string;
 }) {
   return (
-    <section id={id} className={`py-14 ${className}`}>
+    <section id={id} className={`py-5 sm:py-14 ${className}`}>
       <PublicContainer>{children}</PublicContainer>
     </section>
   );
@@ -164,7 +165,7 @@ export function HeroBlock({
   }
 
   return (
-    <section className="relative overflow-hidden pb-16 pt-14">
+    <section className="relative overflow-hidden pb-8 pt-5 sm:pb-16 sm:pt-14">
       <PublicContainer>
         {/* Eyebrow chips */}
         {(eyebrow || dateLabel) && (
@@ -510,7 +511,7 @@ export async function LogoSliderBlock({ payload }: { payload: any }) {
   if (uniqueLogos.length === 0) return null;
 
   return (
-    <section className="py-10">
+    <section className="py-5 sm:py-10">
       <PublicContainer>
         {title && (
           <p className="mb-6 text-center text-[11px] font-semibold uppercase tracking-[0.22em] text-white/35">
@@ -628,17 +629,20 @@ export async function TenantZonesBlock({ payload, event }: { payload: any; event
                   ))}
                 </ul>
 
-                <Link
-                  href={isLoggedIn ? bookingHref : authHref}
-                  className={[
-                    "flex h-10 items-center justify-center rounded-2xl text-sm font-semibold transition active:scale-95",
-                    isFeatured
-                      ? "bg-[#00adee] text-white shadow-[0_6px_20px_rgba(0,173,238,0.30)] hover:brightness-110"
-                      : "border border-white/14 bg-white/6 text-white/80 hover:bg-white/10 hover:text-white",
-                  ].join(" ")}
-                >
-                  Booking {zone.name}
-                </Link>
+                <div className="flex gap-2">
+                  <ZonePreviewButton zoneSlug={zone.slug} zoneName={zone.name} />
+                  <Link
+                    href={isLoggedIn ? bookingHref : authHref}
+                    className={[
+                      "flex flex-1 h-10 items-center justify-center rounded-2xl text-sm font-semibold transition active:scale-95",
+                      isFeatured
+                        ? "bg-[#00adee] text-white shadow-[0_6px_20px_rgba(0,173,238,0.30)] hover:brightness-110"
+                        : "border border-white/14 bg-white/6 text-white/80 hover:bg-white/10 hover:text-white",
+                    ].join(" ")}
+                  >
+                    Booking {zone.name}
+                  </Link>
+                </div>
               </div>
             </article>
           );
@@ -660,7 +664,7 @@ export function CtaBannerBlock({ payload }: { payload: any }) {
   if (!title) throw new Error("CtaBannerBlock: missing title");
 
   return (
-    <section className="py-6">
+    <section className="py-5 sm:py-6">
       <PublicContainer>
         <div className="relative overflow-hidden rounded-3xl border border-[#134397]/60 bg-gradient-to-br from-[#134397] to-[#0d2e68] p-8 text-center shadow-[0_20px_60px_rgba(19,67,151,0.28)]">
           <div className="pointer-events-none absolute -left-10 -top-10 size-52 rounded-full bg-[#00adee]/10 blur-3xl" />
@@ -760,7 +764,7 @@ export function FooterInfoBlock({ payload, event }: { payload: any; event: any }
   const phone = p?.phone ?? p?.contactValue ?? null;
 
   return (
-    <section className="border-t border-white/8 py-12">
+    <section className="border-t border-white/8 py-5 sm:py-12">
       <PublicContainer>
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
           <div>
@@ -828,7 +832,7 @@ export function GalleryBlock({ payload }: { payload: any }) {
   if (!images.length) return null;
 
   return (
-    <section className="py-10">
+    <section className="py-5 sm:py-10">
       <PublicContainer>
         {p?.title && (
           <h2 className="mb-6 text-center text-2xl font-bold tracking-tight text-white">{p.title}</h2>
@@ -854,7 +858,7 @@ export function VideoEmbedBlock({ payload }: { payload: any }) {
   if (!videoId) return null;
 
   return (
-    <section className="py-10">
+    <section className="py-5 sm:py-10">
       <PublicContainer>
         {p?.title && (
           <h2 className="mb-6 text-center text-2xl font-bold tracking-tight text-white">{p.title}</h2>

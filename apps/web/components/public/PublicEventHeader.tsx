@@ -192,8 +192,8 @@ export function PublicEventHeader({
 
   return (
     <header
-      className="sticky top-0 z-50 transition-all duration-300"
-      style={scrolled ? { background: "linear-gradient(180deg, rgba(4,16,31,0.93) 0%, transparent 100%)" } : undefined}
+      className="sticky top-[15px] z-50 transition-all duration-300"
+      style={{ background: scrolled ? "linear-gradient(180deg, rgba(4,16,31,0.93) 0%, transparent 100%)" : "linear-gradient(180deg, rgba(255,255,255,0.2) 0%, transparent 100%)" }}
     >
       <div className="mx-auto flex h-14 max-w-[720px] items-center justify-between px-5 pb-2 sm:h-20 sm:pb-0 sm:pt-4">
 

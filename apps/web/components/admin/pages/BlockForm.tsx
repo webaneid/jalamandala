@@ -552,6 +552,8 @@ function ImageBannerForm({ payload, onChange }: { payload: any; onChange: (p: an
           value={payload?.assetId ? { id: payload.assetId, url: `/api/media/${payload.assetId}`, objectKey: "", fileName: "", mimeType: "image/*" } : null}
           onChange={(v) => update("assetId", v?.id ?? null)}
           accept="image"
+          folder="public/landing/blocks"
+          visibility="public"
         />
       </div>
       <div className="space-y-1.5">
@@ -613,6 +615,8 @@ function GalleryForm({ payload, onChange }: { payload: any; onChange: (p: any) =
             value={null}
             onChange={(v) => { if (v?.id) addImage(v.id); }}
             accept="image"
+            folder="public/landing/blocks"
+            visibility="public"
           />
         </div>
       </div>
