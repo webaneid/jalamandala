@@ -1954,3 +1954,113 @@ export async function createOverpaymentDisbursement(payload: {
     return { success: false, error: "Gagal membuat permohonan. Cek konsol server." };
   }
 }
+
+// ── Fase 7: Perpanjang Reservasi DP ────────────────────────────────────────────
+
+export async function extendReservation(
+  invoiceId: string,
+  extraDays = 7
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await getAdminSession();
+    const tenantDb = await createTenantDb(TENANT_SCHEMA);
+
+    const invoice = await tenantDb.query.invoices.findFirst({
+      where: eq(invoices.id, invoiceId),
+      columns: { status: true, balanceDueDate: true },
+    });
+
+    if (!invoice) return { success: false, error: "Invoice tidak ditemukan." };
+    if (invoice.status !== "dp_paid" && invoice.status !== "balance_overdue") {
+      return { success: false, error: "Hanya invoice DP yang bisa diperpanjang." };
+    }
+
+    const base = invoice.balanceDueDate && invoice.balanceDueDate > new Date()
+      ? invoice.balanceDueDate
+      : new Date();
+    const newDueDate = new Date(base.getTime() + extraDays * 24 * 60 * 60 * 1000);
+    const nextReminderAt = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+
+    await tenantDb.update(invoices).set({
+      status: "dp_paid",
+      balanceDueDate: newDueDate,
+      nextReminderAt,
+      csNotifiedH1: false,
+    }).where(eq(invoices.id, invoiceId));
+
+    revalidatePath(`/admin/keuangan/${invoiceId}`);
+    return { success: true };
+  } catch (error) {
+    console.error("extendReservation error:", error);
+    return { success: false, error: "Gagal memperpanjang reservasi. Cek konsol server." };
+  }
+}
+
+// ── Fase 7: Batalkan Invoice + Buat Disbursement Refund ───────────────────────
+
+export async function cancelInvoiceWithRefund(payload: {
+  invoiceId: string;
+  destBankName: string;
+  destAccountNumber: string;
+  destAccountName: string;
+  notes?: string;
+}): Promise<{ success: boolean; error?: string; disbursementId?: string }> {
+  try {
+    const access = await getAdminSession();
+    const tenantDb = await createTenantDb(TENANT_SCHEMA);
+
+    const invoice = await tenantDb.query.invoices.findFirst({
+      where: eq(invoices.id, payload.invoiceId),
+      columns: { status: true, dpAmount: true, invoiceNumber: true, grandTotal: true },
+    });
+
+    if (!invoice) return { success: false, error: "Invoice tidak ditemukan." };
+    if (invoice.status !== "dp_paid" && invoice.status !== "balance_overdue") {
+      return { success: false, error: "Hanya invoice dengan status DP yang bisa dibatalkan via alur ini." };
+    }
+
+    const refundAmount = invoice.dpAmount ?? 0;
+    if (refundAmount <= 0) {
+      return { success: false, error: "Tidak ada DP yang perlu direfund." };
+    }
+
+    const activeEvent = await resolveActiveEvent();
+
+    // Buat disbursement refund
+    const inserted = await tenantDb
+      .insert(disbursementRequests)
+      .values({
+        requestedBy: access.userId,
+        requestedByName: access.userName,
+        purposeType: "refund",
+        purposeDescription: `Pengembalian DP — Invoice ${invoice.invoiceNumber} dibatalkan`,
+        requestedAmount: refundAmount,
+        destBankName: payload.destBankName.trim(),
+        destAccountNumber: payload.destAccountNumber.trim(),
+        destAccountName: payload.destAccountName.trim(),
+        notes: payload.notes?.trim() || null,
+        status: "submitted",
+        eventId: activeEvent.id,
+      })
+      .returning({ id: disbursementRequests.id });
+
+    const created = inserted[0];
+    if (!created) return { success: false, error: "Gagal membuat permohonan pencairan." };
+
+    await tenantDb.update(invoices).set({
+      status: "refunding",
+      refundAmount,
+      cancelledByUserId: access.userId,
+      cancelledByName: access.userName,
+      cancellationReason: payload.notes?.trim() || "Dibatalkan admin, refund DP",
+      cancelledAt: new Date(),
+    }).where(eq(invoices.id, payload.invoiceId));
+
+    revalidatePath(`/admin/keuangan/${payload.invoiceId}`);
+    revalidatePath("/admin/keuangan/pencairan");
+    return { success: true, disbursementId: created.id };
+  } catch (error) {
+    console.error("cancelInvoiceWithRefund error:", error);
+    return { success: false, error: "Gagal membatalkan invoice. Cek konsol server." };
+  }
+}

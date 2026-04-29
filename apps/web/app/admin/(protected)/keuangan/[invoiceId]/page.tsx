@@ -20,6 +20,7 @@ import {
 
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { DeleteInvoiceButton } from "@/components/admin/finance/DeleteInvoiceButton";
+import { DpProgressBanner } from "@/components/admin/finance/DpProgressBanner";
 import { InvoiceDetailActions } from "@/components/admin/finance/InvoiceDetailActions";
 import { OverpaymentBanner } from "@/components/admin/finance/OverpaymentBanner";
 import { PaymentProofPreviewButton } from "@/components/admin/finance/PaymentProofPreviewButton";
@@ -211,6 +212,9 @@ async function getInvoiceDetail(invoiceId: string) {
       grandTotal: invoice.grandTotal,
       paidAt: invoice.paidAt,
       overpaymentAmount: invoice.overpaymentAmount ?? 0,
+      dpAmount: invoice.dpAmount ?? 0,
+      dpPaidAt: invoice.dpPaidAt ?? null,
+      balanceDueDate: invoice.balanceDueDate ?? null,
       paymentChannelLabel: invoice.paymentChannelLabel,
       paymentChannelKey: invoice.paymentChannelType === "bank_account" && invoice.paymentChannelId
         ? `bank:${invoice.paymentChannelId}`
@@ -257,8 +261,15 @@ function formatDate(date: Date | string) {
 
 function StatusBadge({ status }: { status: string }) {
   if (status === "paid") return <Badge className="bg-green-100 text-green-700 border-none">Lunas</Badge>;
+  if (status === "dp_paid") return <Badge className="bg-sky-100 text-sky-700 border-none">DP Diterima</Badge>;
+  if (status === "balance_overdue") return <Badge className="bg-red-100 text-red-700 border-none">Melewati Deadline Pelunasan</Badge>;
+  if (status === "waiting_confirmation") return <Badge className="bg-blue-100 text-blue-700 border-none">Menunggu Konfirmasi</Badge>;
+  if (status === "dp_waiting_confirmation") return <Badge className="bg-blue-100 text-blue-700 border-none">DP — Menunggu Konfirmasi</Badge>;
+  if (status === "balance_waiting_confirmation") return <Badge className="bg-blue-100 text-blue-700 border-none">Pelunasan — Menunggu Konfirmasi</Badge>;
   if (status === "expired") return <Badge className="bg-neutral-100 text-neutral-500 border-none">Kadaluarsa</Badge>;
   if (status === "cancelled") return <Badge className="bg-neutral-100 text-neutral-500 border-none">Dibatalkan</Badge>;
+  if (status === "refunding") return <Badge className="bg-purple-100 text-purple-700 border-none">Sedang Direfund</Badge>;
+  if (status === "refunded") return <Badge className="bg-purple-100 text-purple-600 border-none">Refund Selesai</Badge>;
   return <Badge className="bg-amber-100 text-amber-700 border-none">Menunggu Pembayaran</Badge>;
 }
 
@@ -445,6 +456,18 @@ export default async function InvoiceDetailPage({
           invoiceId={invoice.id}
           invoiceNumber={invoice.invoiceNumber}
           overpaymentAmount={invoice.overpaymentAmount}
+          participantName={participant?.name ?? ""}
+        />
+      )}
+
+      {(invoice.status === "dp_paid" || invoice.status === "balance_overdue") && (
+        <DpProgressBanner
+          invoiceId={invoice.id}
+          invoiceNumber={invoice.invoiceNumber}
+          grandTotal={invoice.grandTotal}
+          dpAmount={invoice.dpAmount}
+          balanceDueDate={invoice.balanceDueDate}
+          status={invoice.status}
           participantName={participant?.name ?? ""}
         />
       )}
