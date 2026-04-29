@@ -27,6 +27,8 @@ const BLOCK_TYPES = [
   { value: "image_banner", label: "Image Banner (Full Width)" },
   { value: "gallery", label: "Gallery (3 Kolom)" },
   { value: "video_embed", label: "Video YouTube" },
+  { value: "event_info", label: "Info Acara (Tanggal & Lokasi)" },
+  { value: "fun_facts", label: "Fun Facts (Statistik Angka)" },
 ];
 
 export function BlockEditor({

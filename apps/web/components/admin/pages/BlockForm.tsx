@@ -522,6 +522,12 @@ export function BlockForm({ type, payload, eventSlug, onChange }: Props) {
         <VideoEmbedForm payload={payload} onChange={onChange} />
       );
 
+    case "event_info":
+      return <EventInfoForm payload={payload} onChange={onChange} />;
+
+    case "fun_facts":
+      return <FunFactsForm payload={payload} onChange={onChange} />;
+
     default:
       return (
         <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm">
@@ -642,6 +648,56 @@ function VideoEmbedForm({ payload, onChange }: { payload: any; onChange: (p: any
       <div className="space-y-1.5">
         <Label>Deskripsi (opsional)</Label>
         <Input value={payload?.description ?? ""} onChange={(e) => update("description", e.target.value)} placeholder="Teks kecil di bawah judul" />
+      </div>
+    </div>
+  );
+}
+
+// ── Event Info Form ───────────────────────────────────────────────────────────
+
+function EventInfoForm({ payload, onChange }: { payload: any; onChange: (p: any) => void }) {
+  function update(key: string, value: any) { onChange({ ...payload, [key]: value }); }
+  return (
+    <div className="space-y-4">
+      <p className="rounded-xl bg-blue-50 border border-blue-200 px-4 py-3 text-xs text-blue-700">
+        Tanggal dan lokasi diambil otomatis dari <strong>Profil Event</strong> (startDate, endDate, venue). Isi kolom di bawah untuk kustomisasi teks saja.
+      </p>
+      <div className="space-y-1.5">
+        <Label>Label Atas / Eyebrow (opsional)</Label>
+        <Input value={payload?.eyebrow ?? ""} onChange={(e) => update("eyebrow", e.target.value)} placeholder="Informasi Acara" />
+      </div>
+      <div className="space-y-1.5">
+        <Label>Judul Section (opsional)</Label>
+        <Input value={payload?.title ?? ""} onChange={(e) => update("title", e.target.value)} placeholder="Kapan &amp; Di Mana?" />
+      </div>
+      <div className="space-y-1.5">
+        <Label>Link Google Maps (opsional)</Label>
+        <Input value={payload?.mapUrl ?? ""} onChange={(e) => update("mapUrl", e.target.value)} placeholder="https://maps.google.com/..." />
+      </div>
+    </div>
+  );
+}
+
+// ── Fun Facts Form ────────────────────────────────────────────────────────────
+
+function FunFactsForm({ payload, onChange }: { payload: any; onChange: (p: any) => void }) {
+  function update(key: string, value: any) { onChange({ ...payload, [key]: value }); }
+  return (
+    <div className="space-y-4">
+      <p className="rounded-xl bg-blue-50 border border-blue-200 px-4 py-3 text-xs text-blue-700">
+        Angka diambil otomatis: jumlah stand dari data booth aktif, jumlah hari dari startDate–endDate event, target pengunjung dari Profil Event. Isi di bawah untuk kustomisasi teks saja.
+      </p>
+      <div className="space-y-1.5">
+        <Label>Label Atas / Eyebrow (opsional)</Label>
+        <Input value={payload?.eyebrow ?? ""} onChange={(e) => update("eyebrow", e.target.value)} placeholder="Kenapa Harus Ikut?" />
+      </div>
+      <div className="space-y-1.5">
+        <Label>Judul Section (opsional)</Label>
+        <Input value={payload?.title ?? ""} onChange={(e) => update("title", e.target.value)} placeholder="Angka Yang Bicara" />
+      </div>
+      <div className="space-y-1.5">
+        <Label>Deskripsi (opsional)</Label>
+        <Input value={payload?.description ?? ""} onChange={(e) => update("description", e.target.value)} placeholder="Teks penjelasan singkat di bawah judul" />
       </div>
     </div>
   );

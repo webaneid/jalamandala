@@ -14,6 +14,8 @@ import {
   ImageBannerBlock,
   GalleryBlock,
   VideoEmbedBlock,
+  EventInfoBlock,
+  FunFactsBlock,
 } from "./blocks";
 
 const BLOCK_REGISTRY: Record<string, React.FC<any>> = {
@@ -31,6 +33,8 @@ const BLOCK_REGISTRY: Record<string, React.FC<any>> = {
   image_banner: ImageBannerBlock,
   gallery: GalleryBlock,
   video_embed: VideoEmbedBlock,
+  event_info: EventInfoBlock,
+  fun_facts: FunFactsBlock,
 };
 
 export function LandingRenderer({ blocks, event }: { blocks: Block[], event: any }) {

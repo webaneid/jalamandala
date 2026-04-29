@@ -1,7 +1,7 @@
 import { ZonePreviewButton } from "@/components/public/ZonePreviewModal";
 import { GalleryGridClient } from "./GalleryGridClient";
 import Link from "next/link";
-import { getPaidParticipantBusinessLogos, getPublishedEventAgendas, getPublicTenantZones } from "@/actions/public-pages";
+import { getBoothStats, getPaidParticipantBusinessLogos, getPublishedEventAgendas, getPublicTenantZones } from "@/actions/public-pages";
 import { PublicContainer } from "@/components/public/ui/PublicContainer";
 import { LogoMarquee } from "@/components/public/LogoMarquee";
 import { getCurrentParticipantSession } from "@/lib/participant-session";
@@ -919,5 +919,155 @@ export function VideoEmbedBlock({ payload }: { payload: any }) {
         </div>
       </PublicContainer>
     </section>
+  );
+}
+
+// ── Event Info Block ──────────────────────────────────────────────────────────
+
+function formatEventDate(date: Date | string | null | undefined) {
+  if (!date) return null;
+  return new Intl.DateTimeFormat("id-ID", {
+    timeZone: "Asia/Jakarta",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(date));
+}
+
+function eventDayCount(start: Date | string | null | undefined, end: Date | string | null | undefined) {
+  if (!start || !end) return null;
+  const ms = new Date(end).getTime() - new Date(start).getTime();
+  return Math.max(1, Math.round(ms / (1000 * 60 * 60 * 24)) + 1);
+}
+
+export function EventInfoBlock({ payload, event }: { payload: any; event: any }) {
+  const p = normalizePayload(payload);
+  const eyebrow = p?.eyebrow ?? "Informasi Acara";
+  const title = p?.title ?? "Kapan & Di Mana?";
+
+  const startDate = event?.startDate ? new Date(event.startDate) : null;
+  const endDate = event?.endDate ? new Date(event.endDate) : null;
+  const venue = event?.venue ?? null;
+  const days = eventDayCount(startDate, endDate);
+
+  const startStr = formatEventDate(startDate);
+  const endStr = formatEventDate(endDate);
+  const dateRange = startStr && endStr && startStr !== endStr
+    ? `${startStr} – ${endStr}`
+    : startStr ?? "-";
+
+  return (
+    <Section id="info-acara">
+      <div className="mb-8 space-y-2">
+        <Chip>{eyebrow}</Chip>
+        <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">{title}</h2>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {/* Tanggal */}
+        <div className="flex items-start gap-4 rounded-2xl border border-white/8 bg-white/5 p-5">
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#134397]/40 text-xl">
+            📅
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-[#00adee]">Tanggal</p>
+            <p className="mt-1 font-semibold text-white leading-snug">{dateRange}</p>
+            {days && (
+              <p className="mt-0.5 text-sm text-white/50">{days} hari</p>
+            )}
+          </div>
+        </div>
+
+        {/* Lokasi */}
+        <div className="flex items-start gap-4 rounded-2xl border border-white/8 bg-white/5 p-5">
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#134397]/40 text-xl">
+            📍
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-[#00adee]">Lokasi</p>
+            <p className="mt-1 font-semibold text-white leading-snug">{venue ?? "-"}</p>
+            {p?.mapUrl && (
+              <a
+                href={p.mapUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-block text-xs text-[#00adee] hover:underline"
+              >
+                Lihat di Maps →
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+// ── Fun Facts Block ───────────────────────────────────────────────────────────
+
+export async function FunFactsBlock({ payload, event }: { payload: any; event: any }) {
+  const p = normalizePayload(payload);
+  const eyebrow = p?.eyebrow ?? "Kenapa Harus Ikut?";
+  const title = p?.title ?? "Angka Yang Bicara";
+
+  const startDate = event?.startDate ? new Date(event.startDate) : null;
+  const endDate = event?.endDate ? new Date(event.endDate) : null;
+  const days = eventDayCount(startDate, endDate);
+  const targetVisitors: number | null = event?.targetVisitors ?? null;
+
+  const stats = await getBoothStats();
+
+  const facts = [
+    targetVisitors && {
+      emoji: "👥",
+      value: targetVisitors >= 1000
+        ? `${(targetVisitors / 1000 % 1 === 0 ? targetVisitors / 1000 : (targetVisitors / 1000).toFixed(1))}K+`
+        : `${targetVisitors}+`,
+      label: "Target Pengunjung",
+    },
+    stats.total > 0 && {
+      emoji: "🏪",
+      value: `${stats.total}`,
+      label: "Stand Peserta",
+    },
+    stats.fnb > 0 && {
+      emoji: "🍽️",
+      value: `${stats.fnb}`,
+      label: "Stand Kuliner",
+    },
+    days && {
+      emoji: "🗓️",
+      value: `${days}`,
+      label: "Hari Acara",
+    },
+  ].filter((f): f is { emoji: string; value: string; label: string } => Boolean(f));
+
+  if (facts.length === 0) return null;
+
+  const colClass = facts.length >= 4 ? "sm:grid-cols-4" : facts.length === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2";
+
+  return (
+    <Section id="fun-facts">
+      <div className="mb-8 space-y-2">
+        <Chip>{eyebrow}</Chip>
+        <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">{title}</h2>
+        {p?.description && (
+          <p className="text-sm leading-7 text-white/55">{p.description}</p>
+        )}
+      </div>
+
+      <div className={`grid gap-4 grid-cols-2 ${colClass}`}>
+        {facts.map((fact) => (
+          <div
+            key={fact.label}
+            className="flex flex-col items-center gap-2 rounded-2xl border border-white/8 bg-white/5 px-4 py-6 text-center"
+          >
+            <span className="text-3xl">{fact.emoji}</span>
+            <p className="text-3xl font-extrabold tracking-tight text-white">{fact.value}</p>
+            <p className="text-xs font-medium uppercase tracking-widest text-white/50">{fact.label}</p>
+          </div>
+        ))}
+      </div>
+    </Section>
   );
 }

@@ -3,7 +3,7 @@
 import { createTenantDb, db } from "@repo/db";
 import { eventPages, expoEvents, eventAgendas, eventNavMenus, mediaAssets, participantBusinesses } from "@repo/db/schema/public";
 import { invoices } from "@repo/db/schema/tenant";
-import { booths, zonePriceRules, zones } from "@repo/db/schema/tenant";
+import { boothCategories, booths, zonePriceRules, zones } from "@repo/db/schema/tenant";
 import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { PRICE_PHASE_LABELS, resolveCurrentPricePhase, type PricePhase } from "@/lib/price-phase";
 
@@ -261,4 +261,17 @@ export async function getPublicTenantZones() {
       slug: zone.slug,
     };
   });
+}
+
+export async function getBoothStats() {
+  const tenantDb = await createTenantDb(TENANT_SCHEMA);
+  const rows = await tenantDb
+    .select({ categorySlug: boothCategories.slug })
+    .from(booths)
+    .innerJoin(boothCategories, eq(booths.boothCategoryId, boothCategories.id))
+    .where(eq(booths.isActive, true));
+
+  const total = rows.length;
+  const fnb = rows.filter((r) => r.categorySlug === "fnb_kitchen" || r.categorySlug === "fnb_dry_food").length;
+  return { total, fnb };
 }
