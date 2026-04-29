@@ -550,7 +550,7 @@ function ImageBannerForm({ payload, onChange }: { payload: any; onChange: (p: an
         <Label>Gambar *</Label>
         <MediaPicker
           value={payload?.assetId ? { id: payload.assetId, url: `/api/media/${payload.assetId}`, objectKey: "", fileName: "", mimeType: "image/*" } : null}
-          onChange={(v) => update("assetId", v?.id ?? null)}
+          onChange={(v) => onChange({ ...payload, assetId: v?.id ?? null, url: v?.url ?? null })}
           accept="image"
           folder="public/landing/blocks"
           visibility="public"
@@ -575,10 +575,10 @@ function ImageBannerForm({ payload, onChange }: { payload: any; onChange: (p: an
 // ── Gallery Form ──────────────────────────────────────────────────────────────
 
 function GalleryForm({ payload, onChange }: { payload: any; onChange: (p: any) => void }) {
-  const images: Array<{ assetId: string; caption?: string }> = payload?.images ?? [];
+  const images: Array<{ assetId: string; url?: string | null; caption?: string }> = payload?.images ?? [];
 
   function updateTitle(title: string) { onChange({ ...payload, title }); }
-  function addImage(assetId: string) { onChange({ ...payload, images: [...images, { assetId }] }); }
+  function addImage(assetId: string, url?: string) { onChange({ ...payload, images: [...images, { assetId, url: url ?? null }] }); }
   function removeImage(i: number) { onChange({ ...payload, images: images.filter((_, idx) => idx !== i) }); }
   function updateCaption(i: number, caption: string) {
     const next = images.map((img, idx) => idx === i ? { ...img, caption } : img);
@@ -595,7 +595,7 @@ function GalleryForm({ payload, onChange }: { payload: any; onChange: (p: any) =
         <Label>Foto ({images.length})</Label>
         {images.map((img, i) => (
           <div key={i} className="flex gap-3 items-start rounded-xl border p-3">
-            <img src={`/api/media/${img.assetId}`} className="size-16 rounded-lg object-cover shrink-0" alt="" />
+            <img src={img.url ?? `/api/media/${img.assetId}`} className="size-16 rounded-lg object-cover shrink-0" alt="" />
             <div className="flex-1 space-y-2">
               <Input
                 value={img.caption ?? ""}
@@ -613,7 +613,7 @@ function GalleryForm({ payload, onChange }: { payload: any; onChange: (p: any) =
           <Label className="text-xs text-muted-foreground">Tambah Foto</Label>
           <MediaPicker
             value={null}
-            onChange={(v) => { if (v?.id) addImage(v.id); }}
+            onChange={(v) => { if (v?.id) addImage(v.id, v.url); }}
             accept="image"
             folder="public/landing/blocks"
             visibility="public"

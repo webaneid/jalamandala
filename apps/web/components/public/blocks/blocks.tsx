@@ -804,15 +804,16 @@ export function FooterInfoBlock({ payload, event }: { payload: any; event: any }
 export function ImageBannerBlock({ payload }: { payload: any }) {
   const p = normalizePayload(payload);
   const assetId: string | null = p?.assetId ?? null;
+  const src: string | null = p?.url ?? (assetId ? `/api/media/${assetId}` : null);
   const altText: string = p?.altText ?? "";
   const caption: string = p?.caption ?? "";
 
-  if (!assetId) return null;
+  if (!src) return null;
 
   return (
     <section className="w-full">
       <img
-        src={`/api/media/${assetId}`}
+        src={src}
         alt={altText}
         className="w-full object-cover"
         style={{ maxHeight: p?.maxHeight ? `${p.maxHeight}px` : undefined }}

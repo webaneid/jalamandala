@@ -6,6 +6,7 @@ import type { PublicBooth, PublicZoneData } from "@/lib/public-booth-data"
 type Props = {
   zone: PublicZoneData
   onConfirm: (booths: PublicBooth[]) => void
+  readOnly?: boolean
 }
 
 const fmt = (n: number) =>
@@ -26,18 +27,24 @@ function BoothCell({
   onSelect,
   className = "",
   sizeClass = "min-h-[92px] min-w-[92px]",
+  readOnly = false,
 }: {
   booth: PublicBooth
   isSelected: boolean
   onSelect: (b: PublicBooth) => void
   className?: string
   sizeClass?: string
+  readOnly?: boolean
 }) {
-  const canSelect = booth.isAvailable && booth.isEligible
+  const canSelect = !readOnly && booth.isAvailable && booth.isEligible
   const isBooked = !booth.isAvailable
 
   let stateClass = ""
-  if (isSelected) {
+  if (readOnly) {
+    stateClass = isBooked
+      ? "opacity-50 cursor-default bg-slate-100 border-slate-200"
+      : "cursor-default bg-white border-slate-300"
+  } else if (isSelected) {
     stateClass = "border-primary bg-primary-50 ring-2 ring-primary z-10"
   } else if (!canSelect) {
     stateClass = "opacity-50 cursor-not-allowed bg-slate-100 border-slate-200"
@@ -66,6 +73,7 @@ function BoothCell({
       disabled={!canSelect}
       onClick={() => canSelect && onSelect(booth)}
       type="button"
+      tabIndex={readOnly ? -1 : undefined}
     >
       <div className="flex justify-end">{badge}</div>
       <p className="text-xs font-semibold tracking-[-0.02em] text-slate-950">{booth.code}</p>
@@ -79,9 +87,9 @@ function extract(code: string) {
   return Number(code.match(/\d+/)?.[0] ?? 0)
 }
 
-type LayoutProps = { zone: PublicZoneData; selected: Set<string>; onSelect: (b: PublicBooth) => void }
+type LayoutProps = { zone: PublicZoneData; selected: Set<string>; onSelect: (b: PublicBooth) => void; readOnly?: boolean }
 
-function VipLayout({ zone, selected, onSelect }: LayoutProps) {
+function VipLayout({ zone, selected, onSelect, readOnly }: LayoutProps) {
   const sorted = [...zone.booths].sort((a, b) => extract(a.code) - extract(b.code))
   // VIP7-12 di atas, VIP1-6 di bawah
   const rows = [sorted.slice(6, 12), sorted.slice(0, 6)]
@@ -93,7 +101,7 @@ function VipLayout({ zone, selected, onSelect }: LayoutProps) {
             <div className="grid grid-cols-[1fr_52px_1fr] items-stretch gap-2" key={ri}>
               <div className="grid grid-cols-3 gap-0">
                 {row.slice(0, 3).map((b) => (
-                  <BoothCell key={b.id} booth={b} isSelected={selected.has(b.id)} onSelect={onSelect}
+                  <BoothCell key={b.id} booth={b} isSelected={selected.has(b.id)} onSelect={onSelect} readOnly={readOnly}
                     sizeClass="min-h-[60px] min-w-[72px]"
                     className="first:rounded-l-[14px] last:rounded-r-[14px]" />
                 ))}
@@ -103,7 +111,7 @@ function VipLayout({ zone, selected, onSelect }: LayoutProps) {
               </div>
               <div className="grid grid-cols-3 gap-0">
                 {row.slice(3, 6).map((b) => (
-                  <BoothCell key={b.id} booth={b} isSelected={selected.has(b.id)} onSelect={onSelect}
+                  <BoothCell key={b.id} booth={b} isSelected={selected.has(b.id)} onSelect={onSelect} readOnly={readOnly}
                     sizeClass="min-h-[60px] min-w-[72px]"
                     className="first:rounded-l-[14px] last:rounded-r-[14px]" />
                 ))}
@@ -116,7 +124,7 @@ function VipLayout({ zone, selected, onSelect }: LayoutProps) {
   )
 }
 
-function PremiumCol({ booths, selected, onSelect }: { booths: PublicBooth[]; selected: Set<string>; onSelect: (b: PublicBooth) => void }) {
+function PremiumCol({ booths, selected, onSelect, readOnly }: { booths: PublicBooth[]; selected: Set<string>; onSelect: (b: PublicBooth) => void; readOnly?: boolean }) {
   // booths already sorted high→low (top display first)
   return (
     <div className="flex flex-col gap-0">
@@ -126,6 +134,7 @@ function PremiumCol({ booths, selected, onSelect }: { booths: PublicBooth[]; sel
           booth={b}
           isSelected={selected.has(b.id)}
           onSelect={onSelect}
+          readOnly={readOnly}
           sizeClass="min-h-[60px] min-w-[78px]"
           className={`${i === 0 ? "rounded-t-[16px]" : ""} ${i === booths.length - 1 ? "rounded-b-[16px]" : ""}`}
         />
@@ -134,7 +143,7 @@ function PremiumCol({ booths, selected, onSelect }: { booths: PublicBooth[]; sel
   )
 }
 
-function PremiumLayout({ zone, selected, onSelect }: LayoutProps) {
+function PremiumLayout({ zone, selected, onSelect, readOnly }: LayoutProps) {
   const sorted = [...zone.booths].sort((a, b) => extract(a.code) - extract(b.code))
   // P1-P8: kiri-dalam, P9-P16: kanan-dalam, P17-P24: kanan-luar, P25-P32: kiri-luar
   // Tampil dari atas ke bawah: nomor besar dulu (P8→P1, P16→P9, dst)
@@ -156,11 +165,11 @@ function PremiumLayout({ zone, selected, onSelect }: LayoutProps) {
 
           {/* 4 kolom booth di bawah stage */}
           <div className="flex items-start justify-center gap-2">
-            <PremiumCol booths={outerLeft} selected={selected} onSelect={onSelect} />
-            <PremiumCol booths={innerLeft} selected={selected} onSelect={onSelect} />
+            <PremiumCol booths={outerLeft} selected={selected} onSelect={onSelect} readOnly={readOnly} />
+            <PremiumCol booths={innerLeft} selected={selected} onSelect={onSelect} readOnly={readOnly} />
             <div className="w-10 shrink-0" />
-            <PremiumCol booths={innerRight} selected={selected} onSelect={onSelect} />
-            <PremiumCol booths={outerRight} selected={selected} onSelect={onSelect} />
+            <PremiumCol booths={innerRight} selected={selected} onSelect={onSelect} readOnly={readOnly} />
+            <PremiumCol booths={outerRight} selected={selected} onSelect={onSelect} readOnly={readOnly} />
           </div>
         </div>
       </div>
@@ -168,7 +177,7 @@ function PremiumLayout({ zone, selected, onSelect }: LayoutProps) {
   )
 }
 
-function FestivalWestLayout({ zone, selected, onSelect }: LayoutProps) {
+function FestivalWestLayout({ zone, selected, onSelect, readOnly }: LayoutProps) {
   const sorted = [...zone.booths].sort((a, b) => extract(a.code) - extract(b.code))
   const rightTop = sorted.slice(0, 5)
   const block1 = sorted.slice(5, 10)
@@ -185,7 +194,7 @@ function FestivalWestLayout({ zone, selected, onSelect }: LayoutProps) {
   function Block({ booths }: { booths: PublicBooth[] }) {
     return (
       <div className="grid gap-0">
-        {booths.map((b) => <BoothCell key={b.id} booth={b} isSelected={selected.has(b.id)} onSelect={onSelect} sizeClass="min-h-[64px] min-w-[72px]" className="first:rounded-t-[16px] last:rounded-b-[16px]" />)}
+        {booths.map((b) => <BoothCell key={b.id} booth={b} isSelected={selected.has(b.id)} onSelect={onSelect} readOnly={readOnly} sizeClass="min-h-[64px] min-w-[72px]" className="first:rounded-t-[16px] last:rounded-b-[16px]" />)}
       </div>
     )
   }
@@ -195,7 +204,7 @@ function FestivalWestLayout({ zone, selected, onSelect }: LayoutProps) {
       <div className="mx-auto max-h-[700px] w-[156px] overflow-y-auto rounded-[24px]">
         <div className="flex w-[156px] flex-col">
           <div className="self-end grid gap-0">
-            {rightTop.map((b) => <BoothCell key={b.id} booth={b} isSelected={selected.has(b.id)} onSelect={onSelect} sizeClass="min-h-[64px] min-w-[72px]" className="first:rounded-t-[16px] last:rounded-b-[16px]" />)}
+            {rightTop.map((b) => <BoothCell key={b.id} booth={b} isSelected={selected.has(b.id)} onSelect={onSelect} readOnly={readOnly} sizeClass="min-h-[64px] min-w-[72px]" className="first:rounded-t-[16px] last:rounded-b-[16px]" />)}
           </div>
           <div className="self-start">
             <Block booths={block1} />
@@ -212,7 +221,7 @@ function FestivalWestLayout({ zone, selected, onSelect }: LayoutProps) {
   )
 }
 
-function FestivalNorthLayout({ zone, selected, onSelect }: LayoutProps) {
+function FestivalNorthLayout({ zone, selected, onSelect, readOnly }: LayoutProps) {
   const sorted = [...zone.booths].sort((a, b) => extract(a.code) - extract(b.code))
   const blocks = Array.from({ length: Math.ceil(sorted.length / 5) }, (_, i) => sorted.slice(i * 5, i * 5 + 5))
   const scrollRef = React.useRef<HTMLDivElement>(null)
@@ -241,7 +250,7 @@ function FestivalNorthLayout({ zone, selected, onSelect }: LayoutProps) {
         <div className="flex w-max gap-5">
           {blocks.map((block, bi) => (
             <div className="flex gap-0" key={bi}>
-              {block.map((b) => <BoothCell key={b.id} booth={b} isSelected={selected.has(b.id)} onSelect={onSelect} sizeClass="min-h-[72px] min-w-[72px]" className="first:rounded-l-[20px] last:rounded-r-[20px]" />)}
+              {block.map((b) => <BoothCell key={b.id} booth={b} isSelected={selected.has(b.id)} onSelect={onSelect} readOnly={readOnly} sizeClass="min-h-[72px] min-w-[72px]" className="first:rounded-l-[20px] last:rounded-r-[20px]" />)}
             </div>
           ))}
         </div>
@@ -250,12 +259,12 @@ function FestivalNorthLayout({ zone, selected, onSelect }: LayoutProps) {
   )
 }
 
-function ZoneMap({ zone, selected, onSelect }: LayoutProps) {
+function ZoneMap({ zone, selected, onSelect, readOnly }: LayoutProps) {
   switch (zone.slug) {
-    case "vip": return <VipLayout zone={zone} selected={selected} onSelect={onSelect} />
-    case "premium": return <PremiumLayout zone={zone} selected={selected} onSelect={onSelect} />
-    case "festival-west": return <FestivalWestLayout zone={zone} selected={selected} onSelect={onSelect} />
-    case "festival-north": return <FestivalNorthLayout zone={zone} selected={selected} onSelect={onSelect} />
+    case "vip": return <VipLayout zone={zone} selected={selected} onSelect={onSelect} readOnly={readOnly} />
+    case "premium": return <PremiumLayout zone={zone} selected={selected} onSelect={onSelect} readOnly={readOnly} />
+    case "festival-west": return <FestivalWestLayout zone={zone} selected={selected} onSelect={onSelect} readOnly={readOnly} />
+    case "festival-north": return <FestivalNorthLayout zone={zone} selected={selected} onSelect={onSelect} readOnly={readOnly} />
     default: return <div className="text-sm text-slate-500">Layout zona belum tersedia.</div>
   }
 }
@@ -325,7 +334,7 @@ function ConfirmationBar({
 
 // ─── Main component ────────────────────────────────────────────────────────────
 
-export function PublicBoothMap({ zone, onConfirm }: Props) {
+export function PublicBoothMap({ zone, onConfirm, readOnly = false }: Props) {
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set())
   const [isSubmitting, setIsSubmitting] = React.useState(false)
 
@@ -404,9 +413,9 @@ export function PublicBoothMap({ zone, onConfirm }: Props) {
         </div>
 
         {/* Map — full width below */}
-        <ZoneMap zone={zone} selected={selectedIds} onSelect={handleSelect} />
+        <ZoneMap zone={zone} selected={selectedIds} onSelect={handleSelect} readOnly={readOnly} />
 
-        {selectedBooths.length > 0 && (
+        {!readOnly && selectedBooths.length > 0 && (
           <ConfirmationBar
             booths={selectedBooths}
             zone={zone}
@@ -425,7 +434,7 @@ export function PublicBoothMap({ zone, onConfirm }: Props) {
       <div className="aspect-video overflow-hidden rounded-2xl">{image}</div>
 
       {/* Booth map */}
-      <ZoneMap zone={zone} selected={selectedIds} onSelect={handleSelect} />
+      <ZoneMap zone={zone} selected={selectedIds} onSelect={handleSelect} readOnly={readOnly} />
 
       {/* Price + facilities below */}
       <div className="flex flex-col gap-4 rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
@@ -438,7 +447,7 @@ export function PublicBoothMap({ zone, onConfirm }: Props) {
         )}
       </div>
 
-      {selectedBooths.length > 0 && (
+      {!readOnly && selectedBooths.length > 0 && (
         <ConfirmationBar
           booths={selectedBooths}
           zone={zone}

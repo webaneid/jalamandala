@@ -32,8 +32,9 @@ export async function GET(
     return NextResponse.json({ error: "Asset tidak ditemukan." }, { status: 404 });
   }
 
-  if (asset.visibility === "public") {
-    return NextResponse.redirect(asset.publicUrl ?? generatePresignedGetUrl(asset.objectKey, 3600));
+  if (asset.visibility === "public" || asset.objectKey.startsWith("public/")) {
+    const url = asset.publicUrl ?? generatePresignedGetUrl(asset.objectKey, 3600);
+    return NextResponse.redirect(url);
   }
 
   const publicToken = request.nextUrl.searchParams.get("publicToken")?.trim();

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 
-type GalleryImage = { assetId: string; caption?: string };
+type GalleryImage = { assetId: string; url?: string | null; caption?: string };
 
 export function GalleryGridClient({ images }: { images: GalleryImage[] }) {
   const [lightboxIndex, setLightboxIndex] = React.useState<number | null>(null);
@@ -43,7 +43,7 @@ export function GalleryGridClient({ images }: { images: GalleryImage[] }) {
                   style={{ aspectRatio: "4/3" }}
                 >
                   <img
-                    src={`/api/media/${img.assetId}`}
+                    src={img.url ?? `/api/media/${img.assetId}`}
                     alt={img.caption ?? ""}
                     className="h-full w-full object-cover transition duration-300 group-hover:scale-105 group-hover:opacity-90"
                   />
@@ -99,7 +99,7 @@ export function GalleryGridClient({ images }: { images: GalleryImage[] }) {
             onClick={(e) => e.stopPropagation()}
           >
             <img
-              src={`/api/media/${images[lightboxIndex]!.assetId}`}
+              src={images[lightboxIndex]!.url ?? `/api/media/${images[lightboxIndex]!.assetId}`}
               alt={images[lightboxIndex]!.caption ?? ""}
               className="mx-auto max-h-[80vh] rounded-xl object-contain shadow-2xl"
             />

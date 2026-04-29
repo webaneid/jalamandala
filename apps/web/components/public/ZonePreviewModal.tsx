@@ -118,6 +118,7 @@ function ZonePreviewModalSheet({
                 <PublicBoothMap
                   zone={data}
                   onConfirm={() => {}}
+                  readOnly
                 />
               </div>
               <p className="mt-3 text-center text-xs text-white/30">
