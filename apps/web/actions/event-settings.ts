@@ -33,7 +33,12 @@ function normalizeDateTime(value: string | null | undefined) {
     return null;
   }
 
-  const parsed = new Date(normalized);
+  // Input dari datetime-local tidak punya timezone — asumsikan WIB (UTC+7)
+  const withTz = normalized.includes("+") || normalized.includes("Z")
+    ? normalized
+    : `${normalized}:00+07:00`;
+
+  const parsed = new Date(withTz);
 
   if (Number.isNaN(parsed.getTime())) {
     throw new Error("Tanggal atau waktu tidak valid.");
