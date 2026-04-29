@@ -494,10 +494,12 @@ export async function AgendaPreviewBlock({ payload, event }: { payload: any; eve
 // ─────────────────────────────────────────────
 // LOGO SLIDER
 // ─────────────────────────────────────────────
-export async function LogoSliderBlock({ payload }: { payload: any }) {
+export async function LogoSliderBlock({ payload, event }: { payload: any; event?: any }) {
   const p = normalizePayload(payload);
   const title = p?.title ?? null;
   const source = p?.source ?? "mixed";
+  const eventSlug: string = event?.slug ?? "";
+
   const customLogos = Array.isArray(p?.customLogos)
     ? p.customLogos
         .filter((logo: any) => logo?.id || logo?.url)
@@ -510,10 +512,16 @@ export async function LogoSliderBlock({ payload }: { payload: any }) {
         }))
     : [];
   const paidLogos = source === "custom" ? [] : await getPaidParticipantBusinessLogos(40);
-  const logos = source === "paid_participants" ? paidLogos : [...paidLogos, ...customLogos];
+
+  // Custom logos tampil lebih dulu, baru paid
+  const logos = source === "paid_participants"
+    ? paidLogos
+    : [...customLogos, ...paidLogos];
   const uniqueLogos = Array.from(new Map(logos.map((logo) => [logo.id, logo])).values());
 
   if (uniqueLogos.length === 0) return null;
+
+  const tenantHref = eventSlug ? `/${eventSlug}/tenant` : null;
 
   return (
     <section className="py-5 sm:py-10">
@@ -523,7 +531,18 @@ export async function LogoSliderBlock({ payload }: { payload: any }) {
             {title}
           </p>
         )}
-        <LogoMarquee logos={uniqueLogos} />
+        <LogoMarquee logos={uniqueLogos} linkHref={tenantHref ?? undefined} />
+        {tenantHref && (
+          <div className="mt-3 flex justify-end">
+            <a
+              href={tenantHref}
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1 text-[11px] font-medium text-white/50 transition hover:border-white/30 hover:text-white/80"
+            >
+              <Store className="size-3" />
+              Semua Tenant
+            </a>
+          </div>
+        )}
       </PublicContainer>
     </section>
   );

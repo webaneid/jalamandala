@@ -9,7 +9,7 @@ type LogoItem = {
   alt: string;
 };
 
-export function LogoMarquee({ logos }: { logos: LogoItem[] }) {
+export function LogoMarquee({ logos, linkHref }: { logos: LogoItem[]; linkHref?: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const itemSetRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -79,13 +79,13 @@ export function LogoMarquee({ logos }: { logos: LogoItem[] }) {
       <div ref={trackRef} className="flex w-max items-center will-change-transform">
         <div ref={itemSetRef} className="flex shrink-0 items-center gap-5 pr-5">
           {logos.map((logo, logoIndex) => (
-            <LogoCard key={`measure-${logo.id}-${logoIndex}`} logo={logo} />
+            <LogoCard key={`measure-${logo.id}-${logoIndex}`} logo={logo} linkHref={linkHref} />
           ))}
         </div>
         {Array.from({ length: repeat }).map((_, setIndex) => (
           <div key={`set-${setIndex}`} className="flex shrink-0 items-center gap-5 pr-5">
             {logos.map((logo, logoIndex) => (
-              <LogoCard key={`${setIndex}-${logo.id}-${logoIndex}`} logo={logo} />
+              <LogoCard key={`${setIndex}-${logo.id}-${logoIndex}`} logo={logo} linkHref={linkHref} />
             ))}
           </div>
         ))}
@@ -94,10 +94,10 @@ export function LogoMarquee({ logos }: { logos: LogoItem[] }) {
   );
 }
 
-function LogoCard({ logo }: { logo: LogoItem }) {
-  return (
+function LogoCard({ logo, linkHref }: { logo: LogoItem; linkHref?: string }) {
+  const inner = (
     <div
-      className="flex h-20 w-40 shrink-0 items-center justify-center rounded-2xl border border-slate-200/70 bg-white/80 px-5 shadow-[0_16px_45px_rgba(15,23,42,0.05)]"
+      className="flex h-20 w-40 shrink-0 items-center justify-center rounded-2xl border border-slate-200/70 bg-white/80 px-5 shadow-[0_16px_45px_rgba(15,23,42,0.05)] transition hover:border-slate-300 hover:shadow-md"
       title={logo.label}
     >
       <img
@@ -108,4 +108,13 @@ function LogoCard({ logo }: { logo: LogoItem }) {
       />
     </div>
   );
+
+  if (linkHref) {
+    return (
+      <a href={linkHref} className="shrink-0 block">
+        {inner}
+      </a>
+    );
+  }
+  return inner;
 }

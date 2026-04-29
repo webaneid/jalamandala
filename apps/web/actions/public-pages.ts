@@ -275,3 +275,87 @@ export async function getBoothStats() {
   const fnb = rows.filter((r) => r.categorySlug === "fnb_kitchen" || r.categorySlug === "fnb_dry_food").length;
   return { total, fnb };
 }
+
+export async function getCustomLogosFromBlock(eventSlug: string) {
+  const event = await db.query.expoEvents.findFirst({
+    where: eq(expoEvents.slug, eventSlug),
+    columns: { id: true },
+  });
+  if (!event) return [];
+
+  const page = await db.query.eventPages.findFirst({
+    where: and(
+      eq(eventPages.eventId, event.id),
+      eq(eventPages.pageType, "landing"),
+      eq(eventPages.status, "published"),
+      isNull(eventPages.deletedAt)
+    ),
+    columns: { content: true },
+  });
+  if (!page?.content) return [];
+
+  const content = page.content as any;
+  const blocks: any[] = Array.isArray(content?.blocks) ? content.blocks : [];
+  const sliderBlock = blocks.find((b) => b.type === "logo_slider");
+  if (!sliderBlock) return [];
+
+  const customLogos = Array.isArray(sliderBlock.payload?.customLogos)
+    ? sliderBlock.payload.customLogos
+    : [];
+
+  return customLogos
+    .filter((l: any) => l?.url || l?.id)
+    .map((l: any) => ({
+      id: String(l.id || l.url),
+      url: String(l.url || `/api/media/${l.id}`),
+      label: String(l.label || l.fileName || ""),
+    }));
+}
+
+export async function getPaidTenantDirectory() {
+  const tenantDb = await createTenantDb(TENANT_SCHEMA);
+
+  const paidRows = await tenantDb
+    .selectDistinct({ businessId: invoices.businessId })
+    .from(invoices)
+    .where(and(eq(invoices.status, "paid"), isNotNull(invoices.businessId)));
+
+  const businessIds = paidRows
+    .map((r) => r.businessId)
+    .filter((id): id is string => Boolean(id));
+
+  if (businessIds.length === 0) return [];
+
+  const rows = await db
+    .select({
+      id: participantBusinesses.id,
+      companyName: participantBusinesses.companyName,
+      brandName: participantBusinesses.brandName,
+      companyDescription: participantBusinesses.companyDescription,
+      companyAddress: participantBusinesses.companyAddress,
+      companyRegencyName: participantBusinesses.companyRegencyName,
+      companyProvinceName: participantBusinesses.companyProvinceName,
+      companyPhone: participantBusinesses.companyPhone,
+      companyWhatsapp: participantBusinesses.companyWhatsapp,
+      productTags: participantBusinesses.productTags,
+      logoAssetId: participantBusinesses.logoAssetId,
+      logoPublicUrl: mediaAssets.publicUrl,
+    })
+    .from(participantBusinesses)
+    .leftJoin(mediaAssets, eq(mediaAssets.id, participantBusinesses.logoAssetId))
+    .where(inArray(participantBusinesses.id, businessIds));
+
+  return rows.map((r) => ({
+    id: r.id,
+    companyName: r.companyName,
+    brandName: r.brandName,
+    companyDescription: r.companyDescription ?? null,
+    companyAddress: r.companyAddress ?? null,
+    companyRegencyName: r.companyRegencyName ?? null,
+    companyProvinceName: r.companyProvinceName ?? null,
+    companyPhone: r.companyPhone ?? null,
+    companyWhatsapp: r.companyWhatsapp ?? null,
+    productTags: r.productTags ?? null,
+    logoUrl: r.logoPublicUrl ?? (r.logoAssetId ? `/api/media/${r.logoAssetId}` : null),
+  }));
+}
