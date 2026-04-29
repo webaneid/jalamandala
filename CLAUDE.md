@@ -26,14 +26,34 @@ cd apps/web && bun run check-types   # runs next typegen first, then tsc
 cd packages/db
 bun run db:generate          # Generate Drizzle migration files
 bun run db:migrate           # Run migrations
-bun run db:push              # Push schema directly (dev only)
-bun run db:provision:public  # Initialize public schema tables
-bun run db:provision:tenant  # Initialize tenant schema tables
+bun run db:push              # Push schema directly (dev only — JANGAN di production)
+bun run db:provision:public  # Initialize/update public schema tables (aman di production)
+bun run db:provision:tenant  # Initialize/update tenant schema tables (aman di production)
 bun run db:seed:regions      # Seed Indonesia regions
 bun run db:seed:booths       # Seed booth categories/groups
 bun run db:seed:wa-templates # Seed default WhatsApp message templates (run once per event)
 bun run db:studio            # Open Drizzle Studio GUI
 ```
+
+## SOP Perubahan Database
+
+**Selalu gunakan provision script, bukan `db:push`.**
+
+`db:push` interaktif dan berisiko di production. Provision script pakai `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` — aman diulang, tidak merusak data.
+
+- Perubahan public schema → `bun run db:provision:public`
+- Perubahan tenant schema → `bun run db:provision:tenant`
+- Setiap kolom baru di Drizzle schema **wajib** ditambahkan ke provision script yang relevan
+
+**Deploy dengan perubahan DB:**
+```bash
+cd /var/www/jalamandala
+git pull
+bun install
+cd packages/db && bun run db:provision:tenant   # jika ada perubahan tenant schema
+cd /var/www/jalamandala && bun run build && pm2 reload jalamandala
+```
+
 
 ## Infrastructure
 
