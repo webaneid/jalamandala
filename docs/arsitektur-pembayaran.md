@@ -406,10 +406,10 @@ Saat admin verifikasi payment, sistem harus:
 2. ✅ **`verifyPaymentConfirmation`** — deteksi DP vs full, set status yang benar
 3. ✅ **`expireOverdueInvoices`** — deteksi `dp_paid` yang lewat `balance_due_date` → `balance_overdue`
 4. ✅ **Cron reminder** — endpoint + template WA (4 template: dp_diterima, payment_reminder, dp_reminder, balance_overdue_reminder)
-5. **UI invoice publik** — opsi DP, progress bar, pelunasan section
-6. **UI admin** — banner, extend modal, cancel+refund modal
-7. **`cancelInvoiceWithRefund`** + `extendReservation`
-8. **Test end-to-end**
+5. ✅ **UI invoice publik** — opsi DP, progress bar, pelunasan section
+6. ✅ **UI admin** — `DpProgressBanner`: progress bar, deadline, extend modal, cancel+refund modal
+7. ✅ **`cancelInvoiceWithRefund`** + `extendReservation` (server actions di `actions/finance.ts`)
+8. **Test end-to-end** — deploy ke server, jalankan `db:provision:tenant` + `db:seed:wa-templates`
 
 ---
 
