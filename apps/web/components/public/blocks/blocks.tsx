@@ -1062,6 +1062,16 @@ export async function FunFactsBlock({ payload, event }: { payload: any; event: a
           </div>
         ))}
       </div>
+
+      <div className="mt-6 text-center">
+        <a
+          href="#tenant"
+          className="inline-flex items-center gap-2 rounded-xl bg-[#134397] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#0f3280]"
+        >
+          <Store className="size-4" />
+          Lihat Semua Booth
+        </a>
+      </div>
     </Section>
   );
 }
