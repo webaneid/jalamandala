@@ -50,9 +50,12 @@ bun run db:studio            # Open Drizzle Studio GUI
 cd /var/www/jalamandala
 git pull
 bun install
-cd packages/db && bun run db:provision:tenant   # jika ada perubahan tenant schema
+# Provision tenant schema (DATABASE_URL harus di-export manual dari .env)
+cd /var/www/jalamandala/packages/db && export DATABASE_URL="$(grep '^DATABASE_URL=' /var/www/jalamandala/.env | cut -d'=' -f2-)" && bun run db:provision:tenant
 cd /var/www/jalamandala && bun run build && pm2 reload jalamandala
 ```
+
+> Catatan: `bun run db:provision:tenant` perlu `DATABASE_URL` di-export manual karena Bun tidak otomatis membaca `.env` dari parent directory saat dipanggil langsung.
 
 
 ## Infrastructure
