@@ -161,15 +161,67 @@ Login untuk verifikasi:
     key: 'invoice_mau_expired',
     title: 'Pengingat Invoice Hampir Kadaluarsa',
     sortOrder: 10,
-    body: `⚠️ {{nama}}, invoice Anda akan *KADALUARSA besok*!
+    body: `Halo {{nama}}, sekedar mengingatkan — invoice booth Anda akan jatuh tempo *besok* 😊
 
 No. Invoice: *{{invoice_number}}*
 Total: *{{total}}*
 Jatuh Tempo: {{jatuh_tempo}}
 
-Jika belum dibayar sebelum jatuh tempo, booth Anda akan *dilepas* dan harus melakukan booking ulang.
+Kalau ada kendala soal pembayaran, tim kami siap bantu. Silakan balas pesan ini ya.
+Lihat invoice: {{link_invoice}}`,
+  },
+  {
+    key: 'dp_diterima',
+    title: 'DP Diterima — Konfirmasi ke Peserta',
+    sortOrder: 14,
+    body: `{{nama}}, DP Anda sudah kami terima, terima kasih! 🎉
 
-Segera bayar sekarang:
+No. Invoice: *{{invoice_number}}*
+DP Terbayar: *{{dp_amount}}*
+Sisa Pelunasan: {{sisa_pelunasan}}
+Deadline Pelunasan: *{{balance_due_date}}*
+
+Booth Anda sudah kami amankan. Selesaikan pelunasan sebelum deadline ya 🙏
+Detail: {{link_invoice}}`,
+  },
+  {
+    key: 'payment_reminder',
+    title: 'Pengingat Pembayaran (Belum Bayar)',
+    sortOrder: 15,
+    body: `Halo {{nama}}, mengingatkan invoice booth Anda yang belum diselesaikan 😊
+
+No. Invoice: *{{invoice_number}}*
+Atas Nama: {{perusahaan}}
+Total: *{{total}}*
+Jatuh Tempo: {{jatuh_tempo}}
+
+Kalau ada pertanyaan atau butuh bantuan soal pembayaran, tim kami siap membantu. Balas pesan ini saja ya!
+Lihat invoice: {{link_invoice}}`,
+  },
+  {
+    key: 'dp_reminder',
+    title: 'Pengingat Pelunasan DP (Sudah Bayar DP)',
+    sortOrder: 16,
+    body: `Halo {{nama}}, mengingatkan soal pelunasan booth ya 😊
+
+No. Invoice: *{{invoice_number}}*
+DP Terbayar: *{{dp_amount}}*
+Sisa Pelunasan: *{{sisa_pelunasan}}*
+Deadline Lunas: *{{balance_due_date}}*
+
+Booth Anda masih kami amankan. Selesaikan sebelum deadline — kalau ada pertanyaan, balas sini aja 🙏
+{{link_invoice}}`,
+  },
+  {
+    key: 'balance_overdue_reminder',
+    title: 'Pengingat Pelunasan Melewati Deadline',
+    sortOrder: 17,
+    body: `Halo {{nama}}, deadline pelunasan booth Anda sudah terlewat.
+
+No. Invoice: *{{invoice_number}}*
+Sisa Pelunasan: *{{sisa_pelunasan}}*
+
+Tim kami akan segera menghubungi untuk mencarikan solusi terbaik. Atau Anda bisa balas pesan ini langsung ya 🙏
 {{link_invoice}}`,
   },
 ]

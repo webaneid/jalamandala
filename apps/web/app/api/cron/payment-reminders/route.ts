@@ -4,6 +4,7 @@ import { createTenantDb, db } from "@repo/db";
 import { expoEvents, participantBusinesses, participants } from "@repo/db/schema/public";
 import { invoices, waRotatorAgents } from "@repo/db/schema/tenant";
 import { sendWhatsApp } from "@/lib/whatsapp";
+import { renderWaTemplate, WA_KEYS } from "@/lib/whatsapp-template";
 
 const TENANT_SCHEMA = process.env.TENANT_SCHEMA ?? "expo_forbis2026";
 const EXPO_URL = process.env.NEXT_PUBLIC_EXPO_URL ?? "https://expo.forbis.id";
@@ -82,50 +83,31 @@ export async function GET(req: NextRequest) {
 
         const biz = invoice.businessId ? bizMap.get(invoice.businessId) : null;
         const invoiceUrl = `${EXPO_URL}/invoice/${invoice.publicToken}`;
-        const nama = biz?.companyName ?? ptcp.name;
+        const perusahaan = biz?.companyName ?? ptcp.name;
+        const sisa = invoice.grandTotal - (invoice.dpAmount ?? 0);
 
-        let message: string;
+        const sharedVars = {
+          nama: ptcp.name,
+          perusahaan,
+          company_name: perusahaan,
+          invoice_number: invoice.invoiceNumber,
+          total: fmtRp(invoice.grandTotal),
+          invoice_total: fmtRp(invoice.grandTotal),
+          jatuh_tempo: invoice.dueDate ? fmtDate(invoice.dueDate) : "-",
+          due_date: invoice.dueDate ? fmtDate(invoice.dueDate) : "-",
+          dp_amount: fmtRp(invoice.dpAmount ?? 0),
+          sisa_pelunasan: fmtRp(sisa > 0 ? sisa : 0),
+          balance_due_date: invoice.balanceDueDate ? fmtDate(invoice.balanceDueDate) : "-",
+          link_invoice: invoiceUrl,
+        };
 
-        if (invoice.status === "waiting_for_payment") {
-          const dueDate = invoice.dueDate ? fmtDate(invoice.dueDate) : "-";
-          message = [
-            `Halo ${ptcp.name}, tagihan booth Anda belum dibayar 🔔`,
-            ``,
-            `No. Invoice  : ${invoice.invoiceNumber}`,
-            `Atas Nama    : ${nama}`,
-            `Total Tagihan: ${fmtRp(invoice.grandTotal)}`,
-            `Jatuh Tempo  : ${dueDate}`,
-            ``,
-            `Segera bayar agar booth tidak dilepas ke peserta lain:`,
-            invoiceUrl,
-          ].join("\n");
-        } else if (invoice.status === "dp_paid") {
-          const sisa = invoice.grandTotal - (invoice.dpAmount ?? 0);
-          const deadline = invoice.balanceDueDate ? fmtDate(invoice.balanceDueDate) : "-";
-          message = [
-            `Halo ${ptcp.name}, jangan lupa selesaikan pelunasan booth Anda 🔔`,
-            ``,
-            `No. Invoice     : ${invoice.invoiceNumber}`,
-            `DP Terbayar     : ${fmtRp(invoice.dpAmount ?? 0)}`,
-            `Sisa Pelunasan  : ${fmtRp(sisa > 0 ? sisa : 0)}`,
-            `Deadline Lunas  : ${deadline}`,
-            ``,
-            `Bayar sekarang:`,
-            invoiceUrl,
-          ].join("\n");
-        } else {
-          // balance_overdue
-          const sisa = invoice.grandTotal - (invoice.dpAmount ?? 0);
-          message = [
-            `Halo ${ptcp.name}, batas waktu pelunasan booth Anda telah lewat ⚠️`,
-            ``,
-            `No. Invoice   : ${invoice.invoiceNumber}`,
-            `Sisa Pelunasan: ${fmtRp(sisa > 0 ? sisa : 0)}`,
-            ``,
-            `Segera hubungi tim kami untuk melanjutkan pemesanan atau memproses pembatalan.`,
-            invoiceUrl,
-          ].join("\n");
-        }
+        const waKey =
+          invoice.status === "waiting_for_payment" ? WA_KEYS.PAYMENT_REMINDER :
+          invoice.status === "dp_paid" ? WA_KEYS.DP_REMINDER :
+          WA_KEYS.BALANCE_OVERDUE_REMINDER;
+
+        const message = await renderWaTemplate(waKey, sharedVars);
+        if (!message) continue;
 
         void sendWhatsApp({ to: ptcp.whatsapp, message, context: "payment-reminder" });
 
