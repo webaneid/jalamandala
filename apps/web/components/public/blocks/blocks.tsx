@@ -9,6 +9,7 @@ import { db } from "@repo/db";
 import { mediaAssets } from "@repo/db/schema/public";
 import { inArray, isNull, and, eq } from "drizzle-orm";
 import { generatePresignedGetUrl } from "@/lib/minio-storage";
+import { CalendarDays, MapPin, Users, Store, UtensilsCrossed, Clock } from "lucide-react";
 
 function normalizePayload<T = any>(payload: T): any {
   if (typeof payload === "string") {
@@ -966,8 +967,8 @@ export function EventInfoBlock({ payload, event }: { payload: any; event: any })
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {/* Tanggal */}
         <div className="flex items-start gap-4 rounded-2xl border border-white/8 bg-white/5 p-5">
-          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#134397]/40 text-xl">
-            📅
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#134397]/40">
+            <CalendarDays className="size-5 text-[#00adee]" />
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-[#00adee]">Tanggal</p>
@@ -980,8 +981,8 @@ export function EventInfoBlock({ payload, event }: { payload: any; event: any })
 
         {/* Lokasi */}
         <div className="flex items-start gap-4 rounded-2xl border border-white/8 bg-white/5 p-5">
-          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#134397]/40 text-xl">
-            📍
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#134397]/40">
+            <MapPin className="size-5 text-[#00adee]" />
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-[#00adee]">Lokasi</p>
@@ -1017,30 +1018,21 @@ export async function FunFactsBlock({ payload, event }: { payload: any; event: a
 
   const stats = await getBoothStats();
 
-  const facts = [
-    targetVisitors && {
-      emoji: "👥",
+  type Fact = { Icon: React.ComponentType<{ className?: string }>; value: string; label: string };
+
+  const allFacts: (Fact | false)[] = [
+    !!targetVisitors && {
+      Icon: Users,
       value: targetVisitors >= 1000
         ? `${(targetVisitors / 1000 % 1 === 0 ? targetVisitors / 1000 : (targetVisitors / 1000).toFixed(1))}K+`
         : `${targetVisitors}+`,
       label: "Target Pengunjung",
     },
-    stats.total > 0 && {
-      emoji: "🏪",
-      value: `${stats.total}`,
-      label: "Stand Peserta",
-    },
-    stats.fnb > 0 && {
-      emoji: "🍽️",
-      value: `${stats.fnb}`,
-      label: "Stand Kuliner",
-    },
-    days && {
-      emoji: "🗓️",
-      value: `${days}`,
-      label: "Hari Acara",
-    },
-  ].filter((f): f is { emoji: string; value: string; label: string } => Boolean(f));
+    stats.total > 0 && { Icon: Store, value: `${stats.total}`, label: "Stand Peserta" },
+    stats.fnb > 0 && { Icon: UtensilsCrossed, value: `${stats.fnb}`, label: "Stand Kuliner" },
+    !!days && { Icon: Clock, value: `${days}`, label: "Hari Acara" },
+  ];
+  const facts = allFacts.filter((f): f is Fact => f !== false);
 
   if (facts.length === 0) return null;
 
@@ -1060,9 +1052,11 @@ export async function FunFactsBlock({ payload, event }: { payload: any; event: a
         {facts.map((fact) => (
           <div
             key={fact.label}
-            className="flex flex-col items-center gap-2 rounded-2xl border border-white/8 bg-white/5 px-4 py-6 text-center"
+            className="flex flex-col items-center gap-3 rounded-2xl border border-white/8 bg-white/5 px-4 py-6 text-center"
           >
-            <span className="text-3xl">{fact.emoji}</span>
+            <div className="flex size-11 items-center justify-center rounded-xl bg-[#134397]/40">
+              <fact.Icon className="size-5 text-[#00adee]" />
+            </div>
             <p className="text-3xl font-extrabold tracking-tight text-white">{fact.value}</p>
             <p className="text-xs font-medium uppercase tracking-widest text-white/50">{fact.label}</p>
           </div>
