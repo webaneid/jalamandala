@@ -174,17 +174,23 @@ WA dikirim via GoWA. Config diambil dari DB (`whatsappConfigs` tabel, via `/admi
 
 ## Cron Jobs
 
-Tiga endpoint cron di `apps/web/app/api/cron/`. Semua diamankan dengan query param `?secret=CRON_SECRET` (env var `CRON_SECRET`).
+Empat endpoint cron di `apps/web/app/api/cron/`. Semua diamankan dengan query param `?secret=CRON_SECRET` (env var `CRON_SECRET`).
 
 | Endpoint | Jadwal | Penerima | Isi Pesan |
 |----------|--------|----------|-----------|
 | `/api/cron/pimpinan-report` | Tiap hari (pagi) | `expoEvents.leaderWaNumbers` | Rekap booth per zona (terjual/total/sisa) + ringkasan keuangan (terbayar, pending, total potensi) |
 | `/api/cron/finance-unpaid` | Tiap hari | `expoEvents.financeWaNumbers` | Daftar invoice belum lunas + menunggu verifikasi, lengkap dengan nama perusahaan, nominal, jatuh tempo |
 | `/api/cron/tim-acara-rundown` | Tiap malam | `expoEvents.eventTeamWaNumbers` | Rundown agenda besok (waktu, judul, venue, pembicara) |
+| `/api/cron/payment-reminders` | Tiap 30 menit | Peserta + `waRotatorAgents` (CS) | WA reminder setiap 2 hari ke peserta belum lunas; notif H-1 ke CS agen aktif sebelum `balanceDueDate` |
 
 **Nomor penerima** disimpan di tabel `expoEvents` sebagai array string (field `leaderWaNumbers`, `financeWaNumbers`, `eventTeamWaNumbers`). Diatur dari DB — tidak hardcode di kode.
 
 **Format pesan** hardcode di masing-masing route handler, tidak menggunakan tabel `messageTemplates`.
+
+**Crontab production** (tambahkan ke `crontab -e` di server):
+```
+*/30 * * * * curl -s "https://app.forbis.id/api/cron/payment-reminders?secret=<CRON_SECRET>" >> /var/log/cron-jalamandala.log 2>&1
+```
 
 **Cara trigger manual (test):**
 ```
@@ -193,15 +199,26 @@ GET https://app.forbis.id/api/cron/pimpinan-report?secret=<CRON_SECRET>
 
 ## Invoice & Payment Flow
 
-Status invoice: `waiting_for_payment` → `waiting_confirmation` (user submit bukti) → `paid` (admin verifikasi) / `expired` / `cancelled`
+Arsitektur detail: lihat `docs/arsitektur-pembayaran.md`.
 
-Status payment: `pending_verification` → `paid` (verified) / `rejected`
+**Status invoice (full):**
+`waiting_for_payment` → `waiting_confirmation` / `dp_waiting_confirmation` → `paid` / `dp_paid` → `balance_waiting_confirmation` → `paid` | `balance_overdue` → (expired / cancelled / refunding / refunded)
+
+**DP flow:** Peserta bisa bayar DP ≥50%. Sistem otomatis deteksi di `submitPublicPaymentConfirmation()` berdasarkan amount:
+- `amount >= grandTotal` → `paymentSequence='full'`, status `waiting_confirmation`
+- `amount >= dpMinimum (50%)` → `paymentSequence='dp'`, status `dp_waiting_confirmation`
+- Kurang dari dpMinimum → error
+
+Saat admin verifikasi DP (`dp_waiting_confirmation`): status → `dp_paid`, set `dpPaidAt` + `balanceDueDate = dpPaidAt + 7 hari`, WA `DP_DITERIMA` ke peserta.
+Saat `dp_paid` melewati `balanceDueDate` tanpa pelunasan → `balance_overdue` (via `expireOverdueInvoices()`).
+
+**WA reminder:** `nextReminderAt` diset saat invoice dibuat (`+2 hari`). Cron `/api/cron/payment-reminders` (tiap 30 menit) kirim reminder setiap 2 hari untuk status aktif + CS H-1 notif (24 jam sebelum `balanceDueDate`).
 
 Aturan penting:
 - Satu invoice hanya boleh punya **satu** `pending_verification` payment sekaligus — blokir submit baru jika sudah ada.
-- Saat user submit bukti transfer, status invoice otomatis berubah ke `waiting_confirmation`.
 - Admin verifikasi melalui `verifyPaymentConfirmation()` di `actions/finance.ts`.
 - `getInvoiceByToken` di `actions/finance.ts` adalah fungsi utama untuk halaman invoice publik — returns invoice, participant, business, items (enriched), payments (dengan `proofAssetId`), event, paymentChannels, qrisConfig.
+- CS H-1 notif dikirim ke semua `waRotatorAgents` (tenant schema) yang `isActive=true` — bukan ke `expoEvents.financeWaNumbers`.
 
 **Hapus invoice (admin):** `deleteInvoiceCompletely(invoiceId)` di `actions/finance.ts` — hapus invoice + order + booth bookings (reset booths ke `open`) + terms approvals. Participant dan businesses **tidak dihapus** — tetap ada di sistem. Tombol ada di halaman detail invoice (`/admin/keuangan/{id}`), requires konfirmasi ketik "HAPUS".
 
