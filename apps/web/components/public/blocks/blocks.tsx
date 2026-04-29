@@ -5,6 +5,9 @@ import { getPaidParticipantBusinessLogos, getPublishedEventAgendas, getPublicTen
 import { PublicContainer } from "@/components/public/ui/PublicContainer";
 import { LogoMarquee } from "@/components/public/LogoMarquee";
 import { getCurrentParticipantSession } from "@/lib/participant-session";
+import { db } from "@repo/db";
+import { mediaAssets } from "@repo/db/schema/public";
+import { inArray, isNull, and, eq } from "drizzle-orm";
 
 function normalizePayload<T = any>(payload: T): any {
   if (typeof payload === "string") {
@@ -799,14 +802,29 @@ export function FooterInfoBlock({ payload, event }: { payload: any; event: any }
   );
 }
 
-// ── Image Banner Block ───────────────────────���────────────────────────────────
+// ── Image Banner Block ────────────────────────────────────────────────────────
 
-export function ImageBannerBlock({ payload }: { payload: any }) {
+async function resolvePublicUrl(assetId: string): Promise<string | null> {
+  const asset = await db.query.mediaAssets.findFirst({
+    where: and(eq(mediaAssets.id, assetId), isNull(mediaAssets.deletedAt)),
+    columns: { publicUrl: true, objectKey: true },
+  });
+  return asset?.publicUrl ?? null;
+}
+
+export async function ImageBannerBlock({ payload }: { payload: any }) {
   const p = normalizePayload(payload);
   const assetId: string | null = p?.assetId ?? null;
-  const src: string | null = p?.url ?? (assetId ? `/api/media/${assetId}` : null);
   const altText: string = p?.altText ?? "";
   const caption: string = p?.caption ?? "";
+
+  // Use stored url if it's a full URL, otherwise resolve from DB
+  let src: string | null = null;
+  if (p?.url && p.url.startsWith("http")) {
+    src = p.url;
+  } else if (assetId) {
+    src = await resolvePublicUrl(assetId);
+  }
 
   if (!src) return null;
 
@@ -825,12 +843,34 @@ export function ImageBannerBlock({ payload }: { payload: any }) {
   );
 }
 
-// ── Gallery Block ───────────────────────────���───────────────────���─────────────
+// ── Gallery Block ─────────────────────────────────────────────────────────────
 
-export function GalleryBlock({ payload }: { payload: any }) {
+export async function GalleryBlock({ payload }: { payload: any }) {
   const p = normalizePayload(payload);
-  const images: Array<{ assetId: string; caption?: string }> = p?.images ?? [];
-  if (!images.length) return null;
+  const rawImages: Array<{ assetId: string; url?: string | null; caption?: string }> = p?.images ?? [];
+  if (!rawImages.length) return null;
+
+  // Collect IDs that need URL resolution (stored url is missing or relative)
+  const needsLookup = rawImages
+    .filter((img) => img.assetId && (!img.url || !img.url.startsWith("http")))
+    .map((img) => img.assetId);
+
+  const urlMap = new Map<string, string>();
+  if (needsLookup.length > 0) {
+    const rows = await db
+      .select({ id: mediaAssets.id, publicUrl: mediaAssets.publicUrl })
+      .from(mediaAssets)
+      .where(and(inArray(mediaAssets.id, needsLookup), isNull(mediaAssets.deletedAt)));
+    for (const row of rows) {
+      if (row.publicUrl) urlMap.set(row.id, row.publicUrl);
+    }
+  }
+
+  const images = rawImages.map((img) => ({
+    assetId: img.assetId,
+    url: (img.url && img.url.startsWith("http")) ? img.url : (urlMap.get(img.assetId) ?? null),
+    caption: img.caption,
+  }));
 
   return (
     <section className="py-5 sm:py-10">

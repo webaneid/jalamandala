@@ -101,7 +101,12 @@ MinIO integration is in `apps/web/lib/minio-storage.ts`. Files are uploaded with
 
 **Penting:** Di production MinIO berada di belakang reverse proxy (`storage.forbis.id`). Selalu set `MINIO_PUBLIC_URL=https://storage.forbis.id` di env production. Fungsi `generatePresignedGetUrl` menggunakan `publicBaseUrl` (dari `MINIO_PUBLIC_URL`) — jangan kembalikan ke `baseUrl` (localhost) karena presigned URL akan gagal di sisi client.
 
-**Media API auth bypass:** `/api/media/[assetId]` mendukung query `?publicToken=<invoicePublicToken>` untuk asset private milik participant — dipakai di halaman invoice publik agar gambar bukti transfer bisa ditampilkan tanpa login admin.
+**Media API auth behavior:** `/api/media/[assetId]` memerlukan auth (admin/owner) untuk asset private. Tiga cara bypass:
+1. `?publicToken=<invoicePublicToken>` — untuk gambar bukti transfer di halaman invoice publik
+2. `asset.visibility === "public"` — redirect langsung ke `publicUrl` (MinIO URL), tanpa auth
+3. `asset.objectKey.startsWith("public/")` — sama seperti di atas, untuk asset lama yang folder-nya public tapi visibility-nya belum di-set
+
+**Pola gambar di landing page blocks (wajib diikuti):** Gunakan `visibility="public"` + `folder="public/..."` di `MediaPicker`. `MediaPicker.onChange` mengembalikan `{ id, url, ... }` di mana `url = asset.publicUrl` = full MinIO URL (`https://storage.forbis.id/...`). Simpan URL itu langsung di payload block (bukan hanya `assetId`). Di renderer (server component), jika `url` sudah `startsWith("http")` pakai langsung; jika tidak, query `mediaAssets` di DB untuk mendapat `publicUrl`. **Jangan gunakan `/api/media/{id}` sebagai `src` di halaman publik** — akan 401 untuk asset private. Referensi: hero block di `BlockForm.tsx` + `blocks.tsx`, dan `ImageBannerBlock`/`GalleryBlock` yang query DB langsung.
 
 ### PDF Generation
 
