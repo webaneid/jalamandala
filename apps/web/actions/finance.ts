@@ -164,10 +164,6 @@ export async function expireOverdueInvoices(): Promise<void> {
         .where(eq(invoices.id, invoice.id));
     }
 
-    if (overdueRows.length > 0) {
-      revalidatePath("/admin/keuangan");
-      revalidatePath("/admin/booth");
-    }
   } catch (err) {
     console.error("expireOverdueInvoices error:", err);
   }
