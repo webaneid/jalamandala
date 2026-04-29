@@ -6,6 +6,7 @@ export const WA_KEYS = {
   OTP_VERIFIKASI:          'otp_verifikasi',
   INVOICE_TERBIT:          'invoice_terbit',
   INVOICE_LUNAS:           'invoice_lunas',
+  DP_DITERIMA:             'dp_diterima',
   VENDOR_AKUN_DIBUAT:      'vendor_akun_dibuat',
   PENCAIRAN_DISETUJUI:     'pencairan_disetujui',
   PENCAIRAN_DITOLAK:       'pencairan_ditolak',
@@ -45,6 +46,9 @@ export type WaVars = {
   email?: string
   password?: string
   whatsapp?: string
+  dp_amount?: string
+  sisa_pelunasan?: string
+  balance_due_date?: string
 }
 
 // Variable descriptions — used by UI as reference
@@ -73,6 +77,9 @@ export const WA_VAR_LABELS: Record<keyof WaVars, string> = {
   email:                  'Email akun vendor',
   password:               'Password sementara vendor',
   whatsapp:               'Nomor WhatsApp peserta / vendor',
+  dp_amount:              'Nominal DP terbayar (format Rp)',
+  sisa_pelunasan:         'Sisa yang harus dilunasi (format Rp)',
+  balance_due_date:       'Deadline pelunasan',
 }
 
 async function resolveActiveEventId(): Promise<string | null> {

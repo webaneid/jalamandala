@@ -250,6 +250,20 @@ export async function rejectPaymentConfirmation(paymentId: string) {
       .set({ status: "rejected", updatedAt: new Date() })
       .where(eq(invoicePayments.id, paymentId));
 
+    // Balance payment rejection → back to dp_paid (no expiry check, booth stays reserved)
+    if (invoice.status === "balance_waiting_confirmation") {
+      await tenantDb
+        .update(invoices)
+        .set({ status: "dp_paid", updatedAt: new Date() })
+        .where(eq(invoices.id, invoice.id));
+
+      revalidatePath("/admin/keuangan");
+      revalidatePath(`/invoice/${invoice.publicToken}`);
+      revalidatePath("/admin/booth");
+      return { success: true, expired: false };
+    }
+
+    // Full or DP payment rejection → check overdue
     const now = new Date();
     const isOverdue = invoice.dueDate != null && invoice.dueDate < now;
 
@@ -1222,8 +1236,10 @@ export async function submitPublicPaymentConfirmation(payload: {
     });
 
     if (!invoice) return { success: false, error: "Invoice tidak ditemukan." };
-    if (invoice.status === "paid") return { success: false, error: "Invoice sudah lunas." };
-    if (invoice.status === "cancelled" || invoice.status === "expired") {
+    if (["paid", "refunding", "refunded"].includes(invoice.status)) {
+      return { success: false, error: "Invoice sudah lunas." };
+    }
+    if (["cancelled", "expired"].includes(invoice.status)) {
       return { success: false, error: "Invoice tidak aktif." };
     }
 
@@ -1241,6 +1257,30 @@ export async function submitPublicPaymentConfirmation(payload: {
 
     const senderName = normalizeText(payload.senderName);
     if (!senderName) return { success: false, error: "Nama pengirim wajib diisi." };
+
+    // Determine payment sequence and next invoice status
+    const paymentAmount = payload.amount > 0 ? payload.amount : invoice.grandTotal;
+    const dpMinimumPercent = invoice.dpMinimumPercent ?? 50;
+    const dpMinimumAmount = Math.ceil(invoice.grandTotal * dpMinimumPercent / 100);
+
+    let paymentSequence: "full" | "dp" | "balance";
+    let nextInvoiceStatus: string;
+
+    if (invoice.status === "dp_paid" || invoice.status === "balance_overdue") {
+      paymentSequence = "balance";
+      nextInvoiceStatus = "balance_waiting_confirmation";
+    } else if (paymentAmount >= invoice.grandTotal) {
+      paymentSequence = "full";
+      nextInvoiceStatus = "waiting_confirmation";
+    } else if (paymentAmount >= dpMinimumAmount) {
+      paymentSequence = "dp";
+      nextInvoiceStatus = "dp_waiting_confirmation";
+    } else {
+      return {
+        success: false,
+        error: `Pembayaran minimum adalah ${fmtRp(dpMinimumAmount)} (${dpMinimumPercent}% dari total) atau bayar lunas ${fmtRp(invoice.grandTotal)}.`,
+      };
+    }
 
     let proofAssetId: string | null = null;
     if (payload.proofData?.dataUrl) {
@@ -1260,8 +1300,6 @@ export async function submitPublicPaymentConfirmation(payload: {
       ? await resolvePaymentMethodOption(payload.paymentMethodKey).catch(() => null)
       : null;
 
-    const paymentAmount = payload.amount > 0 ? payload.amount : invoice.grandTotal;
-
     const [createdPayment] = await tenantDb.insert(invoicePayments).values({
       amount: paymentAmount,
       invoiceId: invoice.id,
@@ -1273,6 +1311,7 @@ export async function submitPublicPaymentConfirmation(payload: {
       proofAssetId,
       senderName,
       status: "pending_verification",
+      paymentSequence,
     }).returning({ id: invoicePayments.id });
 
     if (proofAssetId && createdPayment?.id) {
@@ -1285,10 +1324,9 @@ export async function submitPublicPaymentConfirmation(payload: {
       });
     }
 
-    // Update invoice status to waiting_confirmation
     await tenantDb
       .update(invoices)
-      .set({ status: "waiting_confirmation", updatedAt: new Date() })
+      .set({ status: nextInvoiceStatus, updatedAt: new Date() })
       .where(eq(invoices.id, invoice.id));
 
     // Notify finance team
@@ -1353,22 +1391,75 @@ export async function verifyPaymentConfirmation(paymentId: string) {
       .set({ status: "verified", updatedAt: new Date() })
       .where(eq(invoicePayments.id, paymentId));
 
-    // Hitung total verified setelah update
+    await tenantDb.insert(cashflowLedger).values({
+      amount: payment.amount,
+      category: "invoice_payment",
+      description: `Pembayaran Invoice ${invoice.invoiceNumber}${invoice.status === "dp_waiting_confirmation" ? " (DP)" : invoice.status === "balance_waiting_confirmation" ? " (pelunasan)" : ""}`,
+      referenceInvoiceId: invoice.id,
+      transactionDate: payment.paidAt,
+      type: "cash_in",
+    });
+
+    // ── DP payment verified ──────────────────────────────────────────────────
+    if (invoice.status === "dp_waiting_confirmation") {
+      const dpPaidAt = payment.paidAt;
+      const balanceDueDate = new Date(dpPaidAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+      await tenantDb
+        .update(invoices)
+        .set({
+          status: "dp_paid",
+          dpPaidAt,
+          dpAmount: payment.amount,
+          balanceDueDate,
+          paymentChannelId: payment.paymentChannelId,
+          paymentChannelLabel: payment.paymentChannelLabel,
+          paymentChannelType: payment.paymentChannelType,
+          updatedAt: new Date(),
+        })
+        .where(eq(invoices.id, invoice.id));
+
+      revalidatePath("/admin/keuangan");
+      revalidatePath("/admin/keuangan/cashflow");
+      revalidatePath(`/invoice/${invoice.publicToken}`);
+
+      if (invoice.participantId) {
+        void (async () => {
+          try {
+            const [ptcp, biz] = await Promise.all([
+              db.query.participants.findFirst({ where: eq(participants.id, invoice.participantId!), columns: { whatsapp: true, name: true } }),
+              invoice.order?.businessId
+                ? db.query.participantBusinesses.findFirst({ where: eq(participantBusinesses.id, invoice.order.businessId), columns: { companyName: true } })
+                : Promise.resolve(null),
+            ])
+            if (!ptcp?.whatsapp) return
+            const invoiceUrl = `${process.env.NEXT_PUBLIC_EXPO_URL ?? 'https://expo.forbis.id'}/invoice/${invoice.publicToken}`
+            const sisaPelunasan = invoice.grandTotal - payment.amount
+            const msg = await renderWaTemplate(WA_KEYS.DP_DITERIMA, {
+              nama: ptcp.name,
+              perusahaan: biz?.companyName ?? ptcp.name,
+              invoice_number: invoice.invoiceNumber,
+              dp_amount: fmtRp(payment.amount),
+              sisa_pelunasan: fmtRp(sisaPelunasan > 0 ? sisaPelunasan : 0),
+              balance_due_date: fmtDate(balanceDueDate),
+              total: fmtRp(invoice.grandTotal),
+              link_invoice: invoiceUrl,
+            })
+            if (msg) void sendWhatsApp({ to: ptcp.whatsapp, message: msg, context: 'dp-diterima' })
+          } catch { /* non-blocking */ }
+        })()
+      }
+
+      return { success: true, isFullyPaid: false };
+    }
+
+    // ── Full or balance payment verified ────────────────────────────────────
     const prevVerified = invoice.payments
       .filter((p) => p.id !== paymentId && p.status === "verified")
       .reduce((s, p) => s + p.amount, 0);
     const totalPaid = prevVerified + payment.amount;
     const isFullyPaid = totalPaid >= invoice.grandTotal;
     const overpaymentAmount = isFullyPaid ? Math.max(0, totalPaid - invoice.grandTotal) : 0;
-
-    await tenantDb.insert(cashflowLedger).values({
-      amount: payment.amount,
-      category: "invoice_payment",
-      description: `Pembayaran Invoice ${invoice.invoiceNumber}${!isFullyPaid ? " (sebagian)" : ""}`,
-      referenceInvoiceId: invoice.id,
-      transactionDate: payment.paidAt,
-      type: "cash_in",
-    });
 
     if (isFullyPaid) {
       await tenantDb
@@ -1411,6 +1502,12 @@ export async function verifyPaymentConfirmation(paymentId: string) {
             .where(inArray(booths.id, boothIds));
         }
       }
+    } else {
+      // Partial payment verified but not yet fully paid (should not happen in normal flow)
+      await tenantDb
+        .update(invoices)
+        .set({ status: "dp_paid", updatedAt: new Date() })
+        .where(eq(invoices.id, invoice.id));
     }
 
     revalidatePath("/admin/keuangan");
