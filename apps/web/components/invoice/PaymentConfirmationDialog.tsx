@@ -11,9 +11,12 @@ type PaymentOption = {
 
 type Props = {
   businessId: string | null;
+  defaultAmount?: number;
+  dialogTitle?: string;
   eventSlug: string;
   grandTotal: number;
   invoiceNumber: string;
+  minAmount?: number;
   paymentOptions: PaymentOption[];
   publicToken: string;
   onClose: () => void;
@@ -49,16 +52,19 @@ function formatCurrency(amount: number) {
 
 export function PaymentConfirmationDialog({
   businessId,
+  defaultAmount,
+  dialogTitle = "Konfirmasi Pembayaran",
   eventSlug,
   grandTotal,
   invoiceNumber,
+  minAmount,
   paymentOptions,
   publicToken,
   onClose,
 }: Props) {
   const [paidAt, setPaidAt] = React.useState(() => toWibDateTimeLocal(new Date()));
   const [paymentMethodKey, setPaymentMethodKey] = React.useState(paymentOptions[0]?.key ?? "");
-  const [amount, setAmount] = React.useState(String(grandTotal));
+  const [amount, setAmount] = React.useState(String(defaultAmount ?? grandTotal));
   const [senderName, setSenderName] = React.useState("");
   const [proofFile, setProofFile] = React.useState<File | null>(null);
   const [proofPreviewUrl, setProofPreviewUrl] = React.useState<string | null>(null);
@@ -146,11 +152,11 @@ export function PaymentConfirmationDialog({
         <div className="flex items-start justify-between gap-4 border-b p-6">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-blue-700">
-              Konfirmasi Pembayaran
+              {dialogTitle}
             </p>
             <h3 className="mt-1 text-xl font-semibold text-neutral-900">{invoiceNumber}</h3>
             <p className="mt-0.5 text-sm text-neutral-500">
-              Nominal: <span className="font-semibold text-neutral-900">{formatCurrency(grandTotal)}</span>
+              Total tagihan: <span className="font-semibold text-neutral-900">{formatCurrency(grandTotal)}</span>
             </p>
           </div>
           <button
@@ -189,14 +195,17 @@ export function PaymentConfirmationDialog({
               {/* Jumlah */}
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-neutral-800">
-                  Jumlah yang ditransfer{" "}
-                  <span className="text-neutral-400 font-normal">
-                    (tagihan: {formatCurrency(grandTotal)})
-                  </span>
+                  Jumlah yang ditransfer
                 </label>
+                {minAmount && minAmount < grandTotal && (
+                  <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                    Minimum DP: <span className="font-semibold">{formatCurrency(minAmount)}</span>
+                    {" "}(50% dari {formatCurrency(grandTotal)})
+                  </p>
+                )}
                 <input
                   className="h-11 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  min={1}
+                  min={minAmount ?? 1}
                   onChange={(e) => setAmount(e.target.value)}
                   required
                   type="number"

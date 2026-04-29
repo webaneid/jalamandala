@@ -56,27 +56,46 @@ export default async function PublicInvoicePage({
   const fmtDate = (d: Date) =>
     new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", year: "numeric" }).format(d);
 
-  const totalPaid = payments.filter((p) => p.status === "paid").reduce((s, p) => s + p.amount, 0);
+  const totalPaid = payments.filter((p) => p.status === "verified").reduce((s, p) => s + p.amount, 0);
   const isOverdue =
     invoice.dueDate
-      ? new Date() > invoice.dueDate && invoice.status !== "paid" && invoice.status !== "cancelled"
+      ? new Date() > invoice.dueDate && invoice.status === "waiting_for_payment"
       : false;
   const isPaid = invoice.status === "paid";
-  const isWaitingConfirmation = invoice.status === "waiting_confirmation";
-  const isClosedStatus = isPaid || invoice.status === "expired" || invoice.status === "cancelled";
+  const isDpPaid = invoice.status === "dp_paid";
+  const isBalanceOverdue = invoice.status === "balance_overdue";
+  const isClosedStatus = ["paid", "expired", "cancelled", "refunding", "refunded"].includes(invoice.status);
   const showPaymentSection = !isClosedStatus;
   const hasPendingPayment = payments.some((p) => p.status === "pending_verification");
   const pendingPayments = payments.filter((p) => p.status === "pending_verification");
 
-  const statusConfig = isPaid
-    ? { label: "Lunas", color: "bg-emerald-500", text: "text-emerald-700 bg-emerald-50 border border-emerald-200", Icon: CheckCircle2 }
-    : isWaitingConfirmation
-    ? { label: "Menunggu Konfirmasi", color: "bg-blue-500", text: "text-blue-700 bg-blue-50 border border-blue-200", Icon: Clock }
+  // DP calculations
+  const dpMinimumPercent = invoice.dpMinimumPercent ?? 50;
+  const dpMinimumAmount = Math.ceil(invoice.grandTotal * dpMinimumPercent / 100);
+  const dpPaidAmount = invoice.dpAmount ?? 0;
+  const remainingBalance = Math.max(0, invoice.grandTotal - dpPaidAmount);
+  const dpProgressPct = invoice.grandTotal > 0 ? Math.min(100, Math.round(dpPaidAmount / invoice.grandTotal * 100)) : 0;
+
+  const statusConfig =
+    isPaid
+      ? { label: "Lunas", color: "bg-emerald-500", text: "text-emerald-700 bg-emerald-50 border border-emerald-200", Icon: CheckCircle2 }
+    : invoice.status === "waiting_confirmation"
+      ? { label: "Menunggu Konfirmasi", color: "bg-blue-500", text: "text-blue-700 bg-blue-50 border border-blue-200", Icon: Clock }
+    : invoice.status === "dp_waiting_confirmation"
+      ? { label: "DP — Menunggu Konfirmasi", color: "bg-blue-400", text: "text-blue-700 bg-blue-50 border border-blue-200", Icon: Clock }
+    : isDpPaid
+      ? { label: "DP Diterima — Menunggu Pelunasan", color: "bg-sky-500", text: "text-sky-700 bg-sky-50 border border-sky-200", Icon: Clock }
+    : invoice.status === "balance_waiting_confirmation"
+      ? { label: "Pelunasan — Menunggu Konfirmasi", color: "bg-blue-500", text: "text-blue-700 bg-blue-50 border border-blue-200", Icon: Clock }
+    : isBalanceOverdue
+      ? { label: "Melewati Deadline Pelunasan", color: "bg-red-500", text: "text-red-700 bg-red-50 border border-red-200", Icon: XCircle }
     : invoice.status === "expired" || invoice.status === "cancelled"
-    ? { label: invoice.status === "expired" ? "Kadaluarsa" : "Dibatalkan", color: "bg-slate-400", text: "text-slate-600 bg-slate-100 border border-slate-200", Icon: XCircle }
+      ? { label: invoice.status === "expired" ? "Kadaluarsa" : "Dibatalkan", color: "bg-slate-400", text: "text-slate-600 bg-slate-100 border border-slate-200", Icon: XCircle }
+    : invoice.status === "refunding" || invoice.status === "refunded"
+      ? { label: invoice.status === "refunded" ? "Refund Selesai" : "Sedang Direfund", color: "bg-purple-400", text: "text-purple-700 bg-purple-50 border border-purple-200", Icon: Clock }
     : isOverdue
-    ? { label: "Jatuh Tempo Terlampaui", color: "bg-red-500", text: "text-red-700 bg-red-50 border border-red-200", Icon: Clock }
-    : { label: "Menunggu Pembayaran", color: "bg-amber-400", text: "text-amber-700 bg-amber-50 border border-amber-200", Icon: Clock };
+      ? { label: "Jatuh Tempo Terlampaui", color: "bg-red-500", text: "text-red-700 bg-red-50 border border-red-200", Icon: Clock }
+      : { label: "Menunggu Pembayaran", color: "bg-amber-400", text: "text-amber-700 bg-amber-50 border border-amber-200", Icon: Clock };
 
   const fallbackUrl = session
     ? `/${event.slug}/dashboard`
@@ -299,11 +318,60 @@ export default async function PublicInvoicePage({
           </div>
         </div>
 
+        {/* ── DP PROGRESS CARD (dp_paid / balance_overdue / balance_waiting_confirmation) ── */}
+        {(isDpPaid || isBalanceOverdue || invoice.status === "balance_waiting_confirmation") && (
+          <div className={`bg-white rounded-2xl shadow-sm border overflow-hidden print:hidden ${isBalanceOverdue ? "border-red-200" : "border-sky-100"}`}>
+            <div className={`px-5 py-4 border-b ${isBalanceOverdue ? "border-red-100 bg-red-50" : "border-sky-50 bg-sky-50/60"}`}>
+              <p className={`text-sm font-bold ${isBalanceOverdue ? "text-red-700" : "text-sky-700"}`}>
+                {isBalanceOverdue ? "⚠️ Deadline Pelunasan Terlewat" : "Status Pembayaran DP"}
+              </p>
+            </div>
+            <div className="p-5 space-y-4">
+              {/* Progress bar */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs text-slate-500">
+                  <span>DP Terbayar</span>
+                  <span className="font-semibold text-slate-700">{fmt(dpPaidAmount)} / {fmt(invoice.grandTotal)}</span>
+                </div>
+                <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-sky-500 rounded-full transition-all"
+                    style={{ width: `${dpProgressPct}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-sky-600 font-medium">DP {dpProgressPct}%</span>
+                  <span className="text-slate-500">Sisa: <span className="font-semibold text-slate-700">{fmt(remainingBalance)}</span></span>
+                </div>
+              </div>
+
+              {/* Balance due date */}
+              {invoice.balanceDueDate && (
+                <div className={`rounded-xl px-4 py-3 text-sm ${isBalanceOverdue ? "bg-red-50 border border-red-200 text-red-700" : "bg-slate-50 border border-slate-200 text-slate-700"}`}>
+                  {isBalanceOverdue ? (
+                    <>
+                      <p className="font-semibold">Deadline pelunasan: {fmtDate(invoice.balanceDueDate)} (terlewat)</p>
+                      <p className="text-xs mt-1">Segera hubungi tim kami untuk melanjutkan atau memproses pembatalan.</p>
+                    </>
+                  ) : (
+                    <>
+                      <p>Deadline pelunasan: <span className="font-semibold">{fmtDate(invoice.balanceDueDate)}</span></p>
+                      <p className="text-xs mt-1 text-slate-500">Booth Anda sudah diamankan. Selesaikan pelunasan sebelum deadline.</p>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* ── INSTRUKSI PEMBAYARAN ── */}
         {showPaymentSection && (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden print:hidden">
             <div className="px-5 py-4 border-b border-slate-50">
-              <p className="text-sm font-bold text-slate-800">Cara Pembayaran</p>
+              <p className="text-sm font-bold text-slate-800">
+                {isDpPaid || isBalanceOverdue ? "Cara Pelunasan" : "Cara Pembayaran"}
+              </p>
             </div>
             <div className="p-5 space-y-4">
               {paymentChannels.length === 0 && !qrisConfig?.isEnabled ? (
@@ -324,7 +392,10 @@ export default async function PublicInvoicePage({
                       </div>
                       <p className="text-xs text-slate-500">
                         Transfer sejumlah:{" "}
-                        <span className="font-bold text-slate-900">{fmt(invoice.grandTotal)}</span>
+                        <span className="font-bold text-slate-900">
+                          {isDpPaid || isBalanceOverdue ? fmt(remainingBalance) : fmt(invoice.grandTotal)}
+                        </span>
+                        {isDpPaid || isBalanceOverdue ? " (sisa pelunasan)" : ""}
                       </p>
                       {ch.instruction && (
                         <p className="text-xs text-slate-400 border-t border-slate-200 pt-2">{ch.instruction}</p>
@@ -347,7 +418,9 @@ export default async function PublicInvoicePage({
                         </p>
                       )}
                       <p className="text-xs text-slate-500">
-                        Nominal: <span className="font-bold">{fmt(invoice.grandTotal)}</span>
+                        Nominal: <span className="font-bold">
+                          {isDpPaid || isBalanceOverdue ? fmt(remainingBalance) : fmt(invoice.grandTotal)}
+                        </span>
                       </p>
                       {qrisDynamic && (
                         <p className="text-xs text-primary font-medium">Scan QRIS · Nominal sudah terkunci</p>
@@ -357,7 +430,7 @@ export default async function PublicInvoicePage({
                 </>
               )}
 
-              {/* Pending confirmation notice OR confirm button */}
+              {/* Pending confirmation notice OR payment buttons */}
               {hasPendingPayment ? (
                 <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 space-y-3">
                   <div className="flex items-start gap-2">
@@ -390,18 +463,54 @@ export default async function PublicInvoicePage({
                     </div>
                   ))}
                 </div>
-              ) : (
-                paymentChannels.length > 0 || qrisConfig?.isEnabled ? (
+              ) : (paymentChannels.length > 0 || qrisConfig?.isEnabled) ? (
+                isDpPaid || isBalanceOverdue ? (
+                  /* Balance payment button */
                   <PaymentConfirmationTrigger
                     businessId={businessId}
+                    buttonLabel="Konfirmasi Pelunasan"
+                    defaultAmount={remainingBalance}
+                    dialogTitle="Konfirmasi Pelunasan"
                     eventSlug={event.slug}
                     grandTotal={invoice.grandTotal}
                     invoiceNumber={invoice.invoiceNumber}
                     paymentOptions={paymentOptions}
                     publicToken={invoice.publicToken}
                   />
-                ) : null
-              )}
+                ) : (
+                  /* waiting_for_payment: two buttons — lunas or DP */
+                  <div className="space-y-2">
+                    <PaymentConfirmationTrigger
+                      businessId={businessId}
+                      buttonLabel={`Bayar Lunas — ${fmt(invoice.grandTotal)}`}
+                      buttonClassName="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
+                      defaultAmount={invoice.grandTotal}
+                      dialogTitle="Konfirmasi Pembayaran Lunas"
+                      eventSlug={event.slug}
+                      grandTotal={invoice.grandTotal}
+                      invoiceNumber={invoice.invoiceNumber}
+                      paymentOptions={paymentOptions}
+                      publicToken={invoice.publicToken}
+                    />
+                    <PaymentConfirmationTrigger
+                      businessId={businessId}
+                      buttonLabel={`Bayar DP dulu — min ${fmt(dpMinimumAmount)} (${dpMinimumPercent}%)`}
+                      buttonClassName="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium rounded-lg border border-slate-300 transition-colors"
+                      defaultAmount={dpMinimumAmount}
+                      minAmount={dpMinimumAmount}
+                      dialogTitle="Konfirmasi DP"
+                      eventSlug={event.slug}
+                      grandTotal={invoice.grandTotal}
+                      invoiceNumber={invoice.invoiceNumber}
+                      paymentOptions={paymentOptions}
+                      publicToken={invoice.publicToken}
+                    />
+                    <p className="text-xs text-slate-400 text-center">
+                      DP mengamankan booth Anda. Pelunasan dalam 7 hari.
+                    </p>
+                  </div>
+                )
+              ) : null}
 
               {/* WhatsApp */}
               {waLink && (

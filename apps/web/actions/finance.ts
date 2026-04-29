@@ -1760,6 +1760,11 @@ export async function getInvoiceByToken(token: string) {
         paymentChannelType: invoice.paymentChannelType,
         notes: invoice.notes,
         publicToken: invoice.publicToken,
+        paymentType: invoice.paymentType,
+        dpMinimumPercent: invoice.dpMinimumPercent,
+        dpAmount: invoice.dpAmount,
+        dpPaidAt: invoice.dpPaidAt,
+        balanceDueDate: invoice.balanceDueDate,
       },
       participant: participant
         ? {
@@ -1790,6 +1795,7 @@ export async function getInvoiceByToken(token: string) {
         senderName: p.senderName,
         status: p.status,
         proofAssetId: p.proofAssetId,
+        paymentSequence: p.paymentSequence,
       })),
       event: {
         name: event.name,
