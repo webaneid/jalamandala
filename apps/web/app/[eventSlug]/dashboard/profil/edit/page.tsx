@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm"
 import { db } from "@repo/db"
 import { participants } from "@repo/db/schema/public"
 import { getCurrentParticipantSession } from "@/lib/participant-session"
+import { DashboardSubpageHeader } from "@/components/public/DashboardSubpageHeader"
 import { EditProfilForm } from "@/components/public/EditProfilForm"
 
 export const metadata = {
@@ -29,13 +30,14 @@ export default async function EditProfilPage({
   if (!participant) redirect(`/${eventSlug}/login`)
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Edit Profil</h1>
-        <p className="mt-0.5 text-sm text-white/60">Perbarui informasi kontak Anda.</p>
-      </div>
-      <div className="rounded-2xl border border-white/10 bg-white/8 p-5 backdrop-blur-sm">
-        <EditProfilForm defaultValues={participant} eventSlug={eventSlug} />
+    <div>
+      <DashboardSubpageHeader title="Edit Profil" subtitle="Perbarui informasi kontak Anda." />
+      <div className="px-4 pt-5 pb-8">
+        {/* White card — same pattern as profil page cards. Explicit text overrides
+            because FieldShell labels are text-white/80 (dark theme default). */}
+        <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm [&_input]:!text-slate-900 [&_label]:!text-slate-700 [&_p.text-xs]:!text-slate-500">
+          <EditProfilForm defaultValues={participant} eventSlug={eventSlug} />
+        </div>
       </div>
     </div>
   )

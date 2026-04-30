@@ -45,7 +45,7 @@ export function EditProfilForm({ defaultValues, eventSlug }: Props) {
     <form className="space-y-5" onSubmit={handleSubmit}>
       <FieldShell id="name" label="Nama Lengkap" required>
         <Input
-          className="h-11 rounded-2xl border-white/12 bg-white/8 text-white placeholder:text-white/30 focus-visible:border-[#00adee]/50"
+          className="h-11 rounded-2xl"
           disabled={isSubmitting}
           id="name"
           onChange={(e) => setName(e.target.value)}
@@ -56,7 +56,7 @@ export function EditProfilForm({ defaultValues, eventSlug }: Props) {
 
       <FieldShell id="email" label="Email" required>
         <Input
-          className="h-11 rounded-2xl border-white/12 bg-white/8 text-white placeholder:text-white/30 focus-visible:border-[#00adee]/50"
+          className="h-11 rounded-2xl"
           disabled={isSubmitting}
           id="email"
           onChange={(e) => setEmail(e.target.value)}
@@ -68,7 +68,7 @@ export function EditProfilForm({ defaultValues, eventSlug }: Props) {
 
       <FieldShell id="phone" label="Nomor Telepon">
         <Input
-          className="h-11 rounded-2xl border-white/12 bg-white/8 text-white placeholder:text-white/30 focus-visible:border-[#00adee]/50"
+          className="h-11 rounded-2xl"
           disabled={isSubmitting}
           id="phone"
           onChange={(e) => setPhone(e.target.value)}
@@ -77,11 +77,22 @@ export function EditProfilForm({ defaultValues, eventSlug }: Props) {
         />
       </FieldShell>
 
-      <div className="rounded-2xl border border-blue-400/20 bg-blue-500/10 px-4 py-3 text-xs text-blue-200">
-        Nomor WhatsApp tidak bisa diubah sendiri — hubungi panitia jika diperlukan perubahan.
+      {/* WhatsApp read-only notice — nomor sudah terverifikasi, tidak bisa diubah mandiri */}
+      <div className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3">
+        <span className="mt-0.5 shrink-0 text-blue-500">
+          <svg className="size-4" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clipRule="evenodd" />
+          </svg>
+        </span>
+        <div>
+          <p className="text-xs font-semibold text-blue-700">WhatsApp: {defaultValues.whatsapp ?? "—"}</p>
+          <p className="text-xs text-blue-600 mt-0.5">Nomor WhatsApp tidak dapat diubah sendiri. Hubungi panitia jika perlu perubahan.</p>
+        </div>
       </div>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && (
+        <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">{error}</p>
+      )}
 
       <button
         className="w-full rounded-2xl bg-primary py-3.5 text-sm font-semibold text-white shadow-sm transition disabled:opacity-50 hover:bg-primary/90"
