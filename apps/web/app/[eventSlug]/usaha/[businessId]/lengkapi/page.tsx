@@ -42,7 +42,7 @@ export default async function LengkapiUsahaPage({ params }: Props) {
         </p>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm text-slate-900 [&_input]:!text-slate-900 [&_textarea]:!text-slate-900 [&_select]:!text-slate-900 [&_label]:!text-slate-700 [&_p.text-xs]:!text-slate-500">
         <CompleteBusinessForm
           boothCategories={boothCategories}
           businessId={businessId}
