@@ -7,6 +7,7 @@ import { CheckCheck, Loader2, Pencil, Wallet, XCircle } from "lucide-react";
 import {
   markInvoiceAsPaid,
   rejectPaymentConfirmation,
+  updateInvoiceAdmin,
   updateInvoicePaymentMethod,
   verifyPaymentConfirmation,
 } from "@/actions/finance";
@@ -36,6 +37,9 @@ type InvoiceSummary = {
   status: string;
   paymentChannelKey: string | null;
   paymentChannelLabel: string | null;
+  dueDate?: string | null;
+  balanceDueDate?: string | null;
+  notes?: string | null;
 };
 
 type PaymentMethod = { key: string; label: string; type: string };
@@ -207,6 +211,12 @@ function AdminActionsCard({
   const [isPending, start] = React.useTransition();
   const [error, setError] = React.useState("");
 
+  // Edit tagihan
+  const [editingInvoice, setEditingInvoice] = React.useState(false);
+  const [editDueDate, setEditDueDate] = React.useState(() => invoice.dueDate ? toWibDateTimeLocal(new Date(invoice.dueDate)) : "");
+  const [editBalanceDueDate, setEditBalanceDueDate] = React.useState(() => invoice.balanceDueDate ? toWibDateTimeLocal(new Date(invoice.balanceDueDate)) : "");
+  const [editNotes, setEditNotes] = React.useState(invoice.notes ?? "");
+
   // Pilih metode
   const [editingMethod, setEditingMethod] = React.useState(false);
   const [methodKey, setMethodKey] = React.useState(invoice.paymentChannelKey ?? "");
@@ -220,6 +230,21 @@ function AdminActionsCard({
   const [paymentMethodKey, setPaymentMethodKey] = React.useState(invoice.paymentChannelKey ?? "");
   const [proofAsset, setProofAsset] = React.useState<MediaPickerValue>(null);
   const [notes, setNotes] = React.useState("");
+
+  function saveEditInvoice() {
+    setError("");
+    start(async () => {
+      const isDpInvoice = invoice.status === "dp_paid" || invoice.status === "balance_overdue";
+      const result = await updateInvoiceAdmin(invoice.id, {
+        dueDate: editDueDate || null,
+        balanceDueDate: isDpInvoice ? (editBalanceDueDate || null) : undefined,
+        notes: editNotes,
+      });
+      if (!result.success) { setError(result.error ?? "Gagal."); return; }
+      setEditingInvoice(false);
+      router.refresh();
+    });
+  }
 
   function saveMethod() {
     setError("");
@@ -268,6 +293,74 @@ function AdminActionsCard({
       <CardContent className="pt-5 space-y-4">
         {error && (
           <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
+        )}
+
+        {/* Edit tagihan */}
+        {!editingMethod && !editingPaid && (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Edit Tagihan</p>
+            {editingInvoice ? (
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Jatuh Tempo</label>
+                  <input
+                    type="datetime-local"
+                    className="h-10 w-full rounded-xl border border-input bg-white px-3 text-sm outline-none focus:border-primary-600"
+                    value={editDueDate}
+                    onChange={(e) => setEditDueDate(e.target.value)}
+                  />
+                </div>
+                {(invoice.status === "dp_paid" || invoice.status === "balance_overdue") && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">Jatuh Tempo Pelunasan (DP)</label>
+                    <input
+                      type="datetime-local"
+                      className="h-10 w-full rounded-xl border border-input bg-white px-3 text-sm outline-none focus:border-primary-600"
+                      value={editBalanceDueDate}
+                      onChange={(e) => setEditBalanceDueDate(e.target.value)}
+                    />
+                  </div>
+                )}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Catatan Admin</label>
+                  <textarea
+                    className="min-h-16 w-full rounded-xl border border-input bg-white px-3 py-2 text-sm outline-none focus:border-primary-600"
+                    placeholder="Catatan internal (tidak tampil ke peserta)"
+                    value={editNotes}
+                    onChange={(e) => setEditNotes(e.target.value)}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    className="flex-1 h-9 rounded-xl bg-primary-700 px-3 text-sm font-medium text-white hover:bg-primary-800 disabled:opacity-50"
+                    disabled={isPending}
+                    onClick={saveEditInvoice}
+                    type="button"
+                  >
+                    {isPending ? "Menyimpan..." : "Simpan"}
+                  </button>
+                  <button
+                    className="flex-1 h-9 rounded-xl border px-3 text-sm hover:bg-neutral-50"
+                    onClick={() => setEditingInvoice(false)}
+                    type="button"
+                  >
+                    Batal
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setEditingInvoice(true)}
+                className="flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-sm hover:bg-neutral-50"
+                type="button"
+              >
+                <span className="text-muted-foreground">Jatuh tempo, catatan, &amp; lainnya</span>
+                <span className="text-primary-700 text-xs font-medium flex items-center gap-1">
+                  <Pencil className="size-3" />Ubah
+                </span>
+              </button>
+            )}
+          </div>
         )}
 
         {/* Pilih metode */}

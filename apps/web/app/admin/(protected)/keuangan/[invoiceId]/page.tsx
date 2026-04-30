@@ -205,7 +205,7 @@ async function getInvoiceDetail(invoiceId: string) {
       id: invoice.id,
       invoiceNumber: invoice.invoiceNumber,
       issueDate: invoice.issueDate,
-      dueDate: invoice.dueDate,
+      dueDate: invoice.dueDate?.toISOString() ?? null,
       status: invoice.status,
       subtotal: invoice.subtotal,
       taxAmount: invoice.taxAmount,
@@ -214,7 +214,7 @@ async function getInvoiceDetail(invoiceId: string) {
       overpaymentAmount: invoice.overpaymentAmount ?? 0,
       dpAmount: invoice.dpAmount ?? 0,
       dpPaidAt: invoice.dpPaidAt ?? null,
-      balanceDueDate: invoice.balanceDueDate ?? null,
+      balanceDueDate: invoice.balanceDueDate?.toISOString() ?? null,
       paymentChannelLabel: invoice.paymentChannelLabel,
       paymentChannelKey: invoice.paymentChannelType === "bank_account" && invoice.paymentChannelId
         ? `bank:${invoice.paymentChannelId}`
@@ -466,7 +466,7 @@ export default async function InvoiceDetailPage({
           invoiceNumber={invoice.invoiceNumber}
           grandTotal={invoice.grandTotal}
           dpAmount={invoice.dpAmount}
-          balanceDueDate={invoice.balanceDueDate}
+          balanceDueDate={invoice.balanceDueDate ? new Date(invoice.balanceDueDate) : null}
           status={invoice.status}
           participantName={participant?.name ?? ""}
         />

@@ -2064,3 +2064,47 @@ export async function cancelInvoiceWithRefund(payload: {
     return { success: false, error: "Gagal membatalkan invoice. Cek konsol server." };
   }
 }
+
+// ── Admin: Edit Invoice ──────────────────────────────────────────────────────
+
+export async function updateInvoiceAdmin(
+  invoiceId: string,
+  payload: {
+    dueDate?: string | null;
+    balanceDueDate?: string | null;
+    notes?: string | null;
+  }
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await getAdminSession();
+    const tenantDb = await createTenantDb(TENANT_SCHEMA);
+
+    const invoice = await tenantDb.query.invoices.findFirst({
+      where: eq(invoices.id, invoiceId),
+      columns: { id: true, status: true },
+    });
+    if (!invoice) return { success: false, error: "Invoice tidak ditemukan." };
+
+    function parseWibDate(value: string | null | undefined): Date | null {
+      if (!value) return null;
+      const withTz = value.includes("+") || value.includes("Z") ? value : `${value}:00+07:00`;
+      const d = new Date(withTz);
+      if (Number.isNaN(d.getTime())) return null;
+      return d;
+    }
+
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
+    if (payload.dueDate !== undefined) updates.dueDate = parseWibDate(payload.dueDate);
+    if (payload.balanceDueDate !== undefined) updates.balanceDueDate = parseWibDate(payload.balanceDueDate);
+    if (payload.notes !== undefined) updates.notes = payload.notes?.trim() || null;
+
+    await tenantDb.update(invoices).set(updates).where(eq(invoices.id, invoiceId));
+
+    revalidatePath(`/admin/keuangan/${invoiceId}`);
+    revalidatePath("/admin/keuangan");
+    return { success: true };
+  } catch (error) {
+    console.error("updateInvoiceAdmin error:", error);
+    return { success: false, error: "Gagal menyimpan perubahan invoice." };
+  }
+}
