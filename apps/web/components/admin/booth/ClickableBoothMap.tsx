@@ -128,11 +128,13 @@ export function ClickableBoothMap({
   boothGroups,
   companies,
   zones,
+  canEdit = true,
 }: {
   boothCategories: BoothOption[];
   boothGroups: BoothOption[];
   companies: CompanyOption[];
   zones: BoothMapZone[];
+  canEdit?: boolean;
 }) {
   const router = useRouter();
   const [isSaving, startSaving] = React.useTransition();
@@ -314,13 +316,15 @@ export function ClickableBoothMap({
                       ) : (
                         <span className="italic text-muted-foreground/50">Lokasi belum diisi</span>
                       )}
-                      <button
-                        className="inline-flex size-6 items-center justify-center rounded-lg border border-border/70 bg-white text-muted-foreground transition hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700"
-                        onClick={() => openLocationEditor(zone)}
-                        type="button"
-                      >
-                        <Pencil className="size-3" />
-                      </button>
+                      {canEdit && (
+                        <button
+                          className="inline-flex size-6 items-center justify-center rounded-lg border border-border/70 bg-white text-muted-foreground transition hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700"
+                          onClick={() => openLocationEditor(zone)}
+                          type="button"
+                        >
+                          <Pencil className="size-3" />
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -340,13 +344,15 @@ export function ClickableBoothMap({
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                         Feature Image
                       </p>
-                      <button
-                        className="inline-flex size-8 items-center justify-center rounded-xl border border-border/70 bg-white text-muted-foreground transition hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700"
-                        onClick={() => openImageEditor(zone)}
-                        type="button"
-                      >
-                        <Pencil className="size-3.5" />
-                      </button>
+                      {canEdit && (
+                        <button
+                          className="inline-flex size-8 items-center justify-center rounded-xl border border-border/70 bg-white text-muted-foreground transition hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700"
+                          onClick={() => openImageEditor(zone)}
+                          type="button"
+                        >
+                          <Pencil className="size-3.5" />
+                        </button>
+                      )}
                     </div>
                     <div className="mt-3 overflow-hidden rounded-xl border border-border/60 bg-muted/30">
                       {zone.imageAssetId ? (
@@ -368,13 +374,15 @@ export function ClickableBoothMap({
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                         Fasilitas
                       </p>
-                      <button
-                        className="inline-flex size-8 items-center justify-center rounded-xl border border-border/70 bg-white text-muted-foreground transition hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700"
-                        onClick={() => openFacilitiesEditor(zone)}
-                        type="button"
-                      >
-                        <Pencil className="size-3.5" />
-                      </button>
+                      {canEdit && (
+                        <button
+                          className="inline-flex size-8 items-center justify-center rounded-xl border border-border/70 bg-white text-muted-foreground transition hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700"
+                          onClick={() => openFacilitiesEditor(zone)}
+                          type="button"
+                        >
+                          <Pencil className="size-3.5" />
+                        </button>
+                      )}
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">
                       {facilities.map((facility) => (
@@ -393,13 +401,15 @@ export function ClickableBoothMap({
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                         Harga
                       </p>
-                      <button
-                        className="inline-flex size-8 items-center justify-center rounded-xl border border-border/70 bg-white text-muted-foreground transition hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700"
-                        onClick={() => openPricesEditor(zone)}
-                        type="button"
-                      >
-                        <Pencil className="size-3.5" />
-                      </button>
+                      {canEdit && (
+                        <button
+                          className="inline-flex size-8 items-center justify-center rounded-xl border border-border/70 bg-white text-muted-foreground transition hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700"
+                          onClick={() => openPricesEditor(zone)}
+                          type="button"
+                        >
+                          <Pencil className="size-3.5" />
+                        </button>
+                      )}
                     </div>
                     <div className="mt-3 grid gap-3 text-sm">
                       {priceGroups.map((group) => (
@@ -410,25 +420,25 @@ export function ClickableBoothMap({
                 </div>
 
                 {zone.slug === "vip" ? (
-                  <VipZoneLayout onBoothClick={(booth) => openBooth(zone, booth)} zone={zone} />
+                  <VipZoneLayout onBoothClick={canEdit ? (booth) => openBooth(zone, booth) : () => {}} zone={zone} />
                 ) : zone.slug === "premium" ? (
                   <PremiumZoneLayout
-                    onBoothClick={(booth) => openBooth(zone, booth)}
+                    onBoothClick={canEdit ? (booth) => openBooth(zone, booth) : () => {}}
                     zone={zone}
                   />
                 ) : zone.slug === "festival-west" ? (
                   <FestivalWestZoneLayout
-                    onBoothClick={(booth) => openBooth(zone, booth)}
+                    onBoothClick={canEdit ? (booth) => openBooth(zone, booth) : () => {}}
                     zone={zone}
                   />
                 ) : zone.slug === "festival-north" ? (
                   <FestivalNorthZoneLayout
-                    onBoothClick={(booth) => openBooth(zone, booth)}
+                    onBoothClick={canEdit ? (booth) => openBooth(zone, booth) : () => {}}
                     zone={zone}
                   />
                 ) : (
                   <BoothCanvasLayout
-                    onBoothClick={(booth) => openBooth(zone, booth)}
+                    onBoothClick={canEdit ? (booth) => openBooth(zone, booth) : () => {}}
                     viewport={viewport}
                     zone={zone}
                   />

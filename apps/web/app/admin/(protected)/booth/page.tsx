@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { Layers3, MapIcon, MoveRight } from "lucide-react";
 
 import { createTenantDb, db } from "@repo/db";
+import { getAdminSession } from "@/lib/admin-auth";
 
 import { ClickableBoothMap } from "@/components/admin/booth/ClickableBoothMap";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
@@ -152,6 +153,9 @@ export const metadata = {
 };
 
 export default async function BoothPage() {
+  const access = await getAdminSession();
+  const canEdit = access.can(["super_admin", "admin"]);
+
   const [{ boothCategories, boothGroups, zones }, companies] = await Promise.all([
     getBoothMapData(),
     getCompanies(),
@@ -182,6 +186,7 @@ export default async function BoothPage() {
           boothGroups={boothGroups}
           companies={companies}
           zones={zones}
+          canEdit={canEdit}
         />
 
         <div className="space-y-4">

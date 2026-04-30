@@ -44,10 +44,14 @@ export default async function PesertaPage() {
               <UserPlus className="size-4" />
               Tambah Peserta
             </Link>
-            <Button variant="outline" className="rounded-2xl bg-white/90 px-4">
+            <a
+              href="/api/admin/export/peserta"
+              download
+              className={buttonVariants({ variant: "outline", className: "rounded-2xl bg-white/90 px-4" })}
+            >
               <FileDown className="size-4" />
-              Export Data
-            </Button>
+              Export Excel
+            </a>
           </>
         }
       />

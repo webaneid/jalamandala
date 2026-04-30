@@ -93,26 +93,32 @@ requireRoles(allowed: AdminRole[]): Promise<AdminAccess>
 
 ### Matriks Akses Halaman Admin
 
-| Halaman | Path | Role yang bisa akses |
-|---|---|---|
-| Dashboard | `/admin` | Semua admin role |
-| Peta & Booth | `/admin/booth` | Semua admin role |
-| Data Pendaftar | `/admin/peserta` | super_admin, admin, finance |
-| Tambah Peserta | `/admin/peserta/tambah` | super_admin, admin, finance |
-| Keuangan | `/admin/keuangan` | super_admin, finance |
-| Pencairan Dana | `/admin/keuangan/pencairan` | super_admin, finance |
-| Agenda Event | `/admin/agenda` | super_admin, event_crew |
-| Setting Event | `/admin/setting` | super_admin, event_crew, admin |
-| Laman Event | `/admin/laman` | super_admin, admin |
-| Anggota FORBIS | `/admin/anggota-forbis` | super_admin, admin |
-| Vendor | `/admin/vendor` | super_admin, admin, finance |
-| Pengguna & Role | `/admin/pengguna` | super_admin only |
-| Media Library | `/admin/media` | super_admin only |
-| Konfigurasi Add-on | `/admin/addon` | super_admin only |
+| Halaman | Path | Role yang bisa akses | Edit? |
+|---|---|---|---|
+| Dashboard | `/admin` | Semua admin role | — |
+| Peta & Booth (lihat) | `/admin/booth` | Semua admin role | — |
+| Peta & Booth (edit zona, booth, harga) | `/admin/booth` | super_admin, admin | ✓ |
+| Data Pendaftar | `/admin/peserta` | super_admin, admin, finance | ✓ |
+| Tambah Peserta | `/admin/peserta/tambah` | super_admin, admin, finance | ✓ |
+| Keuangan | `/admin/keuangan` | super_admin, finance | ✓ |
+| Pencairan Dana | `/admin/keuangan/pencairan` | super_admin, finance | ✓ |
+| Agenda Event | `/admin/agenda` | super_admin, event_crew | ✓ |
+| Setting Event | `/admin/setting` | super_admin, event_crew, admin | ✓ |
+| Laman Event | `/admin/laman` | super_admin, admin | ✓ |
+| Anggota FORBIS | `/admin/anggota-forbis` | super_admin, admin | ✓ |
+| Vendor | `/admin/vendor` | super_admin, admin, finance | ✓ |
+| WhatsApp Rotator | `/admin/whatsapp-rotator` | super_admin, admin, finance | ✓ |
+| Pengguna & Role | `/admin/pengguna` | super_admin only | ✓ |
+| Media Library | `/admin/media` | super_admin only | ✓ |
+| Konfigurasi Add-on | `/admin/addon` | super_admin only | ✓ |
 
 ### Sidebar Filtering
 
-Sidebar (`AdminShell`) juga memfilter nav item berdasarkan role yang sama — item yang tidak bisa diakses tidak ditampilkan sama sekali. Role diambil di server (layout.tsx) dan dipass ke client shell sebagai `userRoles: string[]`.
+Sidebar (`AdminShell`) memfilter nav item berdasarkan role — item yang tidak bisa diakses tidak ditampilkan. Role diambil di server (`layout.tsx`) dan dipass ke client shell sebagai `userRoles: string[]`.
+
+### Booth canEdit
+
+Halaman `/admin/booth` bisa diakses semua admin role (read-only). Namun tombol edit (zona, fasilitas, harga, gambar) dan klik booth untuk edit hanya aktif jika `canEdit = access.can(["super_admin", "admin"])`. `finance` dan `event_crew` bisa **lihat peta** tapi tidak bisa **mengubah** data booth.
 
 ---
 
