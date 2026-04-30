@@ -143,6 +143,12 @@ export function PublicParticipantAuthForm({
       return;
     }
 
+    if (!registerForm.email?.trim()) {
+      setError("Email wajib diisi.");
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       const response = await fetch("/api/public/register", {
         body: JSON.stringify({
@@ -512,7 +518,7 @@ export function PublicParticipantAuthForm({
               />
             </FieldShell>
           )}
-          <FieldShell hint="Opsional. Dipakai untuk pengiriman invoice dan notifikasi." id="email" label="Email">
+          <FieldShell id="email" label="Email" required>
             <Input
               autoComplete="email"
               className="h-11 rounded-2xl border-white/12 bg-white/8 text-white placeholder:text-white/30 focus-visible:border-[#00adee]/50"

@@ -50,6 +50,9 @@ export async function POST(request: NextRequest) {
     if (name.length < 2) {
       return NextResponse.json({ success: false, error: "Nama lengkap wajib diisi." }, { status: 400 });
     }
+    if (!email) {
+      return NextResponse.json({ success: false, error: "Email wajib diisi." }, { status: 400 });
+    }
     if (!PHONE_RE.test(rawPhone.replace(/\s/g, "")) || !PHONE_RE.test(rawWhatsapp.replace(/\s/g, ""))) {
       return NextResponse.json({ success: false, error: "Format nomor telepon/WhatsApp tidak valid." }, { status: 400 });
     }

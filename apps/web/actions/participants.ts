@@ -11,6 +11,7 @@ import {
   deleteMinioObjectByUrl,
   uploadParticipantBusinessLogo,
 } from "@/lib/minio-storage";
+import { hashParticipantPassword } from "@/lib/participant-auth";
 
 type ParticipantPayload = {
   forbisMemberId?: string;
@@ -222,6 +223,26 @@ export async function updateParticipant(id: string, data: ParticipantPayload) {
   } catch (error) {
     console.error("Error updating participant:", error);
     return { success: false, error: "Gagal memperbarui data pribadi." };
+  }
+}
+
+export async function resetParticipantPassword(participantId: string, newPassword: string) {
+  if (!newPassword || newPassword.length < 8) {
+    return { success: false, error: "Password minimal 8 karakter." };
+  }
+  try {
+    const passwordHash = await hashParticipantPassword(newPassword);
+    const [result] = await db
+      .update(participants)
+      .set({ passwordHash, passwordUpdatedAt: new Date(), updatedAt: new Date() })
+      .where(eq(participants.id, participantId))
+      .returning({ id: participants.id });
+    if (!result) return { success: false, error: "Peserta tidak ditemukan." };
+    revalidatePath(`/admin/peserta/${participantId}`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error resetting password:", error);
+    return { success: false, error: "Gagal mereset password." };
   }
 }
 

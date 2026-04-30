@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { ParticipantForm } from "@/components/forms/ParticipantForm";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { getBoothFormOptions } from "@/lib/booth-form-options";
+import { ResetPasswordForm } from "@/components/admin/peserta/ResetPasswordForm";
 
 
 export const metadata = {
@@ -44,11 +45,13 @@ export default async function ParticipantEditPage({ params }: { params: { id: st
         description={`Mengubah informasi untuk ${participant.name}`}
       />
 
-      <ParticipantForm 
+      <ParticipantForm
         boothGroupOptions={boothGroups}
-        participantId={id} 
-        defaultValues={defaultValues as any} 
+        participantId={id}
+        defaultValues={defaultValues as any}
       />
+
+      <ResetPasswordForm participantId={id} />
     </div>
   );
 }
