@@ -26,6 +26,7 @@ export default async function ParticipantEditPage({ params }: { params: { id: st
   // Map DB fields to Form fields
   const defaultValues = {
     fullName: participant.name,
+    email: participant.email || "",
     phone: participant.phone,
     whatsapp: participant.whatsapp,
     isSameAsPhone: participant.phone === participant.whatsapp,
