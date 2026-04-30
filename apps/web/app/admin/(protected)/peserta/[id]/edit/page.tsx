@@ -6,6 +6,7 @@ import { ParticipantForm } from "@/components/forms/ParticipantForm";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { getBoothFormOptions } from "@/lib/booth-form-options";
 import { ResetPasswordForm } from "@/components/admin/peserta/ResetPasswordForm";
+import { WhatsappVerifyButton } from "@/components/admin/peserta/WhatsappVerifyButton";
 
 
 export const metadata = {
@@ -50,6 +51,12 @@ export default async function ParticipantEditPage({ params }: { params: { id: st
         boothGroupOptions={boothGroups}
         participantId={id}
         defaultValues={defaultValues as any}
+      />
+
+      <WhatsappVerifyButton
+        participantId={id}
+        whatsapp={participant.whatsapp}
+        isVerified={!!participant.whatsappVerifiedAt}
       />
 
       <ResetPasswordForm participantId={id} />

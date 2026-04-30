@@ -226,6 +226,23 @@ export async function updateParticipant(id: string, data: ParticipantPayload) {
   }
 }
 
+export async function markWhatsappVerified(participantId: string) {
+  try {
+    const [result] = await db
+      .update(participants)
+      .set({ whatsappVerifiedAt: new Date(), updatedAt: new Date() })
+      .where(eq(participants.id, participantId))
+      .returning({ id: participants.id });
+    if (!result) return { success: false, error: "Peserta tidak ditemukan." };
+    revalidatePath(`/admin/peserta/${participantId}`);
+    revalidatePath(`/admin/peserta/${participantId}/edit`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error marking whatsapp verified:", error);
+    return { success: false, error: "Gagal memperbarui status verifikasi." };
+  }
+}
+
 export async function resetParticipantPassword(participantId: string, newPassword: string) {
   if (!newPassword || newPassword.length < 8) {
     return { success: false, error: "Password minimal 8 karakter." };
