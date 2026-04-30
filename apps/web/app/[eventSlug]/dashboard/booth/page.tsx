@@ -4,6 +4,7 @@ import { db, createTenantDb } from "@repo/db"
 import { participantBusinesses } from "@repo/db/schema/public"
 import { boothBookings, invoices } from "@repo/db/schema/tenant"
 import { getCurrentParticipantSession } from "@/lib/participant-session"
+import { DashboardSubpageHeader } from "@/components/public/DashboardSubpageHeader"
 
 const TENANT_SCHEMA = process.env.TENANT_SCHEMA ?? "expo_forbis2026"
 
@@ -79,12 +80,7 @@ export default async function DashboardBoothPage({
 
   return (
     <div className="min-h-full">
-      <div className="bg-white border-b border-slate-100 px-5 pt-14 pb-5 sticky top-0 z-10">
-        <h1 className="text-xl font-bold text-slate-900">Booth Saya</h1>
-        <p className="text-sm text-slate-500 mt-0.5">
-          {booked.length} booth dipesan
-        </p>
-      </div>
+      <DashboardSubpageHeader title="Booth Saya" subtitle={`${booked.length} booth dipesan`} />
 
       <div className="px-4 py-4 space-y-3">
         {booked.length === 0 && unbooked.length === 0 ? (

@@ -135,7 +135,7 @@ export function PublicTermsStep({
       <div className="max-h-[480px] overflow-y-auto rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-inner">
         <h3 className="mb-4 text-base font-bold text-slate-900">{termsPage.title}</h3>
         <article
-          className="prose prose-sm prose-slate max-w-none font-sans"
+          className="prose prose-slate prose-admin max-w-none"
           dangerouslySetInnerHTML={{ __html: termsPage.htmlString }}
         />
       </div>

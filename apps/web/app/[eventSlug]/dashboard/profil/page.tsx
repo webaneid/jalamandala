@@ -69,7 +69,15 @@ export default async function DashboardProfilPage({
       <div className="px-4 space-y-4 -mt-1 pt-5">
         {/* Info kontak */}
         <section className="rounded-2xl bg-white border border-slate-100 overflow-hidden shadow-sm">
-          <p className="px-4 pt-4 pb-2 text-xs font-semibold uppercase tracking-widest text-slate-400">Informasi Kontak</p>
+          <div className="flex items-center justify-between px-4 pt-4 pb-2">
+            <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Informasi Kontak</p>
+            <Link
+              href={`/${eventSlug}/dashboard/profil/edit`}
+              className="text-xs font-semibold text-primary hover:underline"
+            >
+              Edit →
+            </Link>
+          </div>
           <InfoRow icon="📱" label="WhatsApp" value={participant?.whatsapp ?? "—"} />
           <InfoRow icon="📞" label="Telepon" value={participant?.phone ?? "—"} />
           <InfoRow icon="✉️" label="Email" value={participant?.email ?? "Belum diisi"} />

@@ -46,12 +46,13 @@ export default async function KebijakanPrivasiPage({
   return (
     <div className="py-14">
       <div className="mx-auto max-w-[720px] px-5">
-        <h1 className="mb-8 text-3xl font-bold tracking-tight text-white">{pageData.title}</h1>
-        
-        <article 
-          className="prose prose-forbis max-w-none"
-          dangerouslySetInnerHTML={{ __html: htmlString }}
-        />
+        <h1 className="mb-6 text-3xl font-bold tracking-tight text-white">{pageData.title}</h1>
+        <div className="rounded-[15px] border border-white/10 bg-white/10 p-[15px] backdrop-blur-sm sm:p-5">
+          <article
+            className="prose prose-forbis max-w-none"
+            dangerouslySetInnerHTML={{ __html: htmlString }}
+          />
+        </div>
       </div>
     </div>
   );

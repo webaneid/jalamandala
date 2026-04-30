@@ -243,6 +243,37 @@ export async function markWhatsappVerified(participantId: string) {
   }
 }
 
+export async function updatePublicParticipantProfile(data: {
+  name: string
+  email?: string
+  phone?: string
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { getCurrentParticipantSession } = await import("@/lib/participant-session")
+    const session = await getCurrentParticipantSession()
+    if (!session) return { success: false, error: "Sesi tidak valid. Silakan login kembali." }
+
+    if (!data.name.trim()) return { success: false, error: "Nama wajib diisi." }
+
+    await db
+      .update(participants)
+      .set({
+        name: data.name.trim(),
+        email: data.email?.trim() || null,
+        phone: data.phone?.trim() || "",
+        updatedAt: new Date(),
+      })
+      .where(eq(participants.id, session.participantId))
+
+    revalidatePath(`/${session.eventSlug}/dashboard/profil`)
+    revalidatePath(`/${session.eventSlug}/dashboard`)
+    return { success: true }
+  } catch (error) {
+    console.error("Error updating participant profile:", error)
+    return { success: false, error: "Gagal memperbarui profil." }
+  }
+}
+
 export async function resetParticipantPassword(participantId: string, newPassword: string) {
   if (!newPassword || newPassword.length < 8) {
     return { success: false, error: "Password minimal 8 karakter." };

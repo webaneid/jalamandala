@@ -17,9 +17,12 @@ import {
 } from "@/lib/registration-catalog"
 import type { BoothCategoryFormOption } from "@/lib/booth-form-options"
 
+const MAX_LOGO_BYTES = 5 * 1024 * 1024
+
 type Props = {
   boothCategories: BoothCategoryFormOption[]
   businessId: string
+  currentLogoAssetId?: string | null
   defaultValues: {
     brandName: string
     boothName: string
@@ -44,6 +47,7 @@ type Props = {
     partnershipConcepts: string[]
   }
   eventSlug: string
+  redirectTo?: string
 }
 
 type CatalogData = {
@@ -217,10 +221,14 @@ function TagAutocomplete({
   )
 }
 
-export function CompleteBusinessForm({ boothCategories, businessId, defaultValues, eventSlug }: Props) {
+type NewLogo = { contentType: string; dataUrl: string; fileName: string; previewUrl: string }
+
+export function CompleteBusinessForm({ boothCategories, businessId, currentLogoAssetId, defaultValues, eventSlug, redirectTo }: Props) {
   const router = useRouter()
   const [error, setError] = React.useState("")
   const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [newLogo, setNewLogo] = React.useState<NewLogo | null>(null)
+  const logoFileRef = React.useRef<HTMLInputElement>(null)
   const [catalog, setCatalog] = React.useState<CatalogData>({
     businessCategories: [],
     businessSectors: [],
@@ -262,7 +270,7 @@ export function CompleteBusinessForm({ boothCategories, businessId, defaultValue
 
   const [brandName, setBrandName] = React.useState(defaultValues.brandName)
   const [boothName, setBoothName] = React.useState(defaultValues.boothName)
-  const [companyName] = React.useState(defaultValues.companyName)
+  const [companyName, setCompanyName] = React.useState(defaultValues.companyName)
   const [categorySlug, setCategorySlug] = React.useState(defaultValues.requestedBoothCategorySlug)
   const [description, setDescription] = React.useState(defaultValues.companyDescription)
   const [companyPhone, setCompanyPhone] = React.useState(defaultValues.companyPhone)
@@ -286,6 +294,22 @@ export function CompleteBusinessForm({ boothCategories, businessId, defaultValue
   const [partnershipConcepts, setPartnershipConcepts] = React.useState<string[]>(defaultValues.partnershipConcepts)
 
   const wordCount = description.trim() ? description.trim().split(/\s+/).filter(Boolean).length : 0
+
+  function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > MAX_LOGO_BYTES) { setError("Ukuran logo maksimal 5 MB."); return }
+    const reader = new FileReader()
+    reader.onload = () => {
+      setNewLogo({
+        contentType: file.type,
+        dataUrl: reader.result as string,
+        fileName: file.name,
+        previewUrl: URL.createObjectURL(file),
+      })
+    }
+    reader.readAsDataURL(file)
+  }
 
   function togglePartnership(concept: string) {
     setPartnershipConcepts((prev) =>
@@ -331,6 +355,9 @@ export function CompleteBusinessForm({ boothCategories, businessId, defaultValue
         legalEntity,
         partnershipConcepts,
         productTags,
+        logoUpload: newLogo
+          ? { dataUrl: newLogo.dataUrl, contentType: newLogo.contentType, fileName: newLogo.fileName }
+          : undefined,
       })
 
       if (!result.success) {
@@ -338,7 +365,7 @@ export function CompleteBusinessForm({ boothCategories, businessId, defaultValue
         return
       }
 
-      router.push(`/${eventSlug}/usaha/${businessId}/epass`)
+      router.push(redirectTo ?? `/${eventSlug}/usaha/${businessId}/epass`)
     } catch {
       setError("Terjadi kesalahan. Coba lagi.")
     } finally {
@@ -348,11 +375,58 @@ export function CompleteBusinessForm({ boothCategories, businessId, defaultValue
 
   return (
     <form className="space-y-8" onSubmit={handleSubmit}>
+      {/* Logo */}
+      <div className="flex items-center gap-4">
+        <button
+          className="relative size-16 shrink-0 overflow-hidden rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 transition hover:border-primary/40 focus:outline-none"
+          disabled={isSubmitting}
+          onClick={() => logoFileRef.current?.click()}
+          type="button"
+        >
+          {newLogo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img alt="logo baru" className="h-full w-full object-cover" src={newLogo.previewUrl} />
+          ) : currentLogoAssetId ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img alt="logo" className="h-full w-full object-cover" src={`/api/media/${currentLogoAssetId}`} />
+          ) : (
+            <svg className="size-6 text-slate-300" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <path d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5M12 3.75v8.25M8.25 8.25L12 4.5l3.75 3.75" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+        </button>
+        <div className="text-sm">
+          <p className="font-medium text-slate-700">Logo Perusahaan</p>
+          <p className="text-slate-400">Opsional · Maks 5 MB (JPG/PNG)</p>
+          {newLogo && (
+            <button
+              className="mt-0.5 text-xs text-red-500 hover:underline"
+              onClick={() => { setNewLogo(null); if (logoFileRef.current) logoFileRef.current.value = "" }}
+              type="button"
+            >
+              Hapus logo baru
+            </button>
+          )}
+        </div>
+        <input accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleLogoChange} ref={logoFileRef} type="file" />
+      </div>
+
       {/* Identitas Usaha */}
       <section className="space-y-4">
         <p className="text-sm font-semibold uppercase tracking-[0.15em] text-primary-600">
           Identitas Usaha
         </p>
+
+        <FieldShell id="companyName" label="Nama Perusahaan" required>
+          <Input
+            className="h-11 rounded-2xl"
+            disabled={isSubmitting}
+            id="companyName"
+            onChange={(e) => setCompanyName(e.target.value)}
+            placeholder="PT / CV / UD / Nama Usaha"
+            value={companyName}
+          />
+        </FieldShell>
 
         <FieldShell id="brandName" label="Nama Brand / Merek" required>
           <Input

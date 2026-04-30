@@ -12,7 +12,7 @@ interface Props {
 
 
 export const metadata = {
-  title: "Lengkapi Data Usaha",
+  title: "Edit Data Usaha",
 };
 
 export default async function LengkapiUsahaPage({ params }: Props) {
@@ -36,9 +36,9 @@ export default async function LengkapiUsahaPage({ params }: Props) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Lengkapi Data Usaha</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Lengkapi profil usaha <span className="font-medium text-slate-700">{business.companyName}</span> untuk keperluan pameran.
+        <h1 className="text-2xl font-bold text-white">Edit Data Usaha</h1>
+        <p className="mt-1 text-sm text-white/60">
+          Edit profil usaha <span className="font-medium text-white/80">{business.companyName}</span> untuk keperluan pameran.
         </p>
       </div>
 
@@ -46,6 +46,7 @@ export default async function LengkapiUsahaPage({ params }: Props) {
         <CompleteBusinessForm
           boothCategories={boothCategories}
           businessId={businessId}
+          currentLogoAssetId={business.logoAssetId}
           defaultValues={{
             brandName: business.brandName ?? "",
             boothName: business.boothName ?? "",
@@ -70,6 +71,7 @@ export default async function LengkapiUsahaPage({ params }: Props) {
             partnershipConcepts: business.partnershipConcepts ?? [],
           }}
           eventSlug={eventSlug}
+          redirectTo={`/${eventSlug}/dashboard/usaha`}
         />
       </div>
     </div>

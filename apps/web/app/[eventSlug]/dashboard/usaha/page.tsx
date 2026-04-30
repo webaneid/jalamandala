@@ -4,6 +4,7 @@ import { db, createTenantDb } from "@repo/db"
 import { participantBusinesses } from "@repo/db/schema/public"
 import { boothBookings, invoices, invoiceItems } from "@repo/db/schema/tenant"
 import { getCurrentParticipantSession } from "@/lib/participant-session"
+import { DashboardSubpageHeader } from "@/components/public/DashboardSubpageHeader"
 
 const TENANT_SCHEMA = process.env.TENANT_SCHEMA ?? "expo_forbis2026"
 
@@ -60,11 +61,7 @@ export default async function DashboardUsahaPage({
 
   return (
     <div className="min-h-full">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-100 px-5 pt-14 pb-5 sticky top-0 z-10">
-        <h1 className="text-xl font-bold text-slate-900">Usaha Saya</h1>
-        <p className="text-sm text-slate-500 mt-0.5">{businesses.length} usaha terdaftar</p>
-      </div>
+      <DashboardSubpageHeader title="Usaha Saya" subtitle={`${businesses.length} usaha terdaftar`} />
 
       <div className="px-4 py-4 space-y-3">
         {businessData.length === 0 ? (
@@ -194,19 +191,17 @@ export default async function DashboardUsahaPage({
                 )}
 
                 {/* Actions */}
-                <div className="border-t border-slate-100 flex">
-                  {!isComplete && (
-                    <Link
-                      href={`/${eventSlug}/usaha/${biz.id}/lengkapi`}
-                      className="flex-1 py-3 text-center text-xs font-semibold text-amber-600 border-r border-slate-100"
-                    >
-                      Lengkapi Data
-                    </Link>
-                  )}
+                <div className="border-t border-slate-100 flex flex-wrap">
+                  <Link
+                    href={`/${eventSlug}/usaha/${biz.id}/lengkapi`}
+                    className="flex-1 py-3 text-center text-xs font-semibold text-primary border-r border-slate-100 min-w-[80px]"
+                  >
+                    Edit Data
+                  </Link>
                   {!booking && (
                     <Link
                       href={`/${eventSlug}/booking?businessId=${biz.id}`}
-                      className="flex-1 py-3 text-center text-xs font-semibold text-primary"
+                      className="flex-1 py-3 text-center text-xs font-semibold text-primary border-r border-slate-100 min-w-[80px]"
                     >
                       Booking Booth
                     </Link>
@@ -214,15 +209,15 @@ export default async function DashboardUsahaPage({
                   {invoice?.publicToken && (
                     <Link
                       href={`/invoice/${invoice.publicToken}`}
-                      className="flex-1 py-3 text-center text-xs font-semibold text-slate-600 border-l border-slate-100"
+                      className="flex-1 py-3 text-center text-xs font-semibold text-slate-600 border-r border-slate-100 min-w-[80px]"
                     >
-                      Lihat Invoice
+                      Invoice
                     </Link>
                   )}
                   {booking?.bookingStatus === "booked" && (
                     <Link
                       href={`/${eventSlug}/usaha/${biz.id}/epass`}
-                      className="flex-1 py-3 text-center text-xs font-semibold text-secondary border-l border-slate-100"
+                      className="flex-1 py-3 text-center text-xs font-semibold text-secondary min-w-[80px]"
                     >
                       E-Pass
                     </Link>
