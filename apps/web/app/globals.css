@@ -1,4 +1,105 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/* ── Public dark prose (halaman konten di event public) ── */
+.prose-forbis {
+  --tw-prose-body: rgba(255,255,255,0.75);
+  --tw-prose-headings: #ffffff;
+  --tw-prose-lead: rgba(255,255,255,0.65);
+  --tw-prose-links: #00adee;
+  --tw-prose-bold: #ffffff;
+  --tw-prose-counters: rgba(255,255,255,0.45);
+  --tw-prose-bullets: #00adee;
+  --tw-prose-hr: rgba(255,255,255,0.12);
+  --tw-prose-quotes: rgba(255,255,255,0.7);
+  --tw-prose-quote-borders: #00adee;
+  --tw-prose-captions: rgba(255,255,255,0.45);
+  --tw-prose-code: #93c5fd;
+  --tw-prose-pre-code: rgba(255,255,255,0.85);
+  --tw-prose-pre-bg: rgba(255,255,255,0.06);
+  --tw-prose-th-borders: rgba(255,255,255,0.2);
+  --tw-prose-td-borders: rgba(255,255,255,0.1);
+}
+
+.prose-forbis h2 {
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-top: 2.25rem;
+  margin-bottom: 0.875rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.prose-forbis h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-top: 1.75rem;
+  margin-bottom: 0.625rem;
+  color: #00adee;
+}
+
+.prose-forbis p {
+  line-height: 1.8;
+  margin-bottom: 1.25rem;
+}
+
+.prose-forbis ul,
+.prose-forbis ol {
+  margin-top: 0.75rem;
+  margin-bottom: 1.25rem;
+  padding-left: 1.5rem;
+}
+
+.prose-forbis li {
+  margin-bottom: 0.375rem;
+  line-height: 1.75;
+}
+
+.prose-forbis img {
+  border-radius: 1rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* ── Admin light prose (editor di admin) ── */
+.prose-admin h2 {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.375rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.prose-admin h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #134397;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose-admin p {
+  line-height: 1.75;
+  margin-bottom: 1rem;
+}
+
+.prose-admin ul,
+.prose-admin ol {
+  padding-left: 1.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.prose-admin ul { list-style-type: disc; }
+.prose-admin ol { list-style-type: decimal; }
+
+.prose-admin li {
+  margin-bottom: 0.3rem;
+  line-height: 1.7;
+}
 
 :root {
   --background: #f8fafc;

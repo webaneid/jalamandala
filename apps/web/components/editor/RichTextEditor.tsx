@@ -28,7 +28,7 @@ export function RichTextEditor({ value, onChange, eventSlug }: Props) {
     },
     editorProps: {
       attributes: {
-        class: "prose prose-slate max-w-none focus:outline-none min-h-[400px] p-4",
+        class: "prose prose-slate prose-admin max-w-none focus:outline-none min-h-[400px] p-5",
       },
     },
   });

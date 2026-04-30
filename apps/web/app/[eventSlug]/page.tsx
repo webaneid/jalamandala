@@ -77,7 +77,7 @@ export default async function EventHomePage({
       <PublicContainer>
         <h1 className="mb-6 text-3xl font-bold tracking-tight text-white">{pageData.title}</h1>
         <article
-          className="prose prose-invert prose-sm max-w-none prose-img:rounded-2xl"
+          className="prose prose-forbis max-w-none"
           dangerouslySetInnerHTML={{ __html: htmlString }}
         />
       </PublicContainer>
