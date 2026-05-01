@@ -66,7 +66,7 @@ export default async function UsahaPage({ params }: Props) {
               </div>
               <Link
                 className="ml-4 shrink-0 text-sm font-medium text-primary hover:underline"
-                href={`/${eventSlug}/usaha/${biz.id}/edit`}
+                href={`/${eventSlug}/usaha/${biz.id}/lengkapi`}
               >
                 Edit
               </Link>
