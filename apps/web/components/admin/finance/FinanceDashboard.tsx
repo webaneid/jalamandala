@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 type FinanceDashboardData = {
   invoices: Array<{
     companyName: string;
+    dpAmount: number;
     dueDate: string | null;
     grandTotal: number;
     id: string;
@@ -378,6 +379,10 @@ export function FinanceDashboard({ data }: { data: FinanceDashboardData }) {
                 <option value="all">Semua status</option>
                 <option value="waiting_for_payment">Menunggu Pembayaran</option>
                 <option value="waiting_confirmation">Menunggu Konfirmasi</option>
+                <option value="dp_waiting_confirmation">DP — Menunggu Konfirmasi</option>
+                <option value="dp_paid">DP Diterima — Menunggu Pelunasan</option>
+                <option value="balance_waiting_confirmation">Pelunasan — Menunggu Konfirmasi</option>
+                <option value="balance_overdue">Melewati Deadline Pelunasan</option>
                 <option value="paid">Lunas</option>
                 <option value="expired">Kedaluwarsa</option>
                 <option value="cancelled">Dibatalkan</option>
@@ -457,7 +462,16 @@ export function FinanceDashboard({ data }: { data: FinanceDashboardData }) {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="font-medium">{formatRupiah(invoice.grandTotal)}</TableCell>
+                    <TableCell className="font-medium">
+                      {(invoice.status === "dp_paid" || invoice.status === "balance_overdue" || invoice.status === "balance_waiting_confirmation") && invoice.dpAmount > 0 ? (
+                        <div>
+                          <div>{formatRupiah(invoice.grandTotal - invoice.dpAmount)}</div>
+                          <div className="mt-0.5 text-xs text-muted-foreground">Sisa dari {formatRupiah(invoice.grandTotal)}</div>
+                        </div>
+                      ) : (
+                        formatRupiah(invoice.grandTotal)
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Link href={`/admin/keuangan/${invoice.id}`}>
@@ -797,39 +811,17 @@ function ModalFrame({
 }
 
 function InvoiceStatusBadge({ status }: { status: string }) {
-  if (status === "paid") {
-    return (
-      <Badge className="bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200">
-        Lunas
-      </Badge>
-    );
-  }
-  if (status === "waiting_confirmation") {
-    return (
-      <Badge className="bg-blue-50 text-blue-700 ring-1 ring-blue-200">
-        Menunggu Konfirmasi
-      </Badge>
-    );
-  }
-  if (status === "expired") {
-    return (
-      <Badge className="bg-neutral-100 text-neutral-500 ring-1 ring-neutral-200">
-        Kedaluwarsa
-      </Badge>
-    );
-  }
-  if (status === "cancelled") {
-    return (
-      <Badge className="bg-red-50 text-red-600 ring-1 ring-red-200">
-        Dibatalkan
-      </Badge>
-    );
-  }
-  return (
-    <Badge className="bg-amber-50 text-amber-700 ring-1 ring-amber-200">
-      Menunggu Pembayaran
-    </Badge>
-  );
+  if (status === "paid") return <Badge className="bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200">Lunas</Badge>;
+  if (status === "waiting_confirmation") return <Badge className="bg-blue-50 text-blue-700 ring-1 ring-blue-200">Menunggu Konfirmasi</Badge>;
+  if (status === "dp_waiting_confirmation") return <Badge className="bg-blue-50 text-blue-700 ring-1 ring-blue-200">DP — Menunggu Konfirmasi</Badge>;
+  if (status === "dp_paid") return <Badge className="bg-sky-50 text-sky-700 ring-1 ring-sky-200">DP Diterima — Menunggu Pelunasan</Badge>;
+  if (status === "balance_waiting_confirmation") return <Badge className="bg-blue-50 text-blue-700 ring-1 ring-blue-200">Pelunasan — Menunggu Konfirmasi</Badge>;
+  if (status === "balance_overdue") return <Badge className="bg-red-50 text-red-600 ring-1 ring-red-200">Melewati Deadline Pelunasan</Badge>;
+  if (status === "expired") return <Badge className="bg-neutral-100 text-neutral-500 ring-1 ring-neutral-200">Kedaluwarsa</Badge>;
+  if (status === "cancelled") return <Badge className="bg-red-50 text-red-600 ring-1 ring-red-200">Dibatalkan</Badge>;
+  if (status === "refunding") return <Badge className="bg-purple-50 text-purple-700 ring-1 ring-purple-200">Sedang Direfund</Badge>;
+  if (status === "refunded") return <Badge className="bg-neutral-100 text-neutral-500 ring-1 ring-neutral-200">Refund Selesai</Badge>;
+  return <Badge className="bg-amber-50 text-amber-700 ring-1 ring-amber-200">Menunggu Pembayaran</Badge>;
 }
 
 function EmptyRow({ colSpan, label }: { colSpan: number; label: string }) {

@@ -129,6 +129,7 @@ async function getFinancePageData() {
 
     return {
       companyName: business?.companyName ?? invoice.recipientName ?? "Tanpa Nama",
+      dpAmount: invoice.dpAmount ?? 0,
       dueDate: invoice.dueDate ? invoice.dueDate.toISOString() : null,
       grandTotal: invoice.grandTotal,
       id: invoice.id,

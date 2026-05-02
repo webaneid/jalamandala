@@ -36,10 +36,11 @@ export default async function LoginPage({ params, searchParams }: Props) {
   }
 
   const tenantDb = await createTenantDb(TENANT_SCHEMA)
-  const organizationOptions = await tenantDb.query.boothGroups.findMany({
+  const INTERNAL_GROUP_SLUGS = ["vip-b"]
+  const organizationOptions = (await tenantDb.query.boothGroups.findMany({
     where: eq(boothGroups.isActive, true),
     orderBy: (table, { asc }) => [asc(table.sortOrder), asc(table.name)],
-  })
+  })).filter((g) => !INTERNAL_GROUP_SLUGS.includes(g.slug))
 
   return (
     <PublicContainer className="py-14">
@@ -60,7 +61,7 @@ export default async function LoginPage({ params, searchParams }: Props) {
               initialMode={initialMode}
               organizationOptions={organizationOptions.map((group) => ({
                 id: group.id,
-                label: group.name,
+                label: group.slug === "gontor" ? "Internal Gontor" : group.slug === "general" ? "Umum/Alumni" : group.name,
                 slug: group.slug,
               }))}
               redirectTo={redirectTo}
