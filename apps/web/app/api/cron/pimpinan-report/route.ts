@@ -71,23 +71,34 @@ export async function GET(req: NextRequest) {
 
       const lines = [`*Zona ${zone.name}* (${total} booth)`];
 
-      // Booked — general dulu, lalu per special group
+      // Booked & Reserved untuk non-special group
       const bookedGeneral = booked.filter((b) => !SPECIAL_GROUPS[b.groupSlug]).length;
-      if (bookedGeneral > 0) lines.push(`├ Booked: ${bookedGeneral}`);
-      for (const [slug, label] of Object.entries(SPECIAL_GROUPS)) {
-        const count = booked.filter((b) => b.groupSlug === slug).length;
-        if (count > 0) lines.push(`├ Booked ${label}: ${count}`);
-      }
-
-      // Reserved — general dulu, lalu per special group
       const reservedGeneral = reserved.filter((b) => !SPECIAL_GROUPS[b.groupSlug]).length;
+      const sisaGeneral = boothsWithSlug.filter((b) => b.status === "open" && !SPECIAL_GROUPS[b.groupSlug]).length;
+
+      if (bookedGeneral > 0) lines.push(`├ Booked: ${bookedGeneral}`);
       if (reservedGeneral > 0) lines.push(`├ Reserved: ${reservedGeneral}`);
+      if (sisaGeneral > 0) lines.push(`├ Sisa: ${sisaGeneral}`);
+
+      // Special groups — selalu tampil jika ada booth di zona ini
       for (const [slug, label] of Object.entries(SPECIAL_GROUPS)) {
-        const count = reserved.filter((b) => b.groupSlug === slug).length;
-        if (count > 0) lines.push(`├ Reserved ${label}: ${count}`);
+        const groupBooths = boothsWithSlug.filter((b) => b.groupSlug === slug);
+        if (groupBooths.length === 0) continue;
+        const gBooked = groupBooths.filter((b) => b.status === "booked").length;
+        const gReserved = groupBooths.filter((b) => b.status === "reserved").length;
+        const gSisa = groupBooths.filter((b) => b.status === "open").length;
+        const parts: string[] = [];
+        if (gBooked > 0) parts.push(`${gBooked} booked`);
+        if (gReserved > 0) parts.push(`${gReserved} reserved`);
+        if (gSisa > 0) parts.push(`${gSisa} sisa`);
+        lines.push(`├ ${label} (${groupBooths.length}): ${parts.join(", ")}`);
       }
 
-      lines.push(`└ Sisa: ${sisa}`);
+      // Ganti ├ terakhir jadi └
+      if (lines.length > 1) {
+        lines[lines.length - 1] = lines[lines.length - 1]!.replace("├", "└");
+      }
+
       zoneLines.push(lines.join("\n"));
     }
 
