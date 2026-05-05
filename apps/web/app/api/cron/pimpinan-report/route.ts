@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq, inArray, sum } from "drizzle-orm";
 import { createTenantDb, db } from "@repo/db";
 import { expoEvents } from "@repo/db/schema/public";
-import { booths, invoices, zones } from "@repo/db/schema/tenant";
+import { booths, cashflowLedger, invoices, zones } from "@repo/db/schema/tenant";
 import { sendWhatsApp } from "@/lib/whatsapp";
 
 const TENANT_SCHEMA = process.env.TENANT_SCHEMA ?? "expo_forbis2026";
@@ -58,38 +58,53 @@ export async function GET(req: NextRequest) {
       if (total === 0) continue;
 
       const booked = zone.booths.filter((b) => b.status === "booked");
-      const reserved = zone.booths.filter((b) => b.status === "reserved").length;
+      const reserved = zone.booths.filter((b) => b.status === "reserved");
       const sisa = zone.booths.filter((b) => b.status === "open").length;
 
       totalAll += total;
-      bookedAll += booked.length + reserved;
-
-      // Booked per special group
-      const specialBreakdown: string[] = [];
-      for (const [slug, label] of Object.entries(SPECIAL_GROUPS)) {
-        const count = booked.filter((b) => b.boothGroup?.slug === slug).length;
-        if (count > 0) specialBreakdown.push(`├ Booked ${label}: ${count}`);
-      }
-
-      // Booked non-special
-      const bookedGeneral = booked.filter((b) => !SPECIAL_GROUPS[b.boothGroup?.slug ?? ""]).length;
+      bookedAll += booked.length + reserved.length;
 
       const lines = [`*Zona ${zone.name}* (${total} booth)`];
-      if (bookedGeneral > 0) lines.push(`├ Booked: ${bookedGeneral}`);
-      lines.push(...specialBreakdown);
-      if (reserved > 0) lines.push(`├ Reserved: ${reserved}`);
-      lines.push(`└ Sisa: ${sisa}`);
 
+      // Booked — general dulu, lalu per special group
+      const bookedGeneral = booked.filter((b) => !SPECIAL_GROUPS[b.boothGroup?.slug ?? ""]).length;
+      if (bookedGeneral > 0) lines.push(`├ Booked: ${bookedGeneral}`);
+      for (const [slug, label] of Object.entries(SPECIAL_GROUPS)) {
+        const count = booked.filter((b) => b.boothGroup?.slug === slug).length;
+        if (count > 0) lines.push(`├ Booked ${label}: ${count}`);
+      }
+
+      // Reserved — general dulu, lalu per special group
+      const reservedGeneral = reserved.filter((b) => !SPECIAL_GROUPS[b.boothGroup?.slug ?? ""]).length;
+      if (reservedGeneral > 0) lines.push(`├ Reserved: ${reservedGeneral}`);
+      for (const [slug, label] of Object.entries(SPECIAL_GROUPS)) {
+        const count = reserved.filter((b) => b.boothGroup?.slug === slug).length;
+        if (count > 0) lines.push(`├ Reserved ${label}: ${count}`);
+      }
+
+      lines.push(`└ Sisa: ${sisa}`);
       zoneLines.push(lines.join("\n"));
     }
 
-    // Keuangan
-    const [paidRow, pendingRow] = await Promise.all([
-      tenantDb.select({ total: sum(invoices.grandTotal) }).from(invoices).where(eq(invoices.status, "paid")),
-      tenantDb.select({ total: sum(invoices.grandTotal) }).from(invoices).where(inArray(invoices.status, ["waiting_for_payment", "waiting_confirmation", "dp_paid", "dp_waiting_confirmation", "balance_waiting_confirmation", "balance_overdue"])),
+    // Keuangan — pakai cashflow ledger agar sesuai uang yang benar-benar masuk (termasuk DP)
+    const [cashInRow, pendingRow] = await Promise.all([
+      tenantDb.select({ total: sum(cashflowLedger.amount) }).from(cashflowLedger)
+        .where(eq(cashflowLedger.type, "cash_in")),
+      tenantDb.select({ total: sum(invoices.grandTotal) }).from(invoices)
+        .where(inArray(invoices.status, ["waiting_for_payment", "waiting_confirmation", "dp_waiting_confirmation", "balance_waiting_confirmation", "balance_overdue"])),
     ]);
-    const totalPaid = Number(paidRow[0]?.total ?? 0);
-    const totalPending = Number(pendingRow[0]?.total ?? 0);
+    const totalPaid = Number(cashInRow[0]?.total ?? 0);
+
+    // Untuk pending: grandTotal dikurangi dpAmount yang sudah masuk
+    const dpPaidRows = await tenantDb.select({ sisa: sum(invoices.grandTotal) })
+      .from(invoices).where(eq(invoices.status, "dp_paid"));
+    const dpPaidGrandTotal = Number(dpPaidRows[0]?.sisa ?? 0);
+    const dpAmountRows = await tenantDb.select({ dp: sum(invoices.dpAmount) })
+      .from(invoices).where(eq(invoices.status, "dp_paid"));
+    const dpAmountPaid = Number(dpAmountRows[0]?.dp ?? 0);
+    const sisaDpPaid = dpPaidGrandTotal - dpAmountPaid;
+
+    const totalPending = Number(pendingRow[0]?.total ?? 0) + sisaDpPaid;
 
     const message = [
       `📊 *Laporan Harian FORBIS Summit*`,
