@@ -135,11 +135,29 @@ async function releaseBoothsForInvoice(
     .where(inArray(boothBookings.id, bookingIds));
 
   const boothIds = linkedBookings.map((b) => b.boothId).filter(Boolean) as string[];
-  if (boothIds.length > 0) {
-    await tenantDb
-      .update(booths)
-      .set({ status: "open", updatedAt: new Date() })
-      .where(inArray(booths.id, boothIds));
+
+  // Hapus boothBookings untuk invoice ini agar tidak ada data lama yang menyesatkan
+  await tenantDb.delete(boothBookings).where(inArray(boothBookings.id, bookingIds));
+
+  // Reset booth status — hanya jika tidak ada booking lain yang masih aktif
+  for (const boothId of boothIds) {
+    const otherBooking = await tenantDb.query.boothBookings.findFirst({
+      where: eq(boothBookings.boothId, boothId),
+      columns: { id: true, invoiceId: true },
+    });
+
+    if (!otherBooking) {
+      await tenantDb.update(booths).set({ status: "open", updatedAt: new Date() }).where(eq(booths.id, boothId));
+    } else if (otherBooking.invoiceId) {
+      const linkedInvoice = await tenantDb.query.invoices.findFirst({
+        where: eq(invoices.id, otherBooking.invoiceId),
+        columns: { status: true },
+      });
+      const newStatus = linkedInvoice?.status === "paid" ? "booked" : "reserved";
+      await tenantDb.update(booths).set({ status: newStatus, updatedAt: new Date() }).where(eq(booths.id, boothId));
+    } else {
+      await tenantDb.update(booths).set({ status: "reserved", updatedAt: new Date() }).where(eq(booths.id, boothId));
+    }
   }
 }
 
