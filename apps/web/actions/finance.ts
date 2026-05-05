@@ -1874,8 +1874,26 @@ export async function deleteInvoiceCompletely(invoiceId: string): Promise<{ succ
     if (bookings.length > 0) {
       await tenantDb.delete(boothBookings).where(eq(boothBookings.invoiceId, invoiceId));
     }
-    if (boothIds.length > 0) {
-      await tenantDb.update(booths).set({ status: "open", updatedAt: new Date() }).where(inArray(booths.id, boothIds));
+
+    // Reset booth status — cek dulu apakah booth masih punya booking lain yang aktif
+    for (const boothId of boothIds) {
+      const otherBooking = await tenantDb.query.boothBookings.findFirst({
+        where: eq(boothBookings.boothId, boothId),
+        columns: { id: true, invoiceId: true },
+      });
+
+      if (!otherBooking) {
+        await tenantDb.update(booths).set({ status: "open", updatedAt: new Date() }).where(eq(booths.id, boothId));
+      } else if (otherBooking.invoiceId) {
+        const linkedInvoice = await tenantDb.query.invoices.findFirst({
+          where: eq(invoices.id, otherBooking.invoiceId),
+          columns: { status: true },
+        });
+        const newStatus = linkedInvoice?.status === "paid" ? "booked" : "reserved";
+        await tenantDb.update(booths).set({ status: newStatus, updatedAt: new Date() }).where(eq(booths.id, boothId));
+      } else {
+        await tenantDb.update(booths).set({ status: "reserved", updatedAt: new Date() }).where(eq(booths.id, boothId));
+      }
     }
 
     // 3. Hapus invoice (cascade → invoiceItems + invoicePayments)
