@@ -7,6 +7,12 @@ import { sendWhatsApp } from "@/lib/whatsapp";
 
 const TENANT_SCHEMA = process.env.TENANT_SCHEMA ?? "expo_forbis2026";
 
+const SPECIAL_GROUPS: Record<string, string> = {
+  fpag: "FPAG",
+  formaqin: "FORMAQIN",
+  gontor: "Internal Gontor",
+};
+
 export async function GET(req: NextRequest) {
   const secret = req.nextUrl.searchParams.get("secret");
   if (!secret || secret !== process.env.CRON_SECRET) {
@@ -30,6 +36,7 @@ export async function GET(req: NextRequest) {
       with: {
         booths: {
           where: eq(booths.isActive, true),
+          with: { boothGroup: { columns: { slug: true, name: true } } },
         },
       },
       orderBy: (t, { asc }) => [asc(t.sortOrder), asc(t.name)],
@@ -39,38 +46,60 @@ export async function GET(req: NextRequest) {
       day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Jakarta",
     }).format(new Date());
 
+    const fmtIDR = (n: number) =>
+      new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
+
     let totalAll = 0;
     let bookedAll = 0;
-    const lines: string[] = [];
+    const zoneLines: string[] = [];
 
     for (const zone of allZones) {
       const total = zone.booths.length;
-      const booked = zone.booths.filter((b) => b.status === "booked").length;
+      if (total === 0) continue;
+
+      const booked = zone.booths.filter((b) => b.status === "booked");
       const reserved = zone.booths.filter((b) => b.status === "reserved").length;
-      const sisa = total - booked - reserved;
+      const sisa = zone.booths.filter((b) => b.status === "open").length;
+
       totalAll += total;
-      bookedAll += booked + reserved;
-      lines.push(`${zone.name}: ${booked + reserved} terjual / ${total} total (${sisa} sisa)`);
+      bookedAll += booked.length + reserved;
+
+      // Booked per special group
+      const specialBreakdown: string[] = [];
+      for (const [slug, label] of Object.entries(SPECIAL_GROUPS)) {
+        const count = booked.filter((b) => b.boothGroup?.slug === slug).length;
+        if (count > 0) specialBreakdown.push(`├ Booked ${label}: ${count}`);
+      }
+
+      // Booked non-special
+      const bookedGeneral = booked.filter((b) => !SPECIAL_GROUPS[b.boothGroup?.slug ?? ""]).length;
+
+      const lines = [`*Zona ${zone.name}* (${total} booth)`];
+      if (bookedGeneral > 0) lines.push(`├ Booked: ${bookedGeneral}`);
+      lines.push(...specialBreakdown);
+      if (reserved > 0) lines.push(`├ Reserved: ${reserved}`);
+      lines.push(`└ Sisa: ${sisa}`);
+
+      zoneLines.push(lines.join("\n"));
     }
 
     // Keuangan
     const [paidRow, pendingRow] = await Promise.all([
       tenantDb.select({ total: sum(invoices.grandTotal) }).from(invoices).where(eq(invoices.status, "paid")),
-      tenantDb.select({ total: sum(invoices.grandTotal) }).from(invoices).where(inArray(invoices.status, ["waiting_for_payment", "waiting_confirmation"])),
+      tenantDb.select({ total: sum(invoices.grandTotal) }).from(invoices).where(inArray(invoices.status, ["waiting_for_payment", "waiting_confirmation", "dp_paid", "dp_waiting_confirmation", "balance_waiting_confirmation", "balance_overdue"])),
     ]);
     const totalPaid = Number(paidRow[0]?.total ?? 0);
     const totalPending = Number(pendingRow[0]?.total ?? 0);
-
-    const fmtIDR = (n: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
 
     const message = [
       `📊 *Laporan Harian FORBIS Summit*`,
       fmtDate,
       ``,
-      `🏪 *Status Booth*`,
-      ...lines,
+      `🏪 *Status Booth per Zona*`,
       ``,
-      `*Total Booth: ${bookedAll} / ${totalAll} (${totalAll - bookedAll} sisa)*`,
+      zoneLines.join("\n\n"),
+      ``,
+      `*Total: ${bookedAll} terisi / ${totalAll} total (${totalAll - bookedAll} sisa)*`,
       ``,
       `💰 *Keuangan*`,
       `Terbayar (Paid): ${fmtIDR(totalPaid)}`,
