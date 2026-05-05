@@ -1870,13 +1870,56 @@ export async function getInvoiceByToken(token: string) {
 export async function getCashflowLedger() {
   try {
     const tenantDb = await createTenantDb(TENANT_SCHEMA);
-    
+
     const entries = await tenantDb
       .select()
       .from(cashflowLedger)
       .orderBy(desc(cashflowLedger.transactionDate));
 
-    return { success: true, data: entries };
+    // Enrich dengan info peserta, usaha, booth dari invoice
+    const invoiceIds = [...new Set(entries.map(e => e.referenceInvoiceId).filter(Boolean) as string[])];
+
+    const invoiceInfoMap = new Map<string, { participantId: string | null; businessId: string | null; boothCodes: string[] }>();
+
+    if (invoiceIds.length > 0) {
+      const invoiceRows = await tenantDb.query.invoices.findMany({
+        where: (t, { inArray }) => inArray(t.id, invoiceIds),
+        columns: { id: true, participantId: true, businessId: true },
+        with: { items: { columns: { itemType: true, title: true } } },
+      });
+      for (const inv of invoiceRows) {
+        const boothCodes = inv.items.filter(i => i.itemType === "booth_booking").map(i => i.title)
+        invoiceInfoMap.set(inv.id, { participantId: inv.participantId, businessId: inv.businessId ?? null, boothCodes });
+      }
+    }
+
+    // Fetch participant + business names dari public schema
+    const participantIds = [...new Set([...invoiceInfoMap.values()].map(v => v.participantId).filter(Boolean) as string[])];
+    const businessIds = [...new Set([...invoiceInfoMap.values()].map(v => v.businessId).filter(Boolean) as string[])];
+
+    const [participantRows, businessRows] = await Promise.all([
+      participantIds.length > 0
+        ? db.query.participants.findMany({ where: (t, { inArray }) => inArray(t.id, participantIds), columns: { id: true, name: true } })
+        : [],
+      businessIds.length > 0
+        ? db.query.participantBusinesses.findMany({ where: (t, { inArray }) => inArray(t.id, businessIds), columns: { id: true, companyName: true } })
+        : [],
+    ]);
+
+    const participantMap = new Map(participantRows.map(p => [p.id, p.name]));
+    const businessMap = new Map(businessRows.map(b => [b.id, b.companyName]));
+
+    const enriched = entries.map(entry => {
+      const info = entry.referenceInvoiceId ? invoiceInfoMap.get(entry.referenceInvoiceId) : null;
+      return {
+        ...entry,
+        participantName: info?.participantId ? (participantMap.get(info.participantId) ?? null) : null,
+        businessName: info?.businessId ? (businessMap.get(info.businessId) ?? null) : null,
+        boothCodes: info?.boothCodes ?? [],
+      };
+    });
+
+    return { success: true, data: enriched };
   } catch (error) {
     console.error("Error fetching cashflow ledger:", error);
     return { success: false, error: "Gagal mengambil data buku kas." };

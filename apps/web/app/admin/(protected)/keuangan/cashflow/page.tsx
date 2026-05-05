@@ -3,11 +3,11 @@ export const dynamic = "force-dynamic";
 import { getCashflowLedger } from "@/actions/finance";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDownRight, ArrowUpRight, Wallet, ExternalLink } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Wallet } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { CashflowTable } from "@/components/admin/finance/CashflowTable";
 
 function formatRupiah(value: number) {
   return new Intl.NumberFormat("id-ID", {
@@ -15,16 +15,6 @@ function formatRupiah(value: number) {
     maximumFractionDigits: 0,
     style: "currency",
   }).format(value);
-}
-
-function formatDate(date: Date) {
-  return new Intl.DateTimeFormat("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(date));
 }
 
 
@@ -68,12 +58,10 @@ export default async function CashflowPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-950">
-              {formatRupiah(totalIn)}
-            </div>
+            <div className="text-2xl font-bold text-emerald-950">{formatRupiah(totalIn)}</div>
           </CardContent>
         </Card>
-        
+
         <Card className="bg-rose-50 border-rose-200">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-rose-800 flex items-center gap-2">
@@ -82,9 +70,7 @@ export default async function CashflowPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-rose-950">
-              {formatRupiah(totalOut)}
-            </div>
+            <div className="text-2xl font-bold text-rose-950">{formatRupiah(totalOut)}</div>
           </CardContent>
         </Card>
 
@@ -96,9 +82,7 @@ export default async function CashflowPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-950">
-              {formatRupiah(balance)}
-            </div>
+            <div className="text-2xl font-bold text-blue-950">{formatRupiah(balance)}</div>
           </CardContent>
         </Card>
       </div>
@@ -109,65 +93,7 @@ export default async function CashflowPage() {
           <CardTitle>Riwayat Transaksi</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tanggal</TableHead>
-                <TableHead>Deskripsi</TableHead>
-                <TableHead>Kategori</TableHead>
-                <TableHead className="text-right">Uang Masuk</TableHead>
-                <TableHead className="text-right">Uang Keluar</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {entries.map((entry) => (
-                <TableRow key={entry.id}>
-                  <TableCell className="text-muted-foreground whitespace-nowrap">
-                    {formatDate(entry.transactionDate)}
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    {entry.referenceInvoiceId ? (
-                      <Link
-                        href={`/admin/keuangan/${entry.referenceInvoiceId}`}
-                        className="hover:text-primary hover:underline underline-offset-2"
-                      >
-                        {entry.description}
-                      </Link>
-                    ) : (
-                      <span>{entry.description}</span>
-                    )}
-                    {entry.referenceDisbursementId && (
-                      <Link
-                        href={`/admin/keuangan/pencairan/${entry.referenceDisbursementId}`}
-                        className="ml-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                      >
-                        <ExternalLink className="size-3" />
-                        Lihat Pencairan
-                      </Link>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="bg-neutral-50">
-                      {entry.category}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-medium text-emerald-600">
-                    {entry.type === "cash_in" ? formatRupiah(entry.amount) : "-"}
-                  </TableCell>
-                  <TableCell className="text-right font-medium text-rose-600">
-                    {entry.type === "cash_out" ? formatRupiah(entry.amount) : "-"}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {entries.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    Belum ada riwayat transaksi.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+          <CashflowTable entries={entries} />
         </CardContent>
       </Card>
     </div>
