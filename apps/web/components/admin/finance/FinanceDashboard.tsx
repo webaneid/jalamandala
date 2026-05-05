@@ -266,49 +266,68 @@ export function FinanceDashboard({ data }: { data: FinanceDashboardData }) {
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-5">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Perusahaan</TableHead>
-                  <TableHead>Peserta</TableHead>
-                  <TableHead>Booth</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead className="w-[140px] text-right">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.pendingInvoiceGroups.map((group) => (
-                  <TableRow key={group.businessId}>
-                    <TableCell className="font-medium text-primary-950">
-                      <div>{group.companyName}</div>
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        {group.boothCount} booth
-                      </div>
-                    </TableCell>
-                    <TableCell>{group.participantName}</TableCell>
-                    <TableCell className="max-w-[420px] whitespace-normal text-muted-foreground">
-                      {group.items
-                        .map((item) => `${item.boothCode} (${item.zoneName})`)
-                        .join(", ")}
-                    </TableCell>
-                    <TableCell className="font-medium">{formatRupiah(group.total)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        disabled={isSaving}
-                        onClick={() => createInvoice(group.businessId)}
-                        type="button"
-                      >
-                        {isSaving ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Plus className="mr-2 size-4" />}
-                        Buat Invoice
-                      </Button>
-                    </TableCell>
+            {/* Mobile cards */}
+            <div className="md:hidden space-y-3">
+              {data.pendingInvoiceGroups.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">Belum ada booking yang menunggu invoice.</p>
+              ) : data.pendingInvoiceGroups.map((group) => (
+                <div key={group.businessId} className="rounded-2xl border border-border/60 bg-white p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-semibold text-primary-950">{group.companyName}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{group.participantName}</p>
+                    </div>
+                    <span className="shrink-0 text-sm font-bold text-primary-700">{formatRupiah(group.total)}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {group.items.map((item) => `${item.boothCode} (${item.zoneName})`).join(", ")}
+                  </p>
+                  <Button className="w-full gap-2" disabled={isSaving} onClick={() => createInvoice(group.businessId)} size="sm" type="button">
+                    {isSaving ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+                    Buat Invoice
+                  </Button>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Perusahaan</TableHead>
+                    <TableHead>Peserta</TableHead>
+                    <TableHead>Booth</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead className="w-[140px] text-right">Aksi</TableHead>
                   </TableRow>
-                ))}
-                {data.pendingInvoiceGroups.length === 0 ? (
-                  <EmptyRow colSpan={5} label="Belum ada booking yang menunggu invoice." />
-                ) : null}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {data.pendingInvoiceGroups.map((group) => (
+                    <TableRow key={group.businessId}>
+                      <TableCell className="font-medium text-primary-950">
+                        <div>{group.companyName}</div>
+                        <div className="mt-1 text-xs text-muted-foreground">{group.boothCount} booth</div>
+                      </TableCell>
+                      <TableCell>{group.participantName}</TableCell>
+                      <TableCell className="max-w-[420px] whitespace-normal text-muted-foreground">
+                        {group.items.map((item) => `${item.boothCode} (${item.zoneName})`).join(", ")}
+                      </TableCell>
+                      <TableCell className="font-medium">{formatRupiah(group.total)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button disabled={isSaving} onClick={() => createInvoice(group.businessId)} type="button">
+                          {isSaving ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Plus className="mr-2 size-4" />}
+                          Buat Invoice
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {data.pendingInvoiceGroups.length === 0 ? (
+                    <EmptyRow colSpan={5} label="Belum ada booking yang menunggu invoice." />
+                  ) : null}
+                </TableBody>
+              </Table>
+            </div>
 
             {bookingError ? (
               <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -413,7 +432,86 @@ export function FinanceDashboard({ data }: { data: FinanceDashboardData }) {
               </p>
             )}
           </CardHeader>
-          <CardContent className="pt-5">
+          {/* Mobile invoice cards */}
+          <div className="md:hidden space-y-3 px-4 pt-2 pb-4">
+            {filteredInvoices.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                {data.invoices.length === 0 ? "Belum ada invoice." : "Tidak ada invoice yang cocok."}
+              </p>
+            ) : filteredInvoices.map((invoice) => (
+              <div key={invoice.id} className="rounded-2xl border border-border/60 bg-white overflow-hidden">
+                {/* Status bar */}
+                <div className={`h-1 w-full ${invoice.status === "paid" ? "bg-emerald-400" : "bg-amber-400"}`} />
+                <div className="p-4 space-y-3">
+                  {/* Header */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground">{invoice.companyName}</p>
+                      <p className="font-semibold text-primary-950 text-sm">{invoice.invoiceNumber}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{invoice.participantName}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <InvoiceStatusBadge status={invoice.status} />
+                      {invoice.payments.some((p) => p.status === "pending_verification") && (
+                        <Badge className="bg-blue-50 text-blue-700 ring-1 ring-blue-200 text-xs">Konfirmasi Pending</Badge>
+                      )}
+                    </div>
+                  </div>
+                  {/* Items + total */}
+                  <div className="flex items-end justify-between gap-2">
+                    <p className="text-xs text-muted-foreground flex-1 min-w-0 truncate">
+                      {invoice.items.map((i) => i.title).join(", ")}
+                      {invoice.paymentChannelLabel ? ` · ${invoice.paymentChannelLabel}` : ""}
+                    </p>
+                    <div className="text-right shrink-0">
+                      {(invoice.status === "dp_paid" || invoice.status === "balance_overdue" || invoice.status === "balance_waiting_confirmation") && invoice.dpAmount > 0 ? (
+                        <>
+                          <p className="font-bold text-sm text-primary-950">{formatRupiah(invoice.grandTotal - invoice.dpAmount)}</p>
+                          <p className="text-[10px] text-muted-foreground">Sisa dari {formatRupiah(invoice.grandTotal)}</p>
+                        </>
+                      ) : (
+                        <p className="font-bold text-sm text-primary-950">{formatRupiah(invoice.grandTotal)}</p>
+                      )}
+                    </div>
+                  </div>
+                  {/* Actions */}
+                  <div className="flex gap-2 pt-1 border-t border-border/40">
+                    <Link href={`/admin/keuangan/${invoice.id}`} className="flex-1">
+                      <Button size="sm" variant="outline" className="w-full gap-1.5 text-xs">
+                        <Eye className="size-3.5" />Detail
+                      </Button>
+                    </Link>
+                    <Button size="sm" variant="outline" className="flex-1 gap-1.5 text-xs"
+                      onClick={() => window.open(`/invoice/${invoice.publicToken || invoice.id}`, '_blank')}>
+                      <Wallet className="size-3.5" />Invoice
+                    </Button>
+                    {invoice.status !== "paid" && (
+                      <Button size="sm" className="flex-1 gap-1.5 text-xs"
+                        onClick={() => setMarkPaidEditor({
+                          amount: String(invoice.grandTotal),
+                          grandTotal: invoice.grandTotal,
+                          invoiceId: invoice.id,
+                          invoiceNumber: invoice.invoiceNumber,
+                          notes: "",
+                          paidAt: toDateTimeLocal(new Date().toISOString()),
+                          paymentMethodKey: invoice.paymentChannelKey ?? "",
+                          proofContentType: "",
+                          proofDataUrl: "",
+                          proofFileName: "",
+                          referenceNumber: "",
+                          senderName: "",
+                        })}>
+                        <Wallet className="size-3.5" />Bayar
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop table */}
+          <CardContent className="pt-5 hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -438,9 +536,7 @@ export function FinanceDashboard({ data }: { data: FinanceDashboardData }) {
                     </TableCell>
                     <TableCell>
                       <div>{invoice.companyName}</div>
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        {invoice.participantName}
-                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">{invoice.participantName}</div>
                     </TableCell>
                     <TableCell className="max-w-[340px] whitespace-normal text-muted-foreground">
                       {invoice.items.map((item) => item.title).join(", ")}
@@ -475,59 +571,39 @@ export function FinanceDashboard({ data }: { data: FinanceDashboardData }) {
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Link href={`/admin/keuangan/${invoice.id}`}>
-                          <IconButton
-                            icon={<Eye className="size-4" />}
-                            label="Lihat detail invoice"
-                            onClick={() => {}}
-                          />
+                          <IconButton icon={<Eye className="size-4" />} label="Lihat detail invoice" onClick={() => {}} />
                         </Link>
-                        <IconButton
-                          icon={<Wallet className="size-4" />}
-                          label="Buka Invoice Publik"
-                          onClick={() => window.open(`/invoice/${invoice.publicToken || invoice.id}`, '_blank')}
-                        />
-                        <IconButton
-                          icon={<Pencil className="size-4" />}
-                          label="Pilih metode bayar"
-                          onClick={() =>
-                            setPaymentMethodEditor({
+                        <IconButton icon={<Wallet className="size-4" />} label="Buka Invoice Publik"
+                          onClick={() => window.open(`/invoice/${invoice.publicToken || invoice.id}`, '_blank')} />
+                        <IconButton icon={<Pencil className="size-4" />} label="Pilih metode bayar"
+                          onClick={() => setPaymentMethodEditor({
+                            invoiceId: invoice.id,
+                            invoiceNumber: invoice.invoiceNumber,
+                            paymentMethodKey: invoice.paymentChannelKey ?? "",
+                          })} />
+                        {invoice.status !== "paid" ? (
+                          <IconButton icon={<Wallet className="size-4" />} label="Tandai paid"
+                            onClick={() => setMarkPaidEditor({
+                              amount: String(invoice.grandTotal),
+                              grandTotal: invoice.grandTotal,
                               invoiceId: invoice.id,
                               invoiceNumber: invoice.invoiceNumber,
+                              notes: "",
+                              paidAt: toDateTimeLocal(new Date().toISOString()),
                               paymentMethodKey: invoice.paymentChannelKey ?? "",
-                            })
-                          }
-                        />
-                        {invoice.status !== "paid" ? (
-                          <IconButton
-                            icon={<Wallet className="size-4" />}
-                            label="Tandai paid"
-                            onClick={() =>
-                              setMarkPaidEditor({
-                                amount: String(invoice.grandTotal),
-                                grandTotal: invoice.grandTotal,
-                                invoiceId: invoice.id,
-                                invoiceNumber: invoice.invoiceNumber,
-                                notes: "",
-                                paidAt: toDateTimeLocal(new Date().toISOString()),
-                                paymentMethodKey: invoice.paymentChannelKey ?? "",
-                                proofContentType: "",
-                                proofDataUrl: "",
-                                proofFileName: "",
-                                referenceNumber: "",
-                                senderName: "",
-                              })
-                            }
-                          />
+                              proofContentType: "",
+                              proofDataUrl: "",
+                              proofFileName: "",
+                              referenceNumber: "",
+                              senderName: "",
+                            })} />
                         ) : null}
                       </div>
                     </TableCell>
                   </TableRow>
                 ))}
                 {filteredInvoices.length === 0 ? (
-                  <EmptyRow
-                    colSpan={7}
-                    label={data.invoices.length === 0 ? "Belum ada invoice." : "Tidak ada invoice yang cocok dengan filter."}
-                  />
+                  <EmptyRow colSpan={7} label={data.invoices.length === 0 ? "Belum ada invoice." : "Tidak ada invoice yang cocok dengan filter."} />
                 ) : null}
               </TableBody>
             </Table>
