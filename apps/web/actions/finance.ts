@@ -744,14 +744,32 @@ export async function markInvoiceAsPaid(payload: {
     const isFullyPaid = totalPaid >= invoice.grandTotal;
     const overpaymentAmount = isFullyPaid ? Math.max(0, totalPaid - invoice.grandTotal) : 0;
 
+    const dpMinimumPercent = invoice.dpMinimumPercent ?? 50;
+    const dpMinimumAmount = Math.ceil(invoice.grandTotal * dpMinimumPercent / 100);
+    const isDpPayment = !isFullyPaid && totalPaid >= dpMinimumAmount;
+
+    let newStatus: string;
+    if (isFullyPaid) {
+      newStatus = "paid";
+    } else if (isDpPayment) {
+      newStatus = "dp_paid";
+    } else {
+      newStatus = "waiting_for_payment";
+    }
+
+    const balanceDueDate = isDpPayment ? (() => { const d = new Date(paidAt); d.setDate(d.getDate() + 7); return d; })() : undefined;
+
     await tenantDb
       .update(invoices)
       .set({
         paidAt: isFullyPaid ? paidAt : null,
+        dpAmount: isDpPayment ? totalPaid : (isFullyPaid ? invoice.grandTotal : undefined),
+        dpPaidAt: isDpPayment ? paidAt : undefined,
+        balanceDueDate: isDpPayment ? balanceDueDate : undefined,
         paymentChannelId: paymentMethod.id,
         paymentChannelLabel: paymentMethod.label,
         paymentChannelType: paymentMethod.type,
-        status: isFullyPaid ? "paid" : "waiting_for_payment",
+        status: newStatus,
         overpaymentAmount,
         updatedAt: new Date(),
       })
