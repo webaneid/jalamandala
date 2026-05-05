@@ -451,8 +451,9 @@ export function ClickableBoothMap({
 
       {boothEditor ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-xl overflow-hidden rounded-[32px] border border-white/80 bg-white shadow-[0_32px_90px_rgba(15,23,42,0.28)]">
-            <div className="flex items-start justify-between gap-4 border-b border-border/70 p-6">
+          <div className="flex w-full max-w-xl flex-col max-h-[90vh] rounded-[32px] border border-white/80 bg-white shadow-[0_32px_90px_rgba(15,23,42,0.28)]">
+            {/* Header — fixed */}
+            <div className="shrink-0 flex items-start justify-between gap-4 border-b border-border/70 p-6">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-700">
                   Konfigurasi booth
@@ -474,7 +475,7 @@ export function ClickableBoothMap({
                 </div>
               </div>
               <button
-                className="inline-flex size-10 items-center justify-center rounded-2xl border border-border/80 bg-white text-muted-foreground hover:bg-muted"
+                className="shrink-0 inline-flex size-10 items-center justify-center rounded-2xl border border-border/80 bg-white text-muted-foreground hover:bg-muted"
                 onClick={() => setBoothEditor(null)}
                 type="button"
               >
@@ -482,7 +483,8 @@ export function ClickableBoothMap({
               </button>
             </div>
 
-            <div className="space-y-5 p-6">
+            {/* Body — scrollable */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-5">
               <div className="grid gap-3">
                 {resolveZonePriceGroups(boothEditor.zone).map((group) => (
                   <PriceGroupPreview key={group.priceGroup} group={group} />
@@ -540,11 +542,23 @@ export function ClickableBoothMap({
                     value={boothEditor.status}
                   >
                     <option value="open">Open</option>
+                    <option value="reserved">Reserved</option>
                     <option value="booked">Booked</option>
                   </select>
                 </label>
               </div>
 
+              {/* Reserved — info siapa yang reserved (read-only) */}
+              {boothEditor.status === "reserved" && boothEditor.booth.booking?.businessId ? (
+                <div>
+                  <p className="text-sm font-medium text-foreground mb-2">Direserved oleh</p>
+                  <BoothBookingSummary
+                    company={companies.find((c) => c.id === boothEditor.booth.booking?.businessId) ?? null}
+                  />
+                </div>
+              ) : null}
+
+              {/* Booked — pilih perusahaan */}
               {boothEditor.status === "booked" ? (
                 <div>
                   <label className="text-sm font-medium text-foreground" htmlFor="business-search">
@@ -585,24 +599,25 @@ export function ClickableBoothMap({
                   {boothEditorError}
                 </div>
               ) : null}
+            </div>
 
-              <div className="flex justify-end gap-3 border-t border-border/70 pt-5">
-                <Button variant="outline" onClick={() => setBoothEditor(null)} type="button">
-                  Batal
-                </Button>
-                <Button
-                  disabled={
-                    isSaving ||
-                    (boothEditor.status === "booked" &&
-                      !companyLabelToId.has(boothEditor.businessLabel.trim()))
-                  }
-                  onClick={saveBoothEditor}
-                  type="button"
-                >
-                  {isSaving ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
-                  Simpan Booth
-                </Button>
-              </div>
+            {/* Footer — fixed */}
+            <div className="shrink-0 flex justify-end gap-3 border-t border-border/70 p-6">
+              <Button variant="outline" onClick={() => setBoothEditor(null)} type="button">
+                Batal
+              </Button>
+              <Button
+                disabled={
+                  isSaving ||
+                  (boothEditor.status === "booked" &&
+                    !companyLabelToId.has(boothEditor.businessLabel.trim()))
+                }
+                onClick={saveBoothEditor}
+                type="button"
+              >
+                {isSaving ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+                Simpan Booth
+              </Button>
             </div>
           </div>
         </div>
@@ -610,8 +625,9 @@ export function ClickableBoothMap({
 
       {zoneEditor ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-xl overflow-hidden rounded-[32px] border border-white/80 bg-white shadow-[0_32px_90px_rgba(15,23,42,0.28)]">
-            <div className="flex items-start justify-between gap-4 border-b border-border/70 p-6">
+          <div className="flex w-full max-w-xl flex-col max-h-[90vh] rounded-[32px] border border-white/80 bg-white shadow-[0_32px_90px_rgba(15,23,42,0.28)]">
+            {/* Header — fixed */}
+            <div className="shrink-0 flex items-start justify-between gap-4 border-b border-border/70 p-6">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-700">
                   Edit zona
@@ -630,7 +646,7 @@ export function ClickableBoothMap({
                 </p>
               </div>
               <button
-                className="inline-flex size-10 items-center justify-center rounded-2xl border border-border/80 bg-white text-muted-foreground hover:bg-muted"
+                className="shrink-0 inline-flex size-10 items-center justify-center rounded-2xl border border-border/80 bg-white text-muted-foreground hover:bg-muted"
                 onClick={() => setZoneEditor(null)}
                 type="button"
               >
@@ -638,7 +654,8 @@ export function ClickableBoothMap({
               </button>
             </div>
 
-            <div className="space-y-5 p-6">
+            {/* Body — scrollable */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-5">
               {zoneEditor.mode === "location" ? (
                 <div>
                   <label className="text-sm font-medium text-foreground" htmlFor="location-editor">
@@ -744,21 +761,22 @@ export function ClickableBoothMap({
                   {editorError}
                 </div>
               ) : null}
+            </div>
 
-              <div className="flex justify-end gap-3 border-t border-border/70 pt-5">
-                <Button
-                  disabled={isSaving}
-                  variant="outline"
-                  onClick={() => setZoneEditor(null)}
-                  type="button"
-                >
-                  Batal
-                </Button>
-                <Button disabled={isSaving} onClick={saveZoneEditor} type="button">
-                  {isSaving ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
-                  Simpan
-                </Button>
-              </div>
+            {/* Footer — fixed */}
+            <div className="shrink-0 flex justify-end gap-3 border-t border-border/70 p-6">
+              <Button
+                disabled={isSaving}
+                variant="outline"
+                onClick={() => setZoneEditor(null)}
+                type="button"
+              >
+                Batal
+              </Button>
+              <Button disabled={isSaving} onClick={saveZoneEditor} type="button">
+                {isSaving ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+                Simpan
+              </Button>
             </div>
           </div>
         </div>
