@@ -174,7 +174,7 @@ export default async function PublicBookingPage({
       </div>
 
       {/* ── Content ── */}
-      <div className="mx-auto max-w-[720px] space-y-4 px-5 py-5">
+      <div className="mx-auto max-w-[720px] space-y-4 px-5 py-5 pb-28">
 
         {/* STEP 1 — Pilih Usaha */}
         {currentStep === 1 && (
