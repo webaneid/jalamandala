@@ -26,7 +26,6 @@ import {
 import {
   expoEvents,
   participantBusinesses,
-  participantTermsApprovals,
   participants,
   paymentChannels,
   qrisConfigs,
@@ -1865,20 +1864,18 @@ export async function deleteInvoiceCompletely(invoiceId: string): Promise<{ succ
     const participantId = invoice.participantId;
     const orderId = invoice.orderId;
 
-    // 2. Cari boothBookings milik peserta ini → ambil boothId untuk reset status
-    if (participantId) {
-      const bookings = await tenantDb.query.boothBookings.findMany({
-        where: eq(boothBookings.participantId, participantId),
-        columns: { id: true, boothId: true },
-      });
-      const boothIds = bookings.map((b) => b.boothId);
+    // 2. Cari boothBookings terkait invoice ini saja → ambil boothId untuk reset status
+    const bookings = await tenantDb.query.boothBookings.findMany({
+      where: eq(boothBookings.invoiceId, invoiceId),
+      columns: { id: true, boothId: true },
+    });
+    const boothIds = bookings.map((b) => b.boothId);
 
-      if (bookings.length > 0) {
-        await tenantDb.delete(boothBookings).where(eq(boothBookings.participantId, participantId));
-      }
-      if (boothIds.length > 0) {
-        await tenantDb.update(booths).set({ status: "open", updatedAt: new Date() }).where(inArray(booths.id, boothIds));
-      }
+    if (bookings.length > 0) {
+      await tenantDb.delete(boothBookings).where(eq(boothBookings.invoiceId, invoiceId));
+    }
+    if (boothIds.length > 0) {
+      await tenantDb.update(booths).set({ status: "open", updatedAt: new Date() }).where(inArray(booths.id, boothIds));
     }
 
     // 3. Hapus invoice (cascade → invoiceItems + invoicePayments)
@@ -1887,11 +1884,6 @@ export async function deleteInvoiceCompletely(invoiceId: string): Promise<{ succ
     // 4. Hapus order (cascade → orderItems) jika ada
     if (orderId) {
       await tenantDb.delete(orders).where(eq(orders.id, orderId));
-    }
-
-    // 5. Hapus terms approvals terkait invoice ini saja — participant + businesses tetap ada
-    if (participantId) {
-      await db.delete(participantTermsApprovals).where(eq(participantTermsApprovals.participantId, participantId));
     }
 
     revalidatePath("/admin/keuangan");
