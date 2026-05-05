@@ -64,7 +64,6 @@ async function main() {
         const boothCode = item.title
         const booth = await tenantDb.query.booths.findFirst({
           where: (t, { eq }) => eq(t.code, boothCode),
-          with: { group: true },
         })
 
         if (!booth) {
@@ -83,7 +82,6 @@ async function main() {
         console.log(`   → Recreate boothBooking: booth ${boothCode} untuk invoice ${invoice.invoiceNumber}`)
 
         if (!DRY_RUN) {
-          // Recreate boothBookings dengan ID yang sama agar invoiceItems.referenceId tetap valid
           await tenantDb.execute(sql`
             INSERT INTO booth_bookings (id, booth_id, participant_id, business_id, booking_status, price_category, base_price, final_price, invoice_id, booked_at, created_at, updated_at)
             VALUES (
@@ -92,7 +90,7 @@ async function main() {
               ${participantId}::uuid,
               ${businessId}::uuid,
               'booked',
-              ${booth.group?.defaultPriceGroup ?? 'public'},
+              'public',
               ${item.unitPrice},
               ${item.unitPrice},
               ${invoice.id},
