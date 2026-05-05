@@ -1975,15 +1975,19 @@ export async function deleteInvoiceCompletely(invoiceId: string): Promise<{ succ
       }
     }
 
-    // 3. Hapus invoice (cascade → invoiceItems + invoicePayments)
+    // 3. Hapus cashflow entries terkait invoice ini
+    await tenantDb.delete(cashflowLedger).where(eq(cashflowLedger.referenceInvoiceId, invoiceId));
+
+    // 4. Hapus invoice (cascade → invoiceItems + invoicePayments)
     await tenantDb.delete(invoices).where(eq(invoices.id, invoiceId));
 
-    // 4. Hapus order (cascade → orderItems) jika ada
+    // 5. Hapus order (cascade → orderItems) jika ada
     if (orderId) {
       await tenantDb.delete(orders).where(eq(orders.id, orderId));
     }
 
     revalidatePath("/admin/keuangan");
+    revalidatePath("/admin/keuangan/cashflow");
     return { success: true };
   } catch (error) {
     console.error("deleteInvoiceCompletely error:", error);
