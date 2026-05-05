@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq, inArray, sum } from "drizzle-orm";
 import { createTenantDb, db } from "@repo/db";
 import { expoEvents } from "@repo/db/schema/public";
-import { booths, cashflowLedger, invoices, zones } from "@repo/db/schema/tenant";
+import { boothGroups, booths, cashflowLedger, invoices, zones } from "@repo/db/schema/tenant";
 import { sendWhatsApp } from "@/lib/whatsapp";
 
 const TENANT_SCHEMA = process.env.TENANT_SCHEMA ?? "expo_forbis2026";
@@ -31,16 +31,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: true, skipped: "no leader numbers" });
     }
 
-    const allZones = await tenantDb.query.zones.findMany({
-      where: eq(zones.isActive, true),
-      with: {
-        booths: {
-          where: eq(booths.isActive, true),
-          with: { boothGroup: { columns: { slug: true, name: true } } },
-        },
-      },
-      orderBy: (t, { asc }) => [asc(t.sortOrder), asc(t.name)],
-    });
+    const [allZones, allBoothGroups] = await Promise.all([
+      tenantDb.query.zones.findMany({
+        where: eq(zones.isActive, true),
+        with: { booths: { where: eq(booths.isActive, true) } },
+        orderBy: (t, { asc }) => [asc(t.sortOrder), asc(t.name)],
+      }),
+      tenantDb.select({ id: boothGroups.id, slug: boothGroups.slug }).from(boothGroups),
+    ]);
+
+    const groupSlugById = new Map(allBoothGroups.map((g) => [g.id, g.slug]));
 
     const fmtDate = new Intl.DateTimeFormat("id-ID", {
       day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Jakarta",
@@ -57,9 +57,14 @@ export async function GET(req: NextRequest) {
       const total = zone.booths.length;
       if (total === 0) continue;
 
-      const booked = zone.booths.filter((b) => b.status === "booked");
-      const reserved = zone.booths.filter((b) => b.status === "reserved");
-      const sisa = zone.booths.filter((b) => b.status === "open").length;
+      const boothsWithSlug = zone.booths.map((b) => ({
+        ...b,
+        groupSlug: groupSlugById.get(b.boothGroupId) ?? "",
+      }));
+
+      const booked = boothsWithSlug.filter((b) => b.status === "booked");
+      const reserved = boothsWithSlug.filter((b) => b.status === "reserved");
+      const sisa = boothsWithSlug.filter((b) => b.status === "open").length;
 
       totalAll += total;
       bookedAll += booked.length + reserved.length;
@@ -67,18 +72,18 @@ export async function GET(req: NextRequest) {
       const lines = [`*Zona ${zone.name}* (${total} booth)`];
 
       // Booked — general dulu, lalu per special group
-      const bookedGeneral = booked.filter((b) => !SPECIAL_GROUPS[b.boothGroup?.slug ?? ""]).length;
+      const bookedGeneral = booked.filter((b) => !SPECIAL_GROUPS[b.groupSlug]).length;
       if (bookedGeneral > 0) lines.push(`├ Booked: ${bookedGeneral}`);
       for (const [slug, label] of Object.entries(SPECIAL_GROUPS)) {
-        const count = booked.filter((b) => b.boothGroup?.slug === slug).length;
+        const count = booked.filter((b) => b.groupSlug === slug).length;
         if (count > 0) lines.push(`├ Booked ${label}: ${count}`);
       }
 
       // Reserved — general dulu, lalu per special group
-      const reservedGeneral = reserved.filter((b) => !SPECIAL_GROUPS[b.boothGroup?.slug ?? ""]).length;
+      const reservedGeneral = reserved.filter((b) => !SPECIAL_GROUPS[b.groupSlug]).length;
       if (reservedGeneral > 0) lines.push(`├ Reserved: ${reservedGeneral}`);
       for (const [slug, label] of Object.entries(SPECIAL_GROUPS)) {
-        const count = reserved.filter((b) => b.boothGroup?.slug === slug).length;
+        const count = reserved.filter((b) => b.groupSlug === slug).length;
         if (count > 0) lines.push(`├ Reserved ${label}: ${count}`);
       }
 
