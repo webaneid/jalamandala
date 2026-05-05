@@ -275,11 +275,17 @@ function AdminActionsCard({
     });
   }
 
-  if (invoice.status === "paid") {
+  const CLOSED_STATUSES = ["paid", "expired", "cancelled", "refunded", "refunding"];
+  const isClosed = CLOSED_STATUSES.includes(invoice.status);
+
+  if (isClosed) {
     return (
       <Card>
         <CardContent className="pt-5">
-          <Badge className="bg-green-100 text-green-700 border-none">Invoice Lunas</Badge>
+          {invoice.status === "paid"
+            ? <Badge className="bg-green-100 text-green-700 border-none">Invoice Lunas</Badge>
+            : <Badge className="bg-slate-100 text-slate-600 border-none">Invoice {invoice.status === "expired" ? "Kadaluarsa" : invoice.status === "cancelled" ? "Dibatalkan" : "Selesai"}</Badge>
+          }
         </CardContent>
       </Card>
     );

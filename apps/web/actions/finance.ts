@@ -688,8 +688,9 @@ export async function markInvoiceAsPaid(payload: {
       return { success: false, error: "Invoice tidak ditemukan." };
     }
 
-    if (invoice.status === "paid") {
-      return { success: false, error: "Invoice ini sudah lunas." };
+    const CLOSED_STATUSES = ["paid", "expired", "cancelled", "refunded", "refunding"];
+    if (CLOSED_STATUSES.includes(invoice.status)) {
+      return { success: false, error: `Invoice tidak dapat dibayar (status: ${invoice.status}).` };
     }
 
     const paymentMethod =

@@ -485,7 +485,7 @@ export function FinanceDashboard({ data }: { data: FinanceDashboardData }) {
                       onClick={() => window.open(`/invoice/${invoice.publicToken || invoice.id}`, '_blank')}>
                       <Wallet className="size-3.5" />Invoice
                     </Button>
-                    {invoice.status !== "paid" && (
+                    {!["paid","expired","cancelled","refunded","refunding"].includes(invoice.status) && (
                       <Button size="sm" className="flex-1 gap-1.5 text-xs"
                         onClick={() => setMarkPaidEditor({
                           amount: String(invoice.grandTotal),
@@ -581,7 +581,7 @@ export function FinanceDashboard({ data }: { data: FinanceDashboardData }) {
                             invoiceNumber: invoice.invoiceNumber,
                             paymentMethodKey: invoice.paymentChannelKey ?? "",
                           })} />
-                        {invoice.status !== "paid" ? (
+                        {!["paid","expired","cancelled","refunded","refunding"].includes(invoice.status) ? (
                           <IconButton icon={<Wallet className="size-4" />} label="Tandai paid"
                             onClick={() => setMarkPaidEditor({
                               amount: String(invoice.grandTotal),

@@ -219,6 +219,30 @@ export default async function PublicInvoicePage({
           </div>
         </div>
 
+        {/* ── BOOKING ULANG (expired / cancelled) ── */}
+        {(invoice.status === "expired" || invoice.status === "cancelled") && (
+          <div className="bg-orange-50 rounded-2xl border border-orange-200 p-5 print:hidden space-y-3">
+            <div className="flex items-center gap-2">
+              <RefreshCcw className="w-4 h-4 text-orange-600 shrink-0" />
+              <p className="text-sm font-bold text-orange-800">
+                {invoice.status === "expired" ? "Invoice Telah Kadaluarsa" : "Invoice Dibatalkan"}
+              </p>
+            </div>
+            <p className="text-sm text-orange-700">
+              {invoice.status === "expired"
+                ? "Booth sudah dilepas dan bisa dipesan kembali. Silakan lakukan booking baru."
+                : "Invoice ini telah dibatalkan. Silakan lakukan booking baru jika ingin melanjutkan."}
+            </p>
+            <a
+              href={`/${event.slug}/booking`}
+              className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-primary hover:bg-primary/90 text-white text-sm font-semibold rounded-xl transition-colors"
+            >
+              <RefreshCcw className="w-4 h-4" />
+              Booking Booth Baru
+            </a>
+          </div>
+        )}
+
         {/* ── RINCIAN TAGIHAN ── */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-50">
@@ -530,29 +554,6 @@ export default async function PublicInvoicePage({
           </div>
         )}
 
-        {/* ── BOOKING ULANG (expired) ── */}
-        {invoice.status === "expired" && (
-          <div className="bg-white rounded-2xl shadow-sm border border-orange-100 overflow-hidden print:hidden">
-            <div className="px-5 py-4 border-b border-orange-50">
-              <p className="text-sm font-bold text-orange-700">Invoice Telah Kadaluarsa</p>
-            </div>
-            <div className="p-5 space-y-3">
-              <p className="text-sm text-slate-600">
-                Invoice ini sudah melewati tanggal jatuh tempo. Booth yang tercantum telah dilepas dan bisa dipesan kembali oleh peserta lain.
-              </p>
-              <p className="text-sm text-slate-600">
-                Untuk mengikuti pameran, silakan lakukan booking booth baru dari awal.
-              </p>
-              <a
-                href={`/${event.slug}/booking`}
-                className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-primary hover:bg-primary/90 text-white text-sm font-semibold rounded-xl transition-colors"
-              >
-                <RefreshCcw className="w-4 h-4" />
-                Booking Booth Baru
-              </a>
-            </div>
-          </div>
-        )}
 
         {/* ── HISTORI PEMBAYARAN ── */}
         {payments.length > 0 && (
