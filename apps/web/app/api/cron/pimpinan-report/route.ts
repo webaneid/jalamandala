@@ -50,7 +50,9 @@ export async function GET(req: NextRequest) {
       new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
 
     let totalAll = 0;
-    let bookedAll = 0;
+    let totalTerisi = 0;
+    let totalSisaUmum = 0;
+    const specialTotals: Record<string, { total: number; belumDiambil: number }> = {};
     const zoneLines: string[] = [];
 
     for (const zone of allZones) {
@@ -64,45 +66,53 @@ export async function GET(req: NextRequest) {
 
       const booked = boothsWithSlug.filter((b) => b.status === "booked");
       const reserved = boothsWithSlug.filter((b) => b.status === "reserved");
-      const sisa = boothsWithSlug.filter((b) => b.status === "open").length;
 
       totalAll += total;
-      bookedAll += booked.length + reserved.length;
+      totalTerisi += booked.length + reserved.length;
 
-      const lines = [`*Zona ${zone.name}* (${total} booth)`];
-
-      // Booked & Reserved untuk non-special group
+      // Non-special group stats
       const bookedGeneral = booked.filter((b) => !SPECIAL_GROUPS[b.groupSlug]).length;
       const reservedGeneral = reserved.filter((b) => !SPECIAL_GROUPS[b.groupSlug]).length;
       const sisaGeneral = boothsWithSlug.filter((b) => b.status === "open" && !SPECIAL_GROUPS[b.groupSlug]).length;
+      totalSisaUmum += sisaGeneral;
 
+      const lines = [`*Zona ${zone.name}* (${total} booth)`];
       if (bookedGeneral > 0) lines.push(`├ Booked: ${bookedGeneral}`);
       if (reservedGeneral > 0) lines.push(`├ Reserved: ${reservedGeneral}`);
-      if (sisaGeneral > 0) lines.push(`├ Sisa: ${sisaGeneral}`);
+      lines.push(`├ Sisa Umum: ${sisaGeneral}`);
 
       // Special groups — selalu tampil jika ada booth di zona ini
       for (const [slug, label] of Object.entries(SPECIAL_GROUPS)) {
         const groupBooths = boothsWithSlug.filter((b) => b.groupSlug === slug);
         if (groupBooths.length === 0) continue;
+
         const gBooked = groupBooths.filter((b) => b.status === "booked").length;
         const gReserved = groupBooths.filter((b) => b.status === "reserved").length;
-        const gSisa = groupBooths.filter((b) => b.status === "open").length;
+        const gBelum = groupBooths.filter((b) => b.status === "open").length;
+
+        // Akumulasi untuk total bawah
+        if (!specialTotals[slug]) specialTotals[slug] = { total: 0, belumDiambil: 0 };
+        specialTotals[slug]!.total += groupBooths.length;
+        specialTotals[slug]!.belumDiambil += gBelum;
+
         const parts: string[] = [];
         if (gBooked > 0) parts.push(`${gBooked} booked`);
         if (gReserved > 0) parts.push(`${gReserved} reserved`);
-        if (gSisa > 0) parts.push(`${gSisa} sisa`);
-        lines.push(`├ ${label} (${groupBooths.length}): ${parts.join(", ")}`);
+        parts.push(`${gBelum} belum diambil`);
+        lines.push(`├ Jatah ${label} (${groupBooths.length}): ${parts.join(", ")}`);
       }
 
       // Ganti ├ terakhir jadi └
-      if (lines.length > 1) {
-        lines[lines.length - 1] = lines[lines.length - 1]!.replace("├", "└");
-      }
-
+      lines[lines.length - 1] = lines[lines.length - 1]!.replace("├", "└");
       zoneLines.push(lines.join("\n"));
     }
 
-    // Keuangan — pakai cashflow ledger agar sesuai uang yang benar-benar masuk (termasuk DP)
+    // Total jatah khusus belum diambil
+    const specialSummaryParts = Object.entries(SPECIAL_GROUPS)
+      .filter(([slug]) => specialTotals[slug])
+      .map(([slug, label]) => `${label} ${specialTotals[slug]!.belumDiambil}`);
+
+    // Keuangan
     const [cashInRow, pendingRow] = await Promise.all([
       tenantDb.select({ total: sum(cashflowLedger.amount) }).from(cashflowLedger)
         .where(eq(cashflowLedger.type, "cash_in")),
@@ -111,16 +121,14 @@ export async function GET(req: NextRequest) {
     ]);
     const totalPaid = Number(cashInRow[0]?.total ?? 0);
 
-    // Untuk pending: grandTotal dikurangi dpAmount yang sudah masuk
     const dpPaidRows = await tenantDb.select({ sisa: sum(invoices.grandTotal) })
       .from(invoices).where(eq(invoices.status, "dp_paid"));
-    const dpPaidGrandTotal = Number(dpPaidRows[0]?.sisa ?? 0);
     const dpAmountRows = await tenantDb.select({ dp: sum(invoices.dpAmount) })
       .from(invoices).where(eq(invoices.status, "dp_paid"));
-    const dpAmountPaid = Number(dpAmountRows[0]?.dp ?? 0);
-    const sisaDpPaid = dpPaidGrandTotal - dpAmountPaid;
-
+    const sisaDpPaid = Number(dpPaidRows[0]?.sisa ?? 0) - Number(dpAmountRows[0]?.dp ?? 0);
     const totalPending = Number(pendingRow[0]?.total ?? 0) + sisaDpPaid;
+
+    const totalJatahBelum = Object.values(specialTotals).reduce((s, v) => s + v.belumDiambil, 0);
 
     const message = [
       `📊 *Laporan Harian FORBIS Summit*`,
@@ -130,10 +138,15 @@ export async function GET(req: NextRequest) {
       ``,
       zoneLines.join("\n\n"),
       ``,
-      `*Total: ${bookedAll} terisi / ${totalAll} total (${totalAll - bookedAll} sisa)*`,
+      `📌 *Total Keseluruhan*`,
+      `├ Terisi (booked+reserved): ${totalTerisi} / ${totalAll}`,
+      `├ Sisa untuk umum: ${totalSisaUmum}`,
+      ...(specialSummaryParts.length > 0
+        ? [`└ Jatah khusus belum diambil: ${totalJatahBelum} (${specialSummaryParts.join(", ")})`]
+        : [`└ Semua jatah khusus sudah terisi`]),
       ``,
       `💰 *Keuangan*`,
-      `Terbayar (Paid): ${fmtIDR(totalPaid)}`,
+      `Terbayar (inc. DP): ${fmtIDR(totalPaid)}`,
       `Pending (Belum Lunas): ${fmtIDR(totalPending)}`,
       `Total Potensi: ${fmtIDR(totalPaid + totalPending)}`,
     ].join("\n");
