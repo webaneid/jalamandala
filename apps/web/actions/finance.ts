@@ -305,7 +305,82 @@ export async function updateInvoicePayment(payload: {
       updatedAt: new Date(),
     }).where(eq(invoicePayments.id, payload.paymentId));
 
+    // Recalculate invoice status berdasarkan semua verified payments
+    const invoice = await tenantDb.query.invoices.findFirst({
+      where: eq(invoices.id, payment.invoiceId),
+      with: { payments: true, order: true },
+    });
+
+    if (invoice) {
+      const totalPaid = invoice.payments
+        .filter((p) => p.status === "verified")
+        .reduce((s, p) => s + p.amount, 0);
+
+      const isFullyPaid = totalPaid >= invoice.grandTotal;
+      const overpaymentAmount = isFullyPaid ? Math.max(0, totalPaid - invoice.grandTotal) : 0;
+      const dpMinimumAmount = Math.ceil(invoice.grandTotal * (invoice.dpMinimumPercent ?? 50) / 100);
+      const isDp = !isFullyPaid && totalPaid >= dpMinimumAmount;
+
+      let newStatus: string;
+      if (isFullyPaid) newStatus = "paid";
+      else if (isDp) newStatus = "dp_paid";
+      else newStatus = "waiting_for_payment";
+
+      await tenantDb.update(invoices).set({
+        status: newStatus,
+        paidAt: isFullyPaid ? paidAt : null,
+        overpaymentAmount,
+        ...(isDp && !invoice.dpPaidAt ? {
+          dpAmount: totalPaid,
+          dpPaidAt: paidAt,
+          balanceDueDate: new Date(paidAt.getTime() + 7 * 24 * 60 * 60 * 1000),
+        } : {}),
+        updatedAt: new Date(),
+      }).where(eq(invoices.id, invoice.id));
+
+      // Update booth status jika lunas
+      if (isFullyPaid) {
+        if (invoice.orderId) {
+          await tenantDb.update(orders).set({ status: "paid", updatedAt: new Date() }).where(eq(orders.id, invoice.orderId));
+        }
+        const linkedItems = await tenantDb.select({ referenceId: invoiceItems.referenceId })
+          .from(invoiceItems)
+          .where(and(eq(invoiceItems.invoiceId, invoice.id), eq(invoiceItems.itemType, "booth_booking")));
+        const bookingIds = linkedItems.map((i) => i.referenceId).filter(Boolean) as string[];
+        if (bookingIds.length > 0) {
+          const linkedBookings = await tenantDb.select({ boothId: boothBookings.boothId })
+            .from(boothBookings).where(inArray(boothBookings.id, bookingIds));
+          const boothIds = linkedBookings.map((b) => b.boothId).filter(Boolean) as string[];
+          if (boothIds.length > 0) {
+            await tenantDb.update(booths).set({ status: "booked", updatedAt: new Date() }).where(inArray(booths.id, boothIds));
+          }
+        }
+      }
+
+      // Sync cashflow: hapus semua entry invoice_payment untuk invoice ini, recreate dari verified payments
+      await tenantDb.delete(cashflowLedger).where(
+        and(eq(cashflowLedger.referenceInvoiceId, invoice.id), eq(cashflowLedger.category, "invoice_payment"))
+      );
+      const verifiedPayments = invoice.payments.filter((p) => p.status === "verified");
+      // Update amount untuk payment yang baru diedit
+      const updatedPayments = verifiedPayments.map((p) =>
+        p.id === payload.paymentId ? { ...p, amount: payload.amount, paidAt } : p
+      );
+      for (const vp of updatedPayments) {
+        await tenantDb.insert(cashflowLedger).values({
+          amount: vp.amount,
+          category: "invoice_payment",
+          description: `Pembayaran Invoice ${invoice.invoiceNumber}`,
+          referenceInvoiceId: invoice.id,
+          transactionDate: vp.id === payload.paymentId ? paidAt : vp.paidAt,
+          type: "cash_in",
+        });
+      }
+    }
+
     revalidatePath(`/admin/keuangan/${payment.invoiceId}`);
+    revalidatePath("/admin/keuangan");
+    revalidatePath("/admin/keuangan/cashflow");
     return { success: true };
   } catch (error) {
     console.error("updateInvoicePayment error:", error);
