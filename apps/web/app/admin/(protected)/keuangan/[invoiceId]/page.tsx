@@ -24,6 +24,7 @@ import { DpProgressBanner } from "@/components/admin/finance/DpProgressBanner";
 import { InvoiceDetailActions } from "@/components/admin/finance/InvoiceDetailActions";
 import { OverpaymentBanner } from "@/components/admin/finance/OverpaymentBanner";
 import { PaymentProofPreviewButton } from "@/components/admin/finance/PaymentProofPreviewButton";
+import { PaymentHistoryEditor } from "@/components/admin/finance/PaymentHistoryEditor";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -598,50 +599,12 @@ export default async function InvoiceDetailPage({
                 <CardTitle className="text-base">Histori Pembayaran</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <table className="w-full text-sm">
-                  <thead className="border-b bg-neutral-50">
-                    <tr>
-                      <th className="px-5 py-3 text-left font-medium text-muted-foreground">Tanggal</th>
-                      <th className="px-5 py-3 text-left font-medium text-muted-foreground">Atas Nama</th>
-                      <th className="px-5 py-3 text-left font-medium text-muted-foreground">Channel</th>
-                      <th className="px-5 py-3 text-left font-medium text-muted-foreground">Bukti</th>
-                      <th className="px-5 py-3 text-right font-medium text-muted-foreground">Jumlah</th>
-                      <th className="px-5 py-3 text-left font-medium text-muted-foreground">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {verifiedPayments.map((p) => (
-                      <tr key={p.id}>
-                        <td className="px-5 py-3 text-muted-foreground">{formatDate(p.paidAt)}</td>
-                        <td className="px-5 py-3">{p.senderName ?? "-"}</td>
-                        <td className="px-5 py-3 text-muted-foreground">{p.paymentChannelLabel ?? p.method ?? "-"}</td>
-                        <td className="px-5 py-3">
-                          <PaymentProofPreviewButton assetId={p.proofAssetId} />
-                        </td>
-                        <td className="px-5 py-3 text-right font-medium">{formatCurrency(p.amount)}</td>
-                        <td className="px-5 py-3">
-                          <Badge className="bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 text-xs">
-                            Terverifikasi
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot className="border-t bg-neutral-50/50">
-                    <tr>
-                      <td colSpan={4} className="px-5 py-3 text-right font-semibold">Total Terbayar</td>
-                      <td className="px-5 py-3 text-right font-bold text-emerald-700">{formatCurrency(totalVerified)}</td>
-                      <td />
-                    </tr>
-                    {balanceDue > 0 && (
-                      <tr>
-                        <td colSpan={4} className="px-5 py-2 text-right text-sm text-muted-foreground">Sisa Tagihan</td>
-                        <td className="px-5 py-2 text-right font-semibold text-amber-700">{formatCurrency(balanceDue)}</td>
-                        <td />
-                      </tr>
-                    )}
-                  </tfoot>
-                </table>
+                <PaymentHistoryEditor
+                  payments={verifiedPayments}
+                  paymentMethods={paymentMethods}
+                  totalVerified={totalVerified}
+                  balanceDue={balanceDue}
+                />
               </CardContent>
             </Card>
           )}

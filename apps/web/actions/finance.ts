@@ -257,6 +257,62 @@ async function sendExpiryReminders(tenantDb: TenantDb): Promise<void> {
 
 // ────────────────────────────────────────────────────────────────────────────
 
+export async function updateInvoicePayment(payload: {
+  paymentId: string;
+  amount: number;
+  paidAt: string;
+  senderName?: string;
+  referenceNumber?: string;
+  paymentMethodKey?: string;
+  proofData?: { contentType: string; dataUrl: string; fileName: string };
+  proofAssetId?: string | null;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const tenantDb = await createTenantDb(TENANT_SCHEMA);
+
+    const payment = await tenantDb.query.invoicePayments.findFirst({
+      where: eq(invoicePayments.id, payload.paymentId),
+      columns: { id: true, invoiceId: true, proofAssetId: true },
+    });
+    if (!payment) return { success: false, error: "Data pembayaran tidak ditemukan." };
+
+    const paymentMethod = payload.paymentMethodKey
+      ? await resolvePaymentMethodOption(payload.paymentMethodKey)
+      : null;
+
+    const paidAt = wibInputToDate(normalizeText(payload.paidAt) || null) ?? new Date();
+
+    let proofAssetId: string | null = payment.proofAssetId ?? null;
+    if (payload.proofAssetId !== undefined) {
+      proofAssetId = payload.proofAssetId;
+    } else if (payload.proofData?.dataUrl) {
+      const uploaded = await uploadPaymentProof(payload.proofData);
+      proofAssetId = uploaded.assetId ?? null;
+    }
+
+    await tenantDb.update(invoicePayments).set({
+      amount: payload.amount,
+      paidAt,
+      senderName: normalizeText(payload.senderName) || null,
+      referenceNumber: normalizeText(payload.referenceNumber) || null,
+      ...(paymentMethod ? {
+        method: paymentMethod.type,
+        paymentChannelId: paymentMethod.id,
+        paymentChannelLabel: paymentMethod.label,
+        paymentChannelType: paymentMethod.type,
+      } : {}),
+      proofAssetId,
+      updatedAt: new Date(),
+    }).where(eq(invoicePayments.id, payload.paymentId));
+
+    revalidatePath(`/admin/keuangan/${payment.invoiceId}`);
+    return { success: true };
+  } catch (error) {
+    console.error("updateInvoicePayment error:", error);
+    return { success: false, error: "Gagal menyimpan perubahan." };
+  }
+}
+
 export async function rejectPaymentConfirmation(paymentId: string) {
   try {
     const tenantDb = await createTenantDb(TENANT_SCHEMA);
