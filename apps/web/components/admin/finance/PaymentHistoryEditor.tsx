@@ -2,8 +2,8 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Loader2, Pencil, X, Check } from "lucide-react"
-import { updateInvoicePayment } from "@/actions/finance"
+import { Loader2, Pencil, Trash2, X, Check } from "lucide-react"
+import { deleteInvoicePayment, updateInvoicePayment } from "@/actions/finance"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -56,6 +56,7 @@ export function PaymentHistoryEditor({
 }) {
   const router = useRouter()
   const [editingId, setEditingId] = React.useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = React.useState<string | null>(null)
   const [isSaving, startSaving] = React.useTransition()
   const [error, setError] = React.useState("")
 
@@ -83,6 +84,25 @@ export function PaymentHistoryEditor({
   function cancelEdit() {
     setEditingId(null)
     setError("")
+  }
+
+  function confirmDelete(paymentId: string) {
+    setConfirmDeleteId(paymentId)
+    setError("")
+  }
+
+  function handleDelete(paymentId: string) {
+    setError("")
+    startSaving(async () => {
+      const result = await deleteInvoicePayment(paymentId)
+      if (!result.success) {
+        setError(result.error ?? "Gagal menghapus.")
+        setConfirmDeleteId(null)
+        return
+      }
+      setConfirmDeleteId(null)
+      router.refresh()
+    })
   }
 
   function saveEdit(paymentId: string) {
@@ -190,14 +210,45 @@ export function PaymentHistoryEditor({
                   <Badge className="bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 text-xs">Terverifikasi</Badge>
                 </td>
                 <td className="px-3 py-3 text-right">
-                  <button
-                    className="inline-flex size-7 items-center justify-center rounded-lg border border-border/70 text-muted-foreground hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700 transition"
-                    onClick={() => startEdit(p)}
-                    title="Edit pembayaran"
-                    type="button"
-                  >
-                    <Pencil className="size-3.5" />
-                  </button>
+                  {confirmDeleteId === p.id ? (
+                    <div className="flex items-center justify-end gap-1.5">
+                      <span className="text-xs text-red-600 font-medium">Hapus?</span>
+                      <button
+                        className="inline-flex size-7 items-center justify-center rounded-lg bg-red-600 text-white hover:bg-red-700 transition"
+                        onClick={() => handleDelete(p.id)}
+                        disabled={isSaving}
+                        type="button"
+                      >
+                        {isSaving ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3.5" />}
+                      </button>
+                      <button
+                        className="inline-flex size-7 items-center justify-center rounded-lg border border-border/70 text-muted-foreground hover:bg-muted transition"
+                        onClick={() => setConfirmDeleteId(null)}
+                        type="button"
+                      >
+                        <X className="size-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        className="inline-flex size-7 items-center justify-center rounded-lg border border-border/70 text-muted-foreground hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700 transition"
+                        onClick={() => startEdit(p)}
+                        title="Edit pembayaran"
+                        type="button"
+                      >
+                        <Pencil className="size-3.5" />
+                      </button>
+                      <button
+                        className="inline-flex size-7 items-center justify-center rounded-lg border border-border/70 text-muted-foreground hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition"
+                        onClick={() => confirmDelete(p.id)}
+                        title="Hapus pembayaran"
+                        type="button"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </td>
               </tr>
             )

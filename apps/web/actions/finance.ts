@@ -388,6 +388,91 @@ export async function updateInvoicePayment(payload: {
   }
 }
 
+export async function deleteInvoicePayment(paymentId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const tenantDb = await createTenantDb(TENANT_SCHEMA);
+
+    const payment = await tenantDb.query.invoicePayments.findFirst({
+      where: eq(invoicePayments.id, paymentId),
+      columns: { id: true, invoiceId: true, status: true },
+    });
+    if (!payment) return { success: false, error: "Data pembayaran tidak ditemukan." };
+    if (payment.status === "pending_verification") return { success: false, error: "Tidak bisa hapus pembayaran yang sedang menunggu verifikasi." };
+
+    await tenantDb.delete(invoicePayments).where(eq(invoicePayments.id, paymentId));
+
+    // Recalculate invoice berdasarkan sisa verified payments
+    const invoice = await tenantDb.query.invoices.findFirst({
+      where: eq(invoices.id, payment.invoiceId),
+      with: { payments: true, order: true },
+    });
+
+    if (invoice) {
+      const remainingPayments = invoice.payments.filter((p) => p.status === "verified");
+      const totalPaid = remainingPayments.reduce((s, p) => s + p.amount, 0);
+      const isFullyPaid = totalPaid >= invoice.grandTotal;
+      const overpaymentAmount = isFullyPaid ? Math.max(0, totalPaid - invoice.grandTotal) : 0;
+      const dpMinimumAmount = Math.ceil(invoice.grandTotal * (invoice.dpMinimumPercent ?? 50) / 100);
+      const isDp = !isFullyPaid && totalPaid >= dpMinimumAmount;
+
+      let newStatus: string;
+      if (isFullyPaid) newStatus = "paid";
+      else if (isDp) newStatus = "dp_paid";
+      else newStatus = "waiting_for_payment";
+
+      await tenantDb.update(invoices).set({
+        status: newStatus,
+        paidAt: isFullyPaid ? (remainingPayments.at(-1)?.paidAt ?? null) : null,
+        overpaymentAmount,
+        dpAmount: isDp ? totalPaid : (isFullyPaid ? invoice.grandTotal : 0),
+        updatedAt: new Date(),
+      }).where(eq(invoices.id, invoice.id));
+
+      // Reset booth ke reserved jika tidak lagi lunas
+      if (!isFullyPaid) {
+        const linkedItems = await tenantDb.select({ referenceId: invoiceItems.referenceId })
+          .from(invoiceItems)
+          .where(and(eq(invoiceItems.invoiceId, invoice.id), eq(invoiceItems.itemType, "booth_booking")));
+        const bookingIds = linkedItems.map((i) => i.referenceId).filter(Boolean) as string[];
+        if (bookingIds.length > 0) {
+          const linkedBookings = await tenantDb.select({ boothId: boothBookings.boothId })
+            .from(boothBookings).where(inArray(boothBookings.id, bookingIds));
+          const boothIds = linkedBookings.map((b) => b.boothId).filter(Boolean) as string[];
+          if (boothIds.length > 0) {
+            await tenantDb.update(booths).set({ status: "reserved", updatedAt: new Date() }).where(inArray(booths.id, boothIds));
+          }
+        }
+        if (invoice.orderId) {
+          await tenantDb.update(orders).set({ status: "invoice_issued", updatedAt: new Date() }).where(eq(orders.id, invoice.orderId));
+        }
+      }
+
+      // Sync cashflow
+      await tenantDb.delete(cashflowLedger).where(
+        and(eq(cashflowLedger.referenceInvoiceId, invoice.id), eq(cashflowLedger.category, "invoice_payment"))
+      );
+      for (const vp of remainingPayments) {
+        await tenantDb.insert(cashflowLedger).values({
+          amount: vp.amount,
+          category: "invoice_payment",
+          description: `Pembayaran Invoice ${invoice.invoiceNumber}`,
+          referenceInvoiceId: invoice.id,
+          transactionDate: vp.paidAt,
+          type: "cash_in",
+        });
+      }
+    }
+
+    revalidatePath(`/admin/keuangan/${payment.invoiceId}`);
+    revalidatePath("/admin/keuangan");
+    revalidatePath("/admin/keuangan/cashflow");
+    return { success: true };
+  } catch (error) {
+    console.error("deleteInvoicePayment error:", error);
+    return { success: false, error: "Gagal menghapus pembayaran." };
+  }
+}
+
 export async function rejectPaymentConfirmation(paymentId: string) {
   try {
     const tenantDb = await createTenantDb(TENANT_SCHEMA);
