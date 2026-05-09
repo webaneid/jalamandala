@@ -463,12 +463,25 @@ export default async function InvoiceDetailPage({
 
       {(invoice.status === "dp_paid" || invoice.status === "balance_overdue") && (
         <DpProgressBanner
+          mode="dp"
           invoiceId={invoice.id}
           invoiceNumber={invoice.invoiceNumber}
           grandTotal={invoice.grandTotal}
+          totalPaid={totalVerified}
           dpAmount={invoice.dpAmount}
           balanceDueDate={invoice.balanceDueDate ? new Date(invoice.balanceDueDate) : null}
           status={invoice.status}
+          participantName={participant?.name ?? ""}
+        />
+      )}
+
+      {invoice.status === "paid" && totalVerified > 0 && (
+        <DpProgressBanner
+          mode="paid"
+          invoiceId={invoice.id}
+          invoiceNumber={invoice.invoiceNumber}
+          grandTotal={invoice.grandTotal}
+          totalPaid={totalVerified}
           participantName={participant?.name ?? ""}
         />
       )}

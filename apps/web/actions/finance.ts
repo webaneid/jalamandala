@@ -2310,6 +2310,7 @@ export async function extendReservation(
 
 export async function cancelInvoiceWithRefund(payload: {
   invoiceId: string;
+  refundType: "full" | "half";
   destBankName: string;
   destAccountNumber: string;
   destAccountName: string;
@@ -2321,29 +2322,58 @@ export async function cancelInvoiceWithRefund(payload: {
 
     const invoice = await tenantDb.query.invoices.findFirst({
       where: eq(invoices.id, payload.invoiceId),
-      columns: { status: true, dpAmount: true, invoiceNumber: true, grandTotal: true },
+      with: { payments: true, order: true, items: true },
     });
 
     if (!invoice) return { success: false, error: "Invoice tidak ditemukan." };
-    if (invoice.status !== "dp_paid" && invoice.status !== "balance_overdue") {
-      return { success: false, error: "Hanya invoice dengan status DP yang bisa dibatalkan via alur ini." };
+
+    const CANCELLABLE = ["paid", "dp_paid", "balance_overdue", "balance_waiting_confirmation"];
+    if (!CANCELLABLE.includes(invoice.status)) {
+      return { success: false, error: "Invoice dengan status ini tidak bisa dibatalkan." };
     }
 
-    const refundAmount = invoice.dpAmount ?? 0;
+    // Hitung total yang benar-benar sudah dibayar
+    const totalPaid = invoice.payments
+      .filter((p) => p.status === "verified")
+      .reduce((s, p) => s + p.amount, 0);
+
+    if (totalPaid <= 0) {
+      return { success: false, error: "Tidak ada pembayaran yang perlu direfund." };
+    }
+
+    const refundAmount = payload.refundType === "full" ? totalPaid : Math.floor(totalPaid / 2);
     if (refundAmount <= 0) {
-      return { success: false, error: "Tidak ada DP yang perlu direfund." };
+      return { success: false, error: "Jumlah refund tidak valid." };
     }
 
     const activeEvent = await resolveActiveEvent();
 
+    // Release booth → open
+    const boothItemIds = invoice.items
+      .filter((i) => i.itemType === "booth_booking" && i.referenceId)
+      .map((i) => i.referenceId as string);
+
+    if (boothItemIds.length > 0) {
+      const linkedBookings = await tenantDb
+        .select({ boothId: boothBookings.boothId })
+        .from(boothBookings)
+        .where(inArray(boothBookings.id, boothItemIds));
+      const boothIds = linkedBookings.map((b) => b.boothId).filter(Boolean) as string[];
+      if (boothIds.length > 0) {
+        await tenantDb.update(booths).set({ status: "open", updatedAt: new Date() }).where(inArray(booths.id, boothIds));
+      }
+      await tenantDb.delete(boothBookings).where(inArray(boothBookings.id, boothItemIds));
+    }
+
     // Buat disbursement refund
+    const label = payload.refundType === "full" ? "Refund 100%" : "Refund 50%";
     const inserted = await tenantDb
       .insert(disbursementRequests)
       .values({
         requestedBy: access.userId,
         requestedByName: access.userName,
         purposeType: "refund",
-        purposeDescription: `Pengembalian DP — Invoice ${invoice.invoiceNumber} dibatalkan`,
+        purposeDescription: `${label} — Invoice ${invoice.invoiceNumber} dibatalkan`,
         requestedAmount: refundAmount,
         destBankName: payload.destBankName.trim(),
         destAccountNumber: payload.destAccountNumber.trim(),
@@ -2362,11 +2392,18 @@ export async function cancelInvoiceWithRefund(payload: {
       refundAmount,
       cancelledByUserId: access.userId,
       cancelledByName: access.userName,
-      cancellationReason: payload.notes?.trim() || "Dibatalkan admin, refund DP",
+      cancellationReason: payload.notes?.trim() || `Dibatalkan admin — ${label}`,
       cancelledAt: new Date(),
     }).where(eq(invoices.id, payload.invoiceId));
 
+    // Hapus cashflow cash_in (uang sudah dikembalikan, dicatat cash_out saat disbursement ditransfer)
+    await tenantDb.delete(cashflowLedger).where(
+      and(eq(cashflowLedger.referenceInvoiceId, invoice.id), eq(cashflowLedger.category, "invoice_payment"))
+    );
+
     revalidatePath(`/admin/keuangan/${payload.invoiceId}`);
+    revalidatePath("/admin/keuangan");
+    revalidatePath("/admin/keuangan/cashflow");
     revalidatePath("/admin/keuangan/pencairan");
     return { success: true, disbursementId: created.id };
   } catch (error) {
