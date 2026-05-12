@@ -2312,6 +2312,7 @@ export async function cancelInvoiceWithRefund(payload: {
   invoiceId: string;
   refundType: "full" | "half" | "custom";
   customAmount?: number;
+  cancelBooking?: boolean;
   destBankName: string;
   destAccountNumber: string;
   destAccountName: string;
@@ -2328,9 +2329,9 @@ export async function cancelInvoiceWithRefund(payload: {
 
     if (!invoice) return { success: false, error: "Invoice tidak ditemukan." };
 
-    const CANCELLABLE = ["paid", "dp_paid", "balance_overdue", "balance_waiting_confirmation"];
-    if (!CANCELLABLE.includes(invoice.status)) {
-      return { success: false, error: "Invoice dengan status ini tidak bisa dibatalkan." };
+    const REFUNDABLE = ["paid", "dp_paid", "balance_overdue", "balance_waiting_confirmation"];
+    if (!REFUNDABLE.includes(invoice.status)) {
+      return { success: false, error: "Invoice dengan status ini tidak bisa direfund." };
     }
 
     // Hitung total yang benar-benar sudah dibayar
@@ -2353,32 +2354,35 @@ export async function cancelInvoiceWithRefund(payload: {
 
     const activeEvent = await resolveActiveEvent();
 
-    // Release booth → open
-    const boothItemIds = invoice.items
-      .filter((i) => i.itemType === "booth_booking" && i.referenceId)
-      .map((i) => i.referenceId as string);
+    // Hanya batalkan booking + lepas booth jika cancelBooking = true
+    if (payload.cancelBooking) {
+      const boothItemIds = invoice.items
+        .filter((i) => i.itemType === "booth_booking" && i.referenceId)
+        .map((i) => i.referenceId as string);
 
-    if (boothItemIds.length > 0) {
-      const linkedBookings = await tenantDb
-        .select({ boothId: boothBookings.boothId })
-        .from(boothBookings)
-        .where(inArray(boothBookings.id, boothItemIds));
-      const boothIds = linkedBookings.map((b) => b.boothId).filter(Boolean) as string[];
-      if (boothIds.length > 0) {
-        await tenantDb.update(booths).set({ status: "open", updatedAt: new Date() }).where(inArray(booths.id, boothIds));
+      if (boothItemIds.length > 0) {
+        const linkedBookings = await tenantDb
+          .select({ boothId: boothBookings.boothId })
+          .from(boothBookings)
+          .where(inArray(boothBookings.id, boothItemIds));
+        const boothIds = linkedBookings.map((b) => b.boothId).filter(Boolean) as string[];
+        if (boothIds.length > 0) {
+          await tenantDb.update(booths).set({ status: "open", updatedAt: new Date() }).where(inArray(booths.id, boothIds));
+        }
+        await tenantDb.delete(boothBookings).where(inArray(boothBookings.id, boothItemIds));
       }
-      await tenantDb.delete(boothBookings).where(inArray(boothBookings.id, boothItemIds));
     }
 
     // Buat disbursement refund
-    const label = payload.refundType === "full" ? "Refund 100%" : payload.refundType === "half" ? "Refund 50%" : `Refund Custom`;
+    const label = payload.refundType === "full" ? "Refund 100%" : payload.refundType === "half" ? "Refund 50%" : "Refund Custom";
+    const isCancellation = !!payload.cancelBooking;
     const inserted = await tenantDb
       .insert(disbursementRequests)
       .values({
         requestedBy: access.userId,
         requestedByName: access.userName,
         purposeType: "refund",
-        purposeDescription: `${label} — Invoice ${invoice.invoiceNumber} dibatalkan`,
+        purposeDescription: `${label} — Invoice ${invoice.invoiceNumber}${isCancellation ? " (booking dibatalkan)" : " (penyesuaian)"}`,
         requestedAmount: refundAmount,
         destBankName: payload.destBankName.trim(),
         destAccountNumber: payload.destAccountNumber.trim(),
@@ -2392,19 +2396,26 @@ export async function cancelInvoiceWithRefund(payload: {
     const created = inserted[0];
     if (!created) return { success: false, error: "Gagal membuat permohonan pencairan." };
 
-    await tenantDb.update(invoices).set({
-      status: "refunding",
-      refundAmount,
-      cancelledByUserId: access.userId,
-      cancelledByName: access.userName,
-      cancellationReason: payload.notes?.trim() || `Dibatalkan admin — ${label}`,
-      cancelledAt: new Date(),
-    }).where(eq(invoices.id, payload.invoiceId));
+    // Jika batalkan booking: set invoice ke refunding
+    // Jika hanya refund penyesuaian: invoice status tidak berubah
+    if (isCancellation) {
+      await tenantDb.update(invoices).set({
+        status: "refunding",
+        refundAmount,
+        cancelledByUserId: access.userId,
+        cancelledByName: access.userName,
+        cancellationReason: payload.notes?.trim() || `Dibatalkan admin — ${label}`,
+        cancelledAt: new Date(),
+      }).where(eq(invoices.id, payload.invoiceId));
+    }
 
-    // Hapus cashflow cash_in (uang sudah dikembalikan, dicatat cash_out saat disbursement ditransfer)
-    await tenantDb.delete(cashflowLedger).where(
-      and(eq(cashflowLedger.referenceInvoiceId, invoice.id), eq(cashflowLedger.category, "invoice_payment"))
-    );
+    // Hapus cashflow cash_in hanya jika booking benar-benar dibatalkan
+    // Jika hanya refund penyesuaian, cashflow pemasukan tetap ada
+    if (isCancellation) {
+      await tenantDb.delete(cashflowLedger).where(
+        and(eq(cashflowLedger.referenceInvoiceId, invoice.id), eq(cashflowLedger.category, "invoice_payment"))
+      );
+    }
 
     revalidatePath(`/admin/keuangan/${payload.invoiceId}`);
     revalidatePath("/admin/keuangan");

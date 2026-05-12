@@ -33,7 +33,8 @@ export function DpProgressBanner(props: RefundBannerProps) {
   const [extendError, setExtendError] = React.useState("");
   const [refundOpen, setRefundOpen] = React.useState(false);
   const [refundType, setRefundType] = React.useState<"full" | "half" | "custom">("full")
-  const [customAmount, setCustomAmount] = React.useState("");
+  const [customAmount, setCustomAmount] = React.useState("")
+  const [cancelBooking, setCancelBooking] = React.useState(false);
 
   // Refund form state
   const [destBankName, setDestBankName] = React.useState("");
@@ -77,6 +78,7 @@ export function DpProgressBanner(props: RefundBannerProps) {
         invoiceId: props.invoiceId,
         refundType,
         customAmount: refundType === "custom" ? Number(customAmount) : undefined,
+        cancelBooking,
         destBankName,
         destAccountNumber,
         destAccountName,
@@ -230,6 +232,22 @@ export function DpProgressBanner(props: RefundBannerProps) {
                   </div>
                 )}
               </div>
+
+              {/* Opsi batalkan booking */}
+              <label className={`flex items-start gap-3 rounded-xl border p-3 cursor-pointer transition ${cancelBooking ? "border-red-300 bg-red-50" : "border-border hover:bg-muted/30"}`}>
+                <input
+                  type="checkbox"
+                  className="mt-0.5 size-4 accent-red-600"
+                  checked={cancelBooking}
+                  onChange={(e) => setCancelBooking(e.target.checked)}
+                />
+                <div>
+                  <p className="text-sm font-medium text-slate-800">Batalkan booking & lepas booth</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Centang jika ini pembatalan — booth akan kembali tersedia untuk peserta lain. Jika hanya penyesuaian harga atau kelebihan bayar, biarkan tidak dicentang.
+                  </p>
+                </div>
+              </label>
 
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Nama Bank *</label>
