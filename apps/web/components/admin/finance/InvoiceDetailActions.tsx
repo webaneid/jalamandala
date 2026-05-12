@@ -216,7 +216,6 @@ function AdminActionsCard({
   const [editDueDate, setEditDueDate] = React.useState(() => invoice.dueDate ? toWibDateTimeLocal(new Date(invoice.dueDate)) : "");
   const [editBalanceDueDate, setEditBalanceDueDate] = React.useState(() => invoice.balanceDueDate ? toWibDateTimeLocal(new Date(invoice.balanceDueDate)) : "");
   const [editNotes, setEditNotes] = React.useState(invoice.notes ?? "");
-  const [editGrandTotal, setEditGrandTotal] = React.useState(String(invoice.grandTotal));
 
   // Pilih metode
   const [editingMethod, setEditingMethod] = React.useState(false);
@@ -236,12 +235,10 @@ function AdminActionsCard({
     setError("");
     start(async () => {
       const isDpInvoice = invoice.status === "dp_paid" || invoice.status === "balance_overdue";
-      const newGrandTotal = Number(editGrandTotal);
       const result = await updateInvoiceAdmin(invoice.id, {
         dueDate: editDueDate || null,
         balanceDueDate: isDpInvoice ? (editBalanceDueDate || null) : undefined,
         notes: editNotes,
-        grandTotal: newGrandTotal > 0 && newGrandTotal !== invoice.grandTotal ? newGrandTotal : undefined,
       });
       if (!result.success) { setError(result.error ?? "Gagal."); return; }
       setEditingInvoice(false);
@@ -330,17 +327,6 @@ function AdminActionsCard({
                     />
                   </div>
                 )}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Nominal Tagihan (Rp)</label>
-                  <input
-                    type="number"
-                    min={1}
-                    className="h-10 w-full rounded-xl border border-input bg-white px-3 text-sm outline-none focus:border-primary-600"
-                    value={editGrandTotal}
-                    onChange={(e) => setEditGrandTotal(e.target.value)}
-                  />
-                  <p className="text-xs text-amber-600">Mengubah nominal akan merecalculate status pembayaran.</p>
-                </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">Catatan Admin</label>
                   <textarea

@@ -25,6 +25,7 @@ import { InvoiceDetailActions } from "@/components/admin/finance/InvoiceDetailAc
 import { OverpaymentBanner } from "@/components/admin/finance/OverpaymentBanner";
 import { PaymentProofPreviewButton } from "@/components/admin/finance/PaymentProofPreviewButton";
 import { PaymentHistoryEditor } from "@/components/admin/finance/PaymentHistoryEditor";
+import { InvoiceItemsEditor } from "@/components/admin/finance/InvoiceItemsEditor";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -544,43 +545,20 @@ export default async function InvoiceDetailPage({
               <CardTitle className="text-base">Rincian Tagihan</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <table className="w-full text-sm">
-                <thead className="border-b bg-neutral-50">
-                  <tr>
-                    <th className="px-5 py-3 text-left font-medium text-muted-foreground">Item</th>
-                    <th className="px-5 py-3 text-right font-medium text-muted-foreground w-16">Qty</th>
-                    <th className="px-5 py-3 text-right font-medium text-muted-foreground w-32">Harga</th>
-                    <th className="px-5 py-3 text-right font-medium text-muted-foreground w-32">Subtotal</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {displayItems.map((item) => (
-                    <tr key={item.id}>
-                      <td className="px-5 py-3">
-                        <p className="font-medium">{item.title}</p>
-                        {item.description && (
-                          <p className="text-xs text-muted-foreground">{item.description}</p>
-                        )}
-                      </td>
-                      <td className="px-5 py-3 text-right text-muted-foreground">{item.quantityLabel}</td>
-                      <td className="px-5 py-3 text-right text-muted-foreground">{formatCurrency(item.unitPrice)}</td>
-                      <td className="px-5 py-3 text-right font-medium">{formatCurrency(item.subtotal)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot className="border-t bg-neutral-50/50">
-                  {invoice.taxAmount > 0 && (
-                    <tr>
-                      <td colSpan={3} className="px-5 py-2 text-right text-sm text-muted-foreground">Pajak</td>
-                      <td className="px-5 py-2 text-right text-sm">{formatCurrency(invoice.taxAmount)}</td>
-                    </tr>
-                  )}
-                  <tr>
-                    <td colSpan={3} className="px-5 py-3 text-right font-semibold">Total Tagihan</td>
-                    <td className="px-5 py-3 text-right font-bold text-lg">{formatCurrency(invoice.grandTotal)}</td>
-                  </tr>
-                </tfoot>
-              </table>
+              <InvoiceItemsEditor
+                items={displayItems.map((i) => ({
+                  id: i.id,
+                  title: i.title,
+                  description: i.description,
+                  quantity: i.quantity,
+                  quantityLabel: i.quantityLabel,
+                  unitPrice: i.unitPrice,
+                  subtotal: i.subtotal,
+                  itemType: i.itemType,
+                }))}
+                grandTotal={invoice.grandTotal}
+                taxAmount={invoice.taxAmount}
+              />
             </CardContent>
           </Card>
 

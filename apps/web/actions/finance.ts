@@ -2438,7 +2438,6 @@ export async function updateInvoiceAdmin(
     dueDate?: string | null;
     balanceDueDate?: string | null;
     notes?: string | null;
-    grandTotal?: number;
   }
 ): Promise<{ success: boolean; error?: string }> {
   try {
@@ -2464,60 +2463,7 @@ export async function updateInvoiceAdmin(
     if (payload.balanceDueDate !== undefined) updates.balanceDueDate = parseWibDate(payload.balanceDueDate);
     if (payload.notes !== undefined) updates.notes = payload.notes?.trim() || null;
 
-    if (payload.grandTotal !== undefined && payload.grandTotal > 0) {
-      const newGrandTotal = payload.grandTotal;
-      updates.grandTotal = newGrandTotal;
-      updates.subtotal = newGrandTotal;
-
-      // Recalculate status berdasarkan grandTotal baru
-      const totalPaid = invoice.payments.filter((p) => p.status === "verified").reduce((s, p) => s + p.amount, 0);
-      const isFullyPaid = totalPaid >= newGrandTotal;
-      const dpMinimum = Math.ceil(newGrandTotal * (invoice.dpMinimumPercent ?? 50) / 100);
-      const isDp = !isFullyPaid && totalPaid >= dpMinimum;
-
-      if (isFullyPaid) {
-        updates.status = "paid";
-        updates.overpaymentAmount = Math.max(0, totalPaid - newGrandTotal);
-      } else if (isDp) {
-        updates.status = "dp_paid";
-        updates.dpAmount = totalPaid;
-        updates.overpaymentAmount = 0;
-      } else if (totalPaid > 0) {
-        updates.status = "waiting_for_payment";
-        updates.overpaymentAmount = 0;
-      }
-    }
-
     await tenantDb.update(invoices).set(updates).where(eq(invoices.id, invoiceId));
-
-    // Sync invoiceItems — add-on tetap, hanya harga booth yang disesuaikan
-    if (payload.grandTotal !== undefined && payload.grandTotal > 0) {
-      const newGrandTotal = payload.grandTotal;
-      const items = await tenantDb.query.invoiceItems.findMany({
-        where: eq(invoiceItems.invoiceId, invoiceId),
-      });
-
-      const boothItems = items.filter((i) => i.itemType === "booth_booking");
-      const addonItems = items.filter((i) => i.itemType !== "booth_booking");
-      const totalAddon = addonItems.reduce((s, i) => s + i.subtotal, 0);
-      const newBoothTotal = newGrandTotal - totalAddon;
-
-      if (boothItems.length === 1) {
-        await tenantDb.update(invoiceItems).set({
-          unitPrice: newBoothTotal,
-          subtotal: newBoothTotal,
-        }).where(eq(invoiceItems.id, boothItems[0]!.id));
-      } else if (boothItems.length > 1) {
-        const oldBoothTotal = boothItems.reduce((s, i) => s + i.subtotal, 0) || 1;
-        for (const item of boothItems) {
-          const newSubtotal = Math.round((item.subtotal / oldBoothTotal) * newBoothTotal);
-          await tenantDb.update(invoiceItems).set({
-            unitPrice: newSubtotal,
-            subtotal: newSubtotal,
-          }).where(eq(invoiceItems.id, item.id));
-        }
-      }
-    }
 
     revalidatePath(`/admin/keuangan/${invoiceId}`);
     revalidatePath("/admin/keuangan");
@@ -2525,5 +2471,67 @@ export async function updateInvoiceAdmin(
   } catch (error) {
     console.error("updateInvoiceAdmin error:", error);
     return { success: false, error: "Gagal menyimpan perubahan invoice." };
+  }
+}
+
+export async function updateInvoiceItem(
+  itemId: string,
+  newUnitPrice: number
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await getAdminSession();
+    const tenantDb = await createTenantDb(TENANT_SCHEMA);
+
+    const item = await tenantDb.query.invoiceItems.findFirst({
+      where: eq(invoiceItems.id, itemId),
+      columns: { id: true, invoiceId: true, quantity: true },
+    });
+    if (!item) return { success: false, error: "Item tidak ditemukan." };
+
+    const newSubtotal = newUnitPrice * item.quantity;
+
+    await tenantDb.update(invoiceItems).set({
+      unitPrice: newUnitPrice,
+      subtotal: newSubtotal,
+    }).where(eq(invoiceItems.id, itemId));
+
+    // Recalculate grandTotal dari semua items
+    const allItems = await tenantDb.query.invoiceItems.findMany({
+      where: eq(invoiceItems.invoiceId, item.invoiceId),
+      columns: { subtotal: true },
+    });
+    const newGrandTotal = allItems.reduce((s, i) => s + i.subtotal, 0);
+
+    const invoice = await tenantDb.query.invoices.findFirst({
+      where: eq(invoices.id, item.invoiceId),
+      with: { payments: true },
+    });
+    if (!invoice) return { success: false, error: "Invoice tidak ditemukan." };
+
+    const totalPaid = invoice.payments.filter((p) => p.status === "verified").reduce((s, p) => s + p.amount, 0);
+    const isFullyPaid = totalPaid >= newGrandTotal;
+    const overpaymentAmount = isFullyPaid ? Math.max(0, totalPaid - newGrandTotal) : 0;
+    const dpMinimum = Math.ceil(newGrandTotal * (invoice.dpMinimumPercent ?? 50) / 100);
+    const isDp = !isFullyPaid && totalPaid >= dpMinimum;
+
+    let newStatus: string;
+    if (isFullyPaid) newStatus = "paid";
+    else if (isDp) newStatus = "dp_paid";
+    else newStatus = "waiting_for_payment";
+
+    await tenantDb.update(invoices).set({
+      grandTotal: newGrandTotal,
+      subtotal: newGrandTotal,
+      status: newStatus,
+      overpaymentAmount,
+      updatedAt: new Date(),
+    }).where(eq(invoices.id, item.invoiceId));
+
+    revalidatePath(`/admin/keuangan/${item.invoiceId}`);
+    revalidatePath("/admin/keuangan");
+    return { success: true };
+  } catch (error) {
+    console.error("updateInvoiceItem error:", error);
+    return { success: false, error: "Gagal menyimpan harga item." };
   }
 }
