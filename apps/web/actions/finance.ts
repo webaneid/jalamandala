@@ -2421,6 +2421,7 @@ export async function cancelInvoiceWithRefund(payload: {
     revalidatePath("/admin/keuangan");
     revalidatePath("/admin/keuangan/cashflow");
     revalidatePath("/admin/keuangan/pencairan");
+    if (isCancellation) revalidatePath("/admin/booth");
     return { success: true, disbursementId: created.id };
   } catch (error) {
     console.error("cancelInvoiceWithRefund error:", error);
