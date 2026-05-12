@@ -2490,21 +2490,27 @@ export async function updateInvoiceAdmin(
 
     await tenantDb.update(invoices).set(updates).where(eq(invoices.id, invoiceId));
 
-    // Sync invoiceItems agar harga tampil konsisten dengan grandTotal baru
+    // Sync invoiceItems — add-on tetap, hanya harga booth yang disesuaikan
     if (payload.grandTotal !== undefined && payload.grandTotal > 0) {
       const newGrandTotal = payload.grandTotal;
       const items = await tenantDb.query.invoiceItems.findMany({
         where: eq(invoiceItems.invoiceId, invoiceId),
       });
-      if (items.length === 1) {
+
+      const boothItems = items.filter((i) => i.itemType === "booth_booking");
+      const addonItems = items.filter((i) => i.itemType !== "booth_booking");
+      const totalAddon = addonItems.reduce((s, i) => s + i.subtotal, 0);
+      const newBoothTotal = newGrandTotal - totalAddon;
+
+      if (boothItems.length === 1) {
         await tenantDb.update(invoiceItems).set({
-          unitPrice: newGrandTotal,
-          subtotal: newGrandTotal,
-        }).where(eq(invoiceItems.id, items[0]!.id));
-      } else if (items.length > 1) {
-        const oldTotal = items.reduce((s, i) => s + i.subtotal, 0) || 1;
-        for (const item of items) {
-          const newSubtotal = Math.round((item.subtotal / oldTotal) * newGrandTotal);
+          unitPrice: newBoothTotal,
+          subtotal: newBoothTotal,
+        }).where(eq(invoiceItems.id, boothItems[0]!.id));
+      } else if (boothItems.length > 1) {
+        const oldBoothTotal = boothItems.reduce((s, i) => s + i.subtotal, 0) || 1;
+        for (const item of boothItems) {
+          const newSubtotal = Math.round((item.subtotal / oldBoothTotal) * newBoothTotal);
           await tenantDb.update(invoiceItems).set({
             unitPrice: newSubtotal,
             subtotal: newSubtotal,
