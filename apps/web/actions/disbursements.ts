@@ -4,7 +4,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { createTenantDb, db } from "@repo/db";
-import { disbursementRequests, disbursementTransfers, cashflowLedger } from "@repo/db/schema/tenant";
+import { disbursementRequests, disbursementTransfers, cashflowLedger, invoices } from "@repo/db/schema/tenant";
 import { expoEvents, vendors } from "@repo/db/schema/public";
 import { sendWhatsApp } from "@/lib/whatsapp";
 import { renderWaTemplate, WA_KEYS } from "@/lib/whatsapp-template";
@@ -392,6 +392,14 @@ export async function confirmTransfer(
         description: `[Pencairan] ${req.purposeDescription}`,
         referenceDisbursementId: requestId,
       });
+
+      // Jika refund untuk invoice, update invoice ke 'refunded'
+      if (req.purposeType === "refund" && req.referenceInvoiceId) {
+        await tx
+          .update(invoices)
+          .set({ status: "refunded", updatedAt: new Date() })
+          .where(and(eq(invoices.id, req.referenceInvoiceId), eq(invoices.status, "refunding")));
+      }
     });
 
     void (async () => {
@@ -412,6 +420,10 @@ export async function confirmTransfer(
     revalidatePath("/admin/keuangan/pencairan");
     revalidatePath("/admin/keuangan/cashflow");
     revalidatePath(`/admin/keuangan/pencairan/${requestId}`);
+    if (req.purposeType === "refund" && req.referenceInvoiceId) {
+      revalidatePath(`/admin/keuangan/${req.referenceInvoiceId}`);
+      revalidatePath("/admin/keuangan");
+    }
     return { success: true as const };
   } catch (err) {
     console.error("confirmTransfer failed:", err);

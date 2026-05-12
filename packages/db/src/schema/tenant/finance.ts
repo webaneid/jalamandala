@@ -157,6 +157,7 @@ export const disbursementRequests = pgTable('disbursement_requests', {
   rejectionReason: text('rejection_reason'),
 
   notes: text('notes'),
+  referenceInvoiceId: uuid('reference_invoice_id'),
   eventId: uuid('event_id').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),

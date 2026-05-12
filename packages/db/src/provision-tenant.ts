@@ -621,10 +621,15 @@ async function provisionTenantSchema() {
         rejected_at timestamp,
         rejection_reason text,
         notes text,
+        reference_invoice_id uuid,
         event_id uuid NOT NULL,
         created_at timestamp NOT NULL DEFAULT now(),
         updated_at timestamp NOT NULL DEFAULT now()
       )
+    `);
+    await sql.unsafe(`
+      ALTER TABLE "${schemaName}".disbursement_requests
+        ADD COLUMN IF NOT EXISTS reference_invoice_id uuid
     `);
     await sql.unsafe(`
       CREATE TABLE IF NOT EXISTS "${schemaName}".disbursement_transfers (

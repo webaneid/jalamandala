@@ -2388,6 +2388,7 @@ export async function cancelInvoiceWithRefund(payload: {
         destAccountNumber: payload.destAccountNumber.trim(),
         destAccountName: payload.destAccountName.trim(),
         notes: payload.notes?.trim() || null,
+        referenceInvoiceId: invoice.id,
         status: "submitted",
         eventId: activeEvent.id,
       })
