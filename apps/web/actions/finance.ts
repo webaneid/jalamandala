@@ -2490,6 +2490,29 @@ export async function updateInvoiceAdmin(
 
     await tenantDb.update(invoices).set(updates).where(eq(invoices.id, invoiceId));
 
+    // Sync invoiceItems agar harga tampil konsisten dengan grandTotal baru
+    if (payload.grandTotal !== undefined && payload.grandTotal > 0) {
+      const newGrandTotal = payload.grandTotal;
+      const items = await tenantDb.query.invoiceItems.findMany({
+        where: eq(invoiceItems.invoiceId, invoiceId),
+      });
+      if (items.length === 1) {
+        await tenantDb.update(invoiceItems).set({
+          unitPrice: newGrandTotal,
+          subtotal: newGrandTotal,
+        }).where(eq(invoiceItems.id, items[0]!.id));
+      } else if (items.length > 1) {
+        const oldTotal = items.reduce((s, i) => s + i.subtotal, 0) || 1;
+        for (const item of items) {
+          const newSubtotal = Math.round((item.subtotal / oldTotal) * newGrandTotal);
+          await tenantDb.update(invoiceItems).set({
+            unitPrice: newSubtotal,
+            subtotal: newSubtotal,
+          }).where(eq(invoiceItems.id, item.id));
+        }
+      }
+    }
+
     revalidatePath(`/admin/keuangan/${invoiceId}`);
     revalidatePath("/admin/keuangan");
     return { success: true };
