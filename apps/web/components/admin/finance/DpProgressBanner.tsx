@@ -32,7 +32,8 @@ export function DpProgressBanner(props: RefundBannerProps) {
   const [isPending, start] = React.useTransition();
   const [extendError, setExtendError] = React.useState("");
   const [refundOpen, setRefundOpen] = React.useState(false);
-  const [refundType, setRefundType] = React.useState<"full" | "half">("full");
+  const [refundType, setRefundType] = React.useState<"full" | "half" | "custom">("full")
+  const [customAmount, setCustomAmount] = React.useState("");
 
   // Refund form state
   const [destBankName, setDestBankName] = React.useState("");
@@ -46,7 +47,11 @@ export function DpProgressBanner(props: RefundBannerProps) {
   const dpAmount = props.mode === "dp" ? props.dpAmount : 0;
   const remainingBalance = props.mode === "dp" ? Math.max(0, props.grandTotal - dpAmount) : 0;
   const progressPct = props.grandTotal > 0 ? Math.min(100, Math.round((props.totalPaid / props.grandTotal) * 100)) : 0;
-  const refundAmount = refundType === "full" ? props.totalPaid : Math.floor(props.totalPaid / 2);
+  const refundAmount = refundType === "full"
+    ? props.totalPaid
+    : refundType === "half"
+      ? Math.floor(props.totalPaid / 2)
+      : Math.min(Number(customAmount) || 0, props.totalPaid);
 
   function handleExtend() {
     setExtendError("");
@@ -64,9 +69,14 @@ export function DpProgressBanner(props: RefundBannerProps) {
     }
     setRefundError("");
     start(async () => {
+      if (refundType === "custom" && (!Number(customAmount) || Number(customAmount) <= 0)) {
+        setRefundError("Masukkan nominal custom yang valid.")
+        return
+      }
       const result = await cancelInvoiceWithRefund({
         invoiceId: props.invoiceId,
         refundType,
+        customAmount: refundType === "custom" ? Number(customAmount) : undefined,
         destBankName,
         destAccountNumber,
         destAccountName,
@@ -176,26 +186,49 @@ export function DpProgressBanner(props: RefundBannerProps) {
               {/* Pilihan refund */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Jumlah Refund</label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
                     onClick={() => setRefundType("full")}
                     className={`rounded-xl border p-3 text-left transition ${refundType === "full" ? "border-primary-400 bg-primary-50 ring-2 ring-primary-200" : "border-border hover:bg-muted/50"}`}
                   >
-                    <p className="text-xs font-semibold text-muted-foreground">Refund Penuh</p>
-                    <p className="mt-0.5 font-bold text-primary-900">{fmt(props.totalPaid)}</p>
-                    <p className="text-xs text-muted-foreground">100% dari yang dibayar</p>
+                    <p className="text-xs font-semibold text-muted-foreground">Penuh</p>
+                    <p className="mt-0.5 font-bold text-sm text-primary-900">{fmt(props.totalPaid)}</p>
+                    <p className="text-xs text-muted-foreground">100%</p>
                   </button>
                   <button
                     type="button"
                     onClick={() => setRefundType("half")}
                     className={`rounded-xl border p-3 text-left transition ${refundType === "half" ? "border-amber-400 bg-amber-50 ring-2 ring-amber-200" : "border-border hover:bg-muted/50"}`}
                   >
-                    <p className="text-xs font-semibold text-muted-foreground">Refund 50%</p>
-                    <p className="mt-0.5 font-bold text-amber-800">{fmt(Math.floor(props.totalPaid / 2))}</p>
-                    <p className="text-xs text-muted-foreground">Potongan 50% administrasi</p>
+                    <p className="text-xs font-semibold text-muted-foreground">50%</p>
+                    <p className="mt-0.5 font-bold text-sm text-amber-800">{fmt(Math.floor(props.totalPaid / 2))}</p>
+                    <p className="text-xs text-muted-foreground">Admin fee</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRefundType("custom")}
+                    className={`rounded-xl border p-3 text-left transition ${refundType === "custom" ? "border-slate-400 bg-slate-50 ring-2 ring-slate-200" : "border-border hover:bg-muted/50"}`}
+                  >
+                    <p className="text-xs font-semibold text-muted-foreground">Custom</p>
+                    <p className="mt-0.5 font-bold text-sm text-slate-800">Nominal</p>
+                    <p className="text-xs text-muted-foreground">Bebas</p>
                   </button>
                 </div>
+                {refundType === "custom" && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Nominal Refund (Rp)</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={props.totalPaid}
+                      className="h-10 w-full rounded-xl border border-input bg-white px-3 text-sm outline-none focus:border-primary-600"
+                      placeholder={`Maks. ${fmt(props.totalPaid)}`}
+                      value={customAmount}
+                      onChange={(e) => setCustomAmount(e.target.value)}
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="space-y-1.5">

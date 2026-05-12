@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import {
   updateBoothConfiguration,
+  updateZoneActive,
   updateZoneFacilities,
   updateZoneImage,
   updateZoneLocation,
@@ -23,6 +24,7 @@ export type BoothMapZone = {
   description: string | null;
   id: string;
   imageAssetId: string | null;
+  isActive: boolean;
   location: string | null;
   name: string;
   priceRules: ZonePriceRule[];
@@ -292,7 +294,7 @@ export function ClickableBoothMap({
           const priceGroups = resolveZonePriceGroups(zone);
 
           return (
-            <Card key={zone.id} className="border-white/80 bg-white/90">
+            <Card key={zone.id} className={`border-white/80 ${zone.isActive ? "bg-white/90" : "bg-slate-100/80 opacity-75"}`}>
               <CardHeader className="border-b border-border/60">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="space-y-1">
@@ -305,6 +307,9 @@ export function ClickableBoothMap({
                       <Badge className="bg-white text-primary-700 ring-1 ring-primary-100">
                         {zone.booths.length} booth
                       </Badge>
+                      {!zone.isActive && (
+                        <Badge className="bg-slate-200 text-slate-600 ring-1 ring-slate-300">Non-aktif</Badge>
+                      )}
                     </div>
                     {zone.description ? (
                       <CardDescription>{zone.description}</CardDescription>
@@ -328,12 +333,30 @@ export function ClickableBoothMap({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                    <span>Open {open}</span>
-                    <MoveRight className="size-4" />
-                    {reserved > 0 && <span className="text-amber-600">Reserved {reserved}</span>}
-                    {reserved > 0 && <MoveRight className="size-4" />}
-                    <span>Terisi {booked}</span>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                      <span>Open {open}</span>
+                      <MoveRight className="size-4" />
+                      {reserved > 0 && <span className="text-amber-600">Reserved {reserved}</span>}
+                      {reserved > 0 && <MoveRight className="size-4" />}
+                      <span>Terisi {booked}</span>
+                    </div>
+                    {canEdit && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          startSaving(async () => {
+                            await updateZoneActive(zone.id, !zone.isActive);
+                            router.refresh();
+                          });
+                        }}
+                        disabled={isSaving}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${zone.isActive ? "bg-primary-600" : "bg-slate-300"}`}
+                        title={zone.isActive ? "Nonaktifkan zona" : "Aktifkan zona"}
+                      >
+                        <span className={`inline-block size-5 rounded-full bg-white shadow transition-transform ${zone.isActive ? "translate-x-5" : "translate-x-0"}`} />
+                      </button>
+                    )}
                   </div>
                 </div>
               </CardHeader>

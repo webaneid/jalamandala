@@ -92,7 +92,7 @@ export async function getPublicZoneForBooking(
   const tenantDb = await createTenantDb(TENANT_SCHEMA)
 
   const zone = await tenantDb.query.zones.findFirst({
-    where: (t, { eq }) => eq(t.slug, zoneSlug),
+    where: (t, { eq, and }) => and(eq(t.slug, zoneSlug), eq(t.isActive, true)),
     with: {
       priceRules: true,
       booths: {

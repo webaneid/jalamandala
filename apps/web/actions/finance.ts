@@ -2310,7 +2310,8 @@ export async function extendReservation(
 
 export async function cancelInvoiceWithRefund(payload: {
   invoiceId: string;
-  refundType: "full" | "half";
+  refundType: "full" | "half" | "custom";
+  customAmount?: number;
   destBankName: string;
   destAccountNumber: string;
   destAccountName: string;
@@ -2341,7 +2342,11 @@ export async function cancelInvoiceWithRefund(payload: {
       return { success: false, error: "Tidak ada pembayaran yang perlu direfund." };
     }
 
-    const refundAmount = payload.refundType === "full" ? totalPaid : Math.floor(totalPaid / 2);
+    const refundAmount = payload.refundType === "full"
+      ? totalPaid
+      : payload.refundType === "half"
+        ? Math.floor(totalPaid / 2)
+        : Math.min(payload.customAmount ?? 0, totalPaid);
     if (refundAmount <= 0) {
       return { success: false, error: "Jumlah refund tidak valid." };
     }
@@ -2366,7 +2371,7 @@ export async function cancelInvoiceWithRefund(payload: {
     }
 
     // Buat disbursement refund
-    const label = payload.refundType === "full" ? "Refund 100%" : "Refund 50%";
+    const label = payload.refundType === "full" ? "Refund 100%" : payload.refundType === "half" ? "Refund 50%" : `Refund Custom`;
     const inserted = await tenantDb
       .insert(disbursementRequests)
       .values({
@@ -2420,6 +2425,7 @@ export async function updateInvoiceAdmin(
     dueDate?: string | null;
     balanceDueDate?: string | null;
     notes?: string | null;
+    grandTotal?: number;
   }
 ): Promise<{ success: boolean; error?: string }> {
   try {
@@ -2428,7 +2434,7 @@ export async function updateInvoiceAdmin(
 
     const invoice = await tenantDb.query.invoices.findFirst({
       where: eq(invoices.id, invoiceId),
-      columns: { id: true, status: true },
+      with: { payments: true },
     });
     if (!invoice) return { success: false, error: "Invoice tidak ditemukan." };
 
@@ -2444,6 +2450,30 @@ export async function updateInvoiceAdmin(
     if (payload.dueDate !== undefined) updates.dueDate = parseWibDate(payload.dueDate);
     if (payload.balanceDueDate !== undefined) updates.balanceDueDate = parseWibDate(payload.balanceDueDate);
     if (payload.notes !== undefined) updates.notes = payload.notes?.trim() || null;
+
+    if (payload.grandTotal !== undefined && payload.grandTotal > 0) {
+      const newGrandTotal = payload.grandTotal;
+      updates.grandTotal = newGrandTotal;
+      updates.subtotal = newGrandTotal;
+
+      // Recalculate status berdasarkan grandTotal baru
+      const totalPaid = invoice.payments.filter((p) => p.status === "verified").reduce((s, p) => s + p.amount, 0);
+      const isFullyPaid = totalPaid >= newGrandTotal;
+      const dpMinimum = Math.ceil(newGrandTotal * (invoice.dpMinimumPercent ?? 50) / 100);
+      const isDp = !isFullyPaid && totalPaid >= dpMinimum;
+
+      if (isFullyPaid) {
+        updates.status = "paid";
+        updates.overpaymentAmount = Math.max(0, totalPaid - newGrandTotal);
+      } else if (isDp) {
+        updates.status = "dp_paid";
+        updates.dpAmount = totalPaid;
+        updates.overpaymentAmount = 0;
+      } else if (totalPaid > 0) {
+        updates.status = "waiting_for_payment";
+        updates.overpaymentAmount = 0;
+      }
+    }
 
     await tenantDb.update(invoices).set(updates).where(eq(invoices.id, invoiceId));
 

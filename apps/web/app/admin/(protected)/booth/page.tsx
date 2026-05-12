@@ -92,6 +92,7 @@ async function getBoothMapData() {
       description: zone.description,
       id: zone.id,
       imageAssetId: zone.imageAssetId,
+      isActive: zone.isActive,
       location: zone.location,
       name: zone.name,
       priceRules: zone.priceRules.map((rule) => ({
