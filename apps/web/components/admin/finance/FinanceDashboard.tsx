@@ -10,6 +10,7 @@ import {
   markInvoiceAsPaid,
   updateInvoicePaymentMethod,
 } from "@/actions/finance";
+import { MediaPicker, type MediaPickerValue } from "@/components/admin/media/MediaPicker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -101,9 +102,6 @@ type MarkPaidEditorState = {
   notes: string;
   paidAt: string;
   paymentMethodKey: string;
-  proofContentType: string;
-  proofDataUrl: string;
-  proofFileName: string;
   referenceNumber: string;
   senderName: string;
 } | null;
@@ -117,6 +115,7 @@ export function FinanceDashboard({ data }: { data: FinanceDashboardData }) {
   const [paymentMethodEditor, setPaymentMethodEditor] =
     React.useState<PaymentMethodEditorState>(null);
   const [markPaidEditor, setMarkPaidEditor] = React.useState<MarkPaidEditorState>(null);
+  const [markPaidProof, setMarkPaidProof] = React.useState<MediaPickerValue>(null);
 
   const [invoiceSearch, setInvoiceSearch] = React.useState("");
   const [invoiceStatusFilter, setInvoiceStatusFilter] = React.useState("all");
@@ -216,13 +215,7 @@ export function FinanceDashboard({ data }: { data: FinanceDashboardData }) {
         notes: markPaidEditor.notes,
         paidAt: markPaidEditor.paidAt,
         paymentMethodKey: markPaidEditor.paymentMethodKey,
-        proofData: markPaidEditor.proofDataUrl
-          ? {
-              contentType: markPaidEditor.proofContentType,
-              dataUrl: markPaidEditor.proofDataUrl,
-              fileName: markPaidEditor.proofFileName,
-            }
-          : undefined,
+        proofAssetId: markPaidProof?.id ?? undefined,
         referenceNumber: markPaidEditor.referenceNumber,
         senderName: markPaidEditor.senderName,
       });
@@ -233,6 +226,7 @@ export function FinanceDashboard({ data }: { data: FinanceDashboardData }) {
       }
 
       setMarkPaidEditor(null);
+      setMarkPaidProof(null);
       router.refresh();
     });
   }
@@ -487,7 +481,7 @@ export function FinanceDashboard({ data }: { data: FinanceDashboardData }) {
                     </Button>
                     {!["paid","expired","cancelled","refunded","refunding"].includes(invoice.status) && (
                       <Button size="sm" className="flex-1 gap-1.5 text-xs"
-                        onClick={() => setMarkPaidEditor({
+                        onClick={() => { setMarkPaidProof(null); setMarkPaidEditor({
                           amount: String(invoice.grandTotal),
                           grandTotal: invoice.grandTotal,
                           invoiceId: invoice.id,
@@ -495,12 +489,9 @@ export function FinanceDashboard({ data }: { data: FinanceDashboardData }) {
                           notes: "",
                           paidAt: toDateTimeLocal(new Date().toISOString()),
                           paymentMethodKey: invoice.paymentChannelKey ?? "",
-                          proofContentType: "",
-                          proofDataUrl: "",
-                          proofFileName: "",
                           referenceNumber: "",
                           senderName: "",
-                        })}>
+                        }); }}>
                         <Wallet className="size-3.5" />Bayar
                       </Button>
                     )}
@@ -591,9 +582,6 @@ export function FinanceDashboard({ data }: { data: FinanceDashboardData }) {
                               notes: "",
                               paidAt: toDateTimeLocal(new Date().toISOString()),
                               paymentMethodKey: invoice.paymentChannelKey ?? "",
-                              proofContentType: "",
-                              proofDataUrl: "",
-                              proofFileName: "",
                               referenceNumber: "",
                               senderName: "",
                             })} />
@@ -667,7 +655,7 @@ export function FinanceDashboard({ data }: { data: FinanceDashboardData }) {
         <ModalFrame
           title={`Tandai Paid ${markPaidEditor.invoiceNumber}`}
           description="Simpan metode bayar, tanggal bayar, dan referensi pembayaran lalu ubah invoice menjadi paid."
-          onClose={() => setMarkPaidEditor(null)}
+          onClose={() => { setMarkPaidEditor(null); setMarkPaidProof(null); }}
         >
           <div className="space-y-4">
             <div className="space-y-2">
@@ -751,36 +739,13 @@ export function FinanceDashboard({ data }: { data: FinanceDashboardData }) {
               <label className="text-sm font-medium text-foreground">
                 Bukti Transfer <span className="text-neutral-400 font-normal">(foto/screenshot, maks 5MB)</span>
               </label>
-              <input
-                accept="image/*,application/pdf"
-                className="w-full rounded-2xl border border-input bg-white px-3 py-2.5 text-sm file:mr-3 file:rounded-xl file:border-0 file:bg-primary-50 file:px-3 file:py-1 file:text-xs file:font-medium file:text-primary-700 hover:file:bg-primary-100"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (!file) return;
-                  const reader = new FileReader();
-                  reader.onload = () => {
-                    setMarkPaidEditor((current) =>
-                      current
-                        ? {
-                            ...current,
-                            proofContentType: file.type,
-                            proofDataUrl: reader.result as string,
-                            proofFileName: file.name,
-                          }
-                        : current
-                    );
-                  };
-                  reader.readAsDataURL(file);
-                }}
-                type="file"
+              <MediaPicker
+                value={markPaidProof}
+                onChange={setMarkPaidProof}
+                folder="private/payment-proofs"
+                accept="any"
+                placeholder="Pilih atau upload bukti transfer..."
               />
-              {markPaidEditor.proofDataUrl && markPaidEditor.proofContentType.startsWith("image/") && (
-                <img
-                  alt="Preview bukti transfer"
-                  className="mt-2 h-32 w-auto rounded-xl border object-contain"
-                  src={markPaidEditor.proofDataUrl}
-                />
-              )}
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">Catatan Admin</label>
@@ -803,7 +768,7 @@ export function FinanceDashboard({ data }: { data: FinanceDashboardData }) {
             ) : null}
 
             <div className="flex justify-end gap-3 border-t border-border/70 pt-5">
-              <Button onClick={() => setMarkPaidEditor(null)} type="button" variant="outline">
+              <Button onClick={() => { setMarkPaidEditor(null); setMarkPaidProof(null); }} type="button" variant="outline">
                 Batal
               </Button>
               <Button disabled={isSaving} onClick={saveMarkPaid} type="button">
