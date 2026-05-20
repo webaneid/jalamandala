@@ -8,6 +8,7 @@ import { CompleteBusinessForm } from "@/components/public/CompleteBusinessForm"
 
 interface Props {
   params: Promise<{ eventSlug: string; businessId: string }>
+  searchParams: Promise<{ next?: string }>
 }
 
 
@@ -15,8 +16,9 @@ export const metadata = {
   title: "Edit Data Usaha",
 };
 
-export default async function LengkapiUsahaPage({ params }: Props) {
+export default async function LengkapiUsahaPage({ params, searchParams }: Props) {
   const { eventSlug, businessId } = await params
+  const { next } = await searchParams
   const session = await getCurrentParticipantSession()
 
   if (!session || session.eventSlug !== eventSlug) {
@@ -71,7 +73,7 @@ export default async function LengkapiUsahaPage({ params }: Props) {
             partnershipConcepts: business.partnershipConcepts ?? [],
           }}
           eventSlug={eventSlug}
-          redirectTo={`/${eventSlug}/dashboard/usaha`}
+          redirectTo={next ?? `/${eventSlug}/dashboard/usaha`}
         />
       </div>
     </div>

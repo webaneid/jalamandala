@@ -332,6 +332,7 @@ export function CompleteBusinessForm({ boothCategories, businessId, currentLogoA
     if (!regencyCode) return setError("Kabupaten/kota wajib dipilih.")
     if (!districtCode) return setError("Kecamatan wajib dipilih.")
     if (!villageCode) return setError("Desa/kelurahan wajib dipilih.")
+    if (!companyPhone.trim()) return setError("Nomor telepon perusahaan wajib diisi.")
     if (productTags.length === 0) return setError("Tambahkan minimal satu produk/layanan.")
     if (partnershipConcepts.length === 0) return setError("Pilih minimal satu konsep kemitraan.")
 
@@ -528,7 +529,7 @@ export function CompleteBusinessForm({ boothCategories, businessId, currentLogoA
         </p>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FieldShell id="companyPhone" label="Telepon Perusahaan">
+          <FieldShell id="companyPhone" label="Telepon Perusahaan" required>
             <Input
               className="h-11 rounded-2xl"
               disabled={isSubmitting}

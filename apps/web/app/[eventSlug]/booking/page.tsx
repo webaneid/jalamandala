@@ -66,7 +66,20 @@ export default async function PublicBookingPage({
     }),
     db.query.participantBusinesses.findMany({
       where: eq(participantBusinesses.participantId, session.participantId),
-      columns: { id: true, companyName: true, boothName: true, productTags: true, requestedBoothCategorySlug: true },
+      columns: {
+        id: true,
+        companyName: true,
+        boothName: true,
+        productTags: true,
+        requestedBoothCategorySlug: true,
+        legalEntity: true,
+        businessCategory: true,
+        businessSector: true,
+        brandName: true,
+        companyDescription: true,
+        companyAddress: true,
+        partnershipConcepts: true,
+      },
     }),
   ])
 
@@ -77,6 +90,19 @@ export default async function PublicBookingPage({
 
   const activeBusiness = businesses.find((b) => b.id === selectedBusinessId) ?? null
   const bookingBase = `/${eventSlug}/booking${zoneSlug ? `?zone=${encodeURIComponent(zoneSlug)}` : ""}`
+
+  function isBusinessComplete(biz: typeof businesses[number]) {
+    return !!(
+      biz.legalEntity &&
+      biz.businessCategory &&
+      biz.businessSector &&
+      biz.brandName &&
+      biz.companyDescription &&
+      biz.companyAddress &&
+      biz.productTags && biz.productTags.length > 0 &&
+      biz.partnershipConcepts && biz.partnershipConcepts.length > 0
+    )
+  }
 
   // Release booths from expired invoices before showing available booths
   void expireOverdueInvoices();
@@ -329,6 +355,7 @@ export default async function PublicBookingPage({
                   booths={selectedBooths}
                   businessId={selectedBusinessId}
                   eventSlug={eventSlug}
+                  isBusinessComplete={activeBusiness ? isBusinessComplete(activeBusiness) : false}
                   participantId={session.participantId}
                   termsPage={termsPage}
                   zone={zoneData}

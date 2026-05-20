@@ -15,6 +15,7 @@ type Props = {
   booths: PublicBooth[]
   businessId: string
   eventSlug: string
+  isBusinessComplete: boolean
   participantId: string
   termsPage: TermsPageData
   zone: PublicZoneData
@@ -25,6 +26,7 @@ export function PublicTermsStep({
   booths,
   businessId,
   eventSlug,
+  isBusinessComplete,
   participantId,
   termsPage,
   zone,
@@ -85,7 +87,12 @@ export function PublicTermsStep({
       return
     }
 
-    router.push(`/invoice/${invoiceRes.publicToken}`)
+    const invoiceUrl = `/invoice/${invoiceRes.publicToken}`
+    if (!isBusinessComplete) {
+      router.push(`/${eventSlug}/usaha/${businessId}/lengkapi?next=${encodeURIComponent(invoiceUrl)}`)
+    } else {
+      router.push(invoiceUrl)
+    }
   }
 
   if (approvalResult) {

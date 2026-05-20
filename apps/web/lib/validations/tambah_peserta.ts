@@ -37,7 +37,7 @@ export const businessSchema = z.object({
     .refine((value) => countWords(value) <= 150, {
       message: "Tentang perusahaan maksimal 150 kata",
     }),
-  companyPhone: z.string().optional(),
+  companyPhone: z.string().min(6, "Nomor telepon perusahaan harus diisi"),
   companyWhatsapp: z.string().optional(),
   companyAddress: z.string().min(5, "Alamat perusahaan harus diisi"),
   companyProvinceCode: z.string().min(1, "Pilih provinsi"),
