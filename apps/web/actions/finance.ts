@@ -2034,6 +2034,12 @@ export async function getInvoiceByToken(token: string) {
             companyAddress: business.companyAddress,
             companyPhone: business.companyPhone,
             companyWhatsapp: business.companyWhatsapp,
+            legalEntity: business.legalEntity,
+            businessCategory: business.businessCategory,
+            businessSector: business.businessSector,
+            companyDescription: business.companyDescription,
+            productTags: business.productTags,
+            partnershipConcepts: business.partnershipConcepts,
           }
         : null,
       items: enrichedItems,

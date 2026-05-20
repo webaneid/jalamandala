@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import {
   CheckCircle2,
   Clock,
@@ -49,6 +49,26 @@ export default async function PublicInvoicePage({
   if (!data) notFound();
 
   const { invoice, participant, business, businessId, items, payments, event, paymentChannels, qrisConfig, qrisDynamic, whatsappSenderId } = data;
+
+  // Gate: peserta login + business belum lengkap → wajib lengkapi dulu
+  if (session && business && businessId) {
+    const isComplete = !!(
+      business.legalEntity &&
+      business.businessCategory &&
+      business.businessSector &&
+      business.brandName &&
+      business.companyDescription &&
+      business.companyAddress &&
+      business.productTags && business.productTags.length > 0 &&
+      business.partnershipConcepts && business.partnershipConcepts.length > 0
+    )
+    if (!isComplete) {
+      const eventSlug = event?.slug
+      if (eventSlug) {
+        redirect(`/${eventSlug}/usaha/${businessId}/lengkapi?next=/invoice/${token}`)
+      }
+    }
+  }
 
   const fmt = (n: number) =>
     new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
