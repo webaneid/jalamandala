@@ -3,7 +3,7 @@
 import { db } from "@repo/db";
 import { createTenantDb } from "@repo/db";
 import { indonesiaRegions, participants, participantBusinesses } from "@repo/db/schema/public";
-import { boothCategories, boothGroups } from "@repo/db/schema/tenant";
+import { boothCategories, boothGroups, boothBookings, invoices, booths, zones } from "@repo/db/schema/tenant";
 import { and, eq, ne, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -98,10 +98,77 @@ export async function getParticipants() {
       },
       orderBy: (participants, { desc }) => [desc(participants.createdAt)],
     });
-    
+
     return data;
   } catch (error) {
     console.error("Error fetching participants:", error);
+    return [];
+  }
+}
+
+export async function getParticipantsWithBookings() {
+  try {
+    const [allParticipants, tenantDb] = await Promise.all([
+      db.query.participants.findMany({
+        with: { businesses: { columns: { id: true, companyName: true, logoAssetId: true } } },
+        orderBy: (t, { asc }) => [asc(t.name)],
+      }),
+      createTenantDb(TENANT_SCHEMA),
+    ]);
+
+    // Ambil semua invoice aktif (semua status kecuali expired/cancelled)
+    const allInvoices = await tenantDb.query.invoices.findMany({
+      columns: { id: true, businessId: true, status: true, grandTotal: true, invoiceNumber: true },
+    });
+
+    // Ambil semua booth bookings + nama booth + zona
+    const allBookings = await tenantDb.query.boothBookings.findMany({
+      columns: { businessId: true, invoiceId: true },
+      with: {
+        booth: { columns: { code: true }, with: { zone: { columns: { name: true } } } },
+      },
+    });
+
+    // Index: businessId → invoice
+    const invoiceByBusiness = new Map<string, typeof allInvoices[number]>();
+    for (const inv of allInvoices) {
+      if (inv.businessId && !invoiceByBusiness.has(inv.businessId)) {
+        invoiceByBusiness.set(inv.businessId, inv);
+      }
+    }
+
+    // Index: businessId → booth codes
+    const boothsByBusiness = new Map<string, string[]>();
+    for (const bk of allBookings) {
+      if (!bk.businessId || !bk.booth) continue;
+      const label = bk.booth.zone?.name
+        ? `${bk.booth.zone.name} ${bk.booth.code}`
+        : bk.booth.code;
+      const existing = boothsByBusiness.get(bk.businessId) ?? [];
+      boothsByBusiness.set(bk.businessId, [...existing, label]);
+    }
+
+    return allParticipants.map((p) => {
+      const businessesEnriched = p.businesses.map((biz) => ({
+        ...biz,
+        invoice: invoiceByBusiness.get(biz.id) ?? null,
+        booths: boothsByBusiness.get(biz.id) ?? [],
+      }));
+
+      const invoiceStatuses = businessesEnriched.map((b) => b.invoice?.status).filter(Boolean) as string[];
+      const isPaid = invoiceStatuses.includes("paid");
+      const isDpPaid = invoiceStatuses.includes("dp_paid");
+      const isWaiting = invoiceStatuses.some((s) =>
+        ["waiting_for_payment", "waiting_confirmation", "dp_waiting_confirmation", "balance_waiting_confirmation", "balance_overdue"].includes(s)
+      );
+
+      const bookingStatus: "paid" | "dp_paid" | "waiting" | "none" =
+        isPaid ? "paid" : isDpPaid ? "dp_paid" : isWaiting ? "waiting" : "none";
+
+      return { ...p, businesses: businessesEnriched, bookingStatus };
+    });
+  } catch (error) {
+    console.error("Error fetching participants with bookings:", error);
     return [];
   }
 }

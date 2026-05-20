@@ -1,14 +1,13 @@
 import { requireRoles } from "@/lib/admin-auth";
 import Link from "next/link";
-import { FileDown, UserPlus, SlidersHorizontal, Search } from "lucide-react";
+import { FileDown, UserPlus, SlidersHorizontal, Search, CheckCircle2 } from "lucide-react";
 
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminMetricCard } from "@/components/admin/admin-metric-card";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { PesertaTable } from "@/components/admin/peserta/PesertaTable";
-import { getParticipants } from "@/actions/participants";
+import { getParticipantsWithBookings } from "@/actions/participants";
 
 
 export const metadata = {
@@ -17,30 +16,21 @@ export const metadata = {
 
 export default async function PesertaPage() {
   await requireRoles(["admin", "finance"]);
-  const participants = await getParticipants();
-  const needBusinessCount = participants.filter(
-    (participant) =>
-      participant.businesses.length === 0 ||
-      !participant.businesses.some((business) => !!business.logoAssetId)
-  ).length;
-  const validCount = participants.filter(
-    (participant) =>
-      participant.businesses.length > 0 &&
-      participant.businesses.some((business) => !!business.logoAssetId)
-  ).length;
+  const participants = await getParticipantsWithBookings();
+
+  const confirmedCount = participants.filter((p) => ["paid", "dp_paid"].includes(p.bookingStatus)).length;
+  const waitingCount = participants.filter((p) => p.bookingStatus === "waiting").length;
+  const noBookingCount = participants.filter((p) => p.bookingStatus === "none").length;
 
   return (
     <div className="space-y-6">
       <AdminPageHeader
         eyebrow="Data Pendaftar"
-        title="Verifikasi peserta expo"
+        title="Peserta Expo"
         description="Kelola data peserta, lakukan verifikasi, dan tambah peserta manual bila diperlukan."
         actions={
           <>
-            <Link
-              href="/admin/peserta/tambah"
-              className={buttonVariants({ className: "rounded-2xl px-4" })}
-            >
+            <Link href="/admin/peserta/tambah" className={buttonVariants({ className: "rounded-2xl px-4" })}>
               <UserPlus className="size-4" />
               Tambah Peserta
             </Link>
@@ -56,37 +46,45 @@ export default async function PesertaPage() {
         }
       />
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <AdminMetricCard
           label="Total Pendaftar"
           value={participants.length.toString()}
-          detail="Jumlah total peserta yang sudah masuk ke dalam sistem."
+          detail="Semua peserta yang sudah masuk sistem."
           icon={UserPlus}
           trend="up"
-          trendLabel="Aktif"
+          trendLabel="Total"
         />
         <AdminMetricCard
-          label="Butuh Verifikasi"
-          value={needBusinessCount.toString()}
-          detail="Peserta yang identitasnya sudah ada, tetapi data usaha belum lengkap."
-          icon={SlidersHorizontal}
-          trend={needBusinessCount > 0 ? "down" : "neutral"}
-          trendLabel="Antrian"
-        />
-        <AdminMetricCard
-          label="Sudah Valid"
-          value={validCount.toString()}
-          detail="Peserta dengan data usaha aktif dan logo yang sudah tersimpan."
-          icon={Search}
+          label="Tenant Konfirmasi"
+          value={confirmedCount.toString()}
+          detail="Sudah bayar DP atau lunas — dipastikan ikut."
+          icon={CheckCircle2}
           trend="up"
-          trendLabel={`${participants.length > 0 ? Math.round((validCount / participants.length) * 100) : 0}% tervalidasi`}
+          trendLabel="DP / Lunas"
+        />
+        <AdminMetricCard
+          label="Menunggu Bayar"
+          value={waitingCount.toString()}
+          detail="Sudah booking, invoice terbit, belum bayar."
+          icon={SlidersHorizontal}
+          trend={waitingCount > 0 ? "down" : "neutral"}
+          trendLabel="Pending"
+        />
+        <AdminMetricCard
+          label="Belum Booking"
+          value={noBookingCount.toString()}
+          detail="Daftar tapi belum ambil booth."
+          icon={Search}
+          trend="neutral"
+          trendLabel="Registrasi saja"
         />
       </div>
 
       <Card className="border-white/80 bg-white/90 shadow-sm ring-1 ring-black/5 rounded-[32px] overflow-hidden">
         <CardHeader className="border-b border-border/60 pb-4">
-          <CardTitle>Data Peserta Pendaftar</CardTitle>
-          <CardDescription>Daftar peserta yang diambil langsung dari database.</CardDescription>
+          <CardTitle>Daftar Peserta</CardTitle>
+          <CardDescription>Filter berdasarkan status booking.</CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
           <PesertaTable initialData={participants} />
