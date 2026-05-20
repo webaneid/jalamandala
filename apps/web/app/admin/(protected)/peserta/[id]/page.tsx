@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Pencil, Building2, UserCircle2, Phone, MessageSquare, GraduationCap } from "lucide-react";
+import { ArrowLeft, Pencil, Building2, UserCircle2, Phone, MessageSquare, GraduationCap, CheckCircle2, AlertCircle } from "lucide-react";
 import { PrivateImage } from "@/components/admin/media/PrivateImage";
 
 import { db } from "@repo/db";
@@ -167,110 +167,89 @@ export default async function ParticipantViewPage({ params }: { params: { id: st
                 <p className="mt-2 text-muted-foreground">Belum ada data usaha yang terdaftar.</p>
               </div>
             ) : (
-              participant.businesses.map((biz) => (
-                <Card key={biz.id} className="rounded-[32px] border-white/80 bg-white/90 shadow-sm ring-1 ring-black/5 hover:ring-primary-200 transition-all">
-                  <CardContent className="p-6">
-                    <div className="space-y-4">
-                      <div className="flex items-start justify-between gap-4">
-                        {biz.logoAssetId ? (
-                          <PrivateImage
-                            assetId={biz.logoAssetId}
-                            alt={`Logo ${biz.companyName}`}
-                            className="size-16 rounded-2xl border border-border/50"
-                          />
-                        ) : (
-                          <div className="flex size-16 items-center justify-center rounded-2xl border border-border/50 bg-muted/20 text-[10px] italic text-muted-foreground">
-                            No Logo
-                          </div>
-                        )}
-                        <BusinessItemActions
-                          businessId={biz.id}
-                          participantId={participant.id}
-                        />
-                      </div>
+              participant.businesses.map((biz) => {
+                const complete = !!(
+                  biz.legalEntity && biz.businessCategory && biz.businessSector &&
+                  biz.brandName && biz.companyDescription && biz.companyAddress &&
+                  biz.productTags?.length && biz.partnershipConcepts?.length
+                )
+                const addr = [biz.companyAddress, biz.companyVillageName, biz.companyDistrictName, biz.companyRegencyName, biz.companyProvinceName].filter(Boolean).join(", ")
+                return (
+                <Card key={biz.id} className="rounded-[32px] border-white/80 bg-white/90 shadow-sm ring-1 ring-black/5">
+                  <CardContent className="p-6 space-y-5">
 
-                      <div className="space-y-3">
+                    {/* Header: logo + status + actions */}
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        {biz.logoAssetId ? (
+                          <PrivateImage assetId={biz.logoAssetId} alt={`Logo ${biz.companyName}`} className="size-14 rounded-2xl border border-border/50" />
+                        ) : (
+                          <div className="flex size-14 items-center justify-center rounded-2xl border border-border/50 bg-muted/20 text-[10px] italic text-muted-foreground">No Logo</div>
+                        )}
                         <div>
-                          <p className="text-xs font-bold text-primary-600 uppercase tracking-tighter">{biz.legalEntity}</p>
-                          <h4 className="text-xl font-bold text-foreground">{biz.companyName}</h4>
+                          <h4 className="text-lg font-bold text-foreground leading-tight">{biz.companyName}</h4>
+                          {complete ? (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600"><CheckCircle2 className="size-3.5" />Data Lengkap</span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600"><AlertCircle className="size-3.5" />Belum Lengkap</span>
+                          )}
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                          <Badge variant="outline" className="bg-muted/30 font-normal">{biz.businessCategory}</Badge>
-                          <Badge variant="outline" className="bg-muted/30 font-normal">{biz.businessSector}</Badge>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-[10px] font-bold uppercase text-muted-foreground">Brand/Merk</p>
-                          <p className="text-sm font-medium">{biz.brandName}</p>
-                        </div>
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <div className="space-y-1">
-                            <p className="text-[10px] font-bold uppercase text-muted-foreground">Nama Booth</p>
-                            <p className="text-sm font-medium">{biz.boothName || biz.companyName}</p>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-[10px] font-bold uppercase text-muted-foreground">Jenis Produk Pameran</p>
-                            <p className="text-sm font-medium">
-                              {biz.requestedBoothCategoryName || "Belum dipilih"}
-                            </p>
-                          </div>
-                        </div>
-                        {biz.companyDescription ? (
-                          <div className="space-y-1">
-                            <p className="text-[10px] font-bold uppercase text-muted-foreground">Tentang Perusahaan</p>
-                            <p className="text-sm leading-6 text-muted-foreground">
-                              {biz.companyDescription}
-                            </p>
-                          </div>
-                        ) : null}
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <div className="space-y-1">
-                            <p className="text-[10px] font-bold uppercase text-muted-foreground">Kontak Perusahaan</p>
-                            <p className="text-sm font-medium">{biz.companyPhone || "-"}</p>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-[10px] font-bold uppercase text-muted-foreground">WhatsApp Perusahaan</p>
-                            <p className="text-sm font-medium">{biz.companyWhatsapp || "-"}</p>
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-[10px] font-bold uppercase text-muted-foreground">Alamat Perusahaan</p>
-                          <p className="text-sm font-medium">
-                            {[
-                              biz.companyAddress,
-                              biz.companyVillageName,
-                              biz.companyDistrictName,
-                              biz.companyRegencyName,
-                              biz.companyProvinceName,
-                            ]
-                              .filter(Boolean)
-                              .join(", ") || "-"}
-                          </p>
-                        </div>
-                        <div className="space-y-2">
-                          <p className="text-[10px] font-bold uppercase text-muted-foreground">Produk/Jasa</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {biz.productTags?.map((tag) => (
-                              <Badge key={tag} className="bg-primary-50 text-primary-700 hover:bg-primary-100 border-none text-[11px]">
-                                {tag}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <p className="text-[10px] font-bold uppercase text-muted-foreground">Peluang Kemitraan</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {biz.partnershipConcepts?.map((item) => (
-                              <Badge key={item} variant="outline" className="bg-muted/30 font-normal">
-                                {item}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
+                      </div>
+                      <BusinessItemActions businessId={biz.id} participantId={participant.id} />
+                    </div>
+
+                    {/* Identitas Usaha */}
+                    <div className="rounded-2xl bg-muted/20 p-4 space-y-3">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-primary-600">Identitas Usaha</p>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <Field label="Badan Hukum" value={biz.legalEntity} />
+                        <Field label="Nama Brand / Merek" value={biz.brandName} />
+                        <Field label="Nama di Booth" value={biz.boothName || biz.companyName} />
+                        <Field label="Jenis Produk Pameran" value={biz.requestedBoothCategoryName} />
+                        <Field label="Kategori Usaha" value={biz.businessCategory} />
+                        <Field label="Bidang Usaha" value={biz.businessSector} />
                       </div>
                     </div>
+
+                    {/* Tentang Perusahaan */}
+                    <div className="rounded-2xl bg-muted/20 p-4 space-y-2">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-primary-600">Tentang Perusahaan</p>
+                      {biz.companyDescription
+                        ? <p className="text-sm leading-relaxed text-muted-foreground">{biz.companyDescription}</p>
+                        : <p className="text-sm text-muted-foreground/50 italic">Belum diisi</p>}
+                    </div>
+
+                    {/* Kontak & Alamat */}
+                    <div className="rounded-2xl bg-muted/20 p-4 space-y-3">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-primary-600">Kontak & Alamat</p>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <Field label="Telepon Perusahaan" value={biz.companyPhone} />
+                        <Field label="WhatsApp Perusahaan" value={biz.companyWhatsapp} />
+                      </div>
+                      <Field label="Alamat" value={addr} />
+                    </div>
+
+                    {/* Produk & Kemitraan */}
+                    <div className="rounded-2xl bg-muted/20 p-4 space-y-4">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-primary-600">Produk & Kemitraan</p>
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] font-bold uppercase text-muted-foreground">Produk / Jasa</p>
+                        {biz.productTags?.length
+                          ? <div className="flex flex-wrap gap-1.5">{biz.productTags.map((tag) => <Badge key={tag} className="bg-primary-50 text-primary-700 border-none text-[11px]">{tag}</Badge>)}</div>
+                          : <p className="text-sm text-muted-foreground/50 italic">Belum diisi</p>}
+                      </div>
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] font-bold uppercase text-muted-foreground">Konsep Kemitraan</p>
+                        {biz.partnershipConcepts?.length
+                          ? <div className="flex flex-wrap gap-1.5">{biz.partnershipConcepts.map((item) => <Badge key={item} variant="outline" className="bg-muted/30 font-normal">{item}</Badge>)}</div>
+                          : <p className="text-sm text-muted-foreground/50 italic">Belum diisi</p>}
+                      </div>
+                    </div>
+
                   </CardContent>
                 </Card>
-              ))
+                )
+              })
             )}
               </div>
             </CardContent>
@@ -279,4 +258,15 @@ export default async function ParticipantViewPage({ params }: { params: { id: st
       </div>
     </div>
   );
+}
+
+function Field({ label, value }: { label: string; value: string | null | undefined }) {
+  return (
+    <div className="space-y-1">
+      <p className="text-[10px] font-bold uppercase text-muted-foreground">{label}</p>
+      {value
+        ? <p className="text-sm font-medium">{value}</p>
+        : <p className="text-sm text-muted-foreground/50 italic">Belum diisi</p>}
+    </div>
+  )
 }
