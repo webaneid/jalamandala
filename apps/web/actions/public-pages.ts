@@ -320,7 +320,7 @@ export async function getPaidTenantDirectory() {
   const paidRows = await tenantDb
     .selectDistinct({ businessId: invoices.businessId })
     .from(invoices)
-    .where(and(eq(invoices.status, "paid"), isNotNull(invoices.businessId)));
+    .where(and(inArray(invoices.status, ["paid", "dp_paid"]), isNotNull(invoices.businessId)));
 
   const businessIds = paidRows
     .map((r) => r.businessId)
@@ -340,6 +340,11 @@ export async function getPaidTenantDirectory() {
       companyPhone: participantBusinesses.companyPhone,
       companyWhatsapp: participantBusinesses.companyWhatsapp,
       productTags: participantBusinesses.productTags,
+      partnershipConcepts: participantBusinesses.partnershipConcepts,
+      legalEntity: participantBusinesses.legalEntity,
+      businessCategory: participantBusinesses.businessCategory,
+      businessSector: participantBusinesses.businessSector,
+      requestedBoothCategoryName: participantBusinesses.requestedBoothCategoryName,
       logoAssetId: participantBusinesses.logoAssetId,
       logoPublicUrl: mediaAssets.publicUrl,
       logoObjectKey: mediaAssets.objectKey,
@@ -359,6 +364,11 @@ export async function getPaidTenantDirectory() {
     companyPhone: r.companyPhone ?? null,
     companyWhatsapp: r.companyWhatsapp ?? null,
     productTags: r.productTags ?? null,
+    partnershipConcepts: r.partnershipConcepts ?? null,
+    legalEntity: r.legalEntity ?? null,
+    businessCategory: r.businessCategory ?? null,
+    businessSector: r.businessSector ?? null,
+    requestedBoothCategoryName: r.requestedBoothCategoryName ?? null,
     logoUrl: r.logoPublicUrl
       ?? (r.logoObjectKey ? generatePresignedGetUrl(r.logoObjectKey, 3600 * 6) : null)
       ?? null,

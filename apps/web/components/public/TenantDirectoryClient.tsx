@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import { MapPin, Phone, X } from "lucide-react";
+import { TenantStats } from "./TenantStats";
+import { TenantTable } from "./TenantTable";
 
 type Sponsor = {
   id: string;
@@ -20,6 +22,11 @@ type Tenant = {
   companyPhone: string | null;
   companyWhatsapp: string | null;
   productTags: string[] | null;
+  partnershipConcepts: string[] | null;
+  legalEntity: string | null;
+  businessCategory: string | null;
+  businessSector: string | null;
+  requestedBoothCategoryName: string | null;
   logoUrl: string | null;
 };
 
@@ -222,6 +229,12 @@ export function TenantDirectoryClient({
       {selected && (
         <TenantPopup tenant={selected} onClose={() => setSelected(null)} />
       )}
+
+      {/* Stats */}
+      <TenantStats tenants={tenants} />
+
+      {/* Table */}
+      <TenantTable tenants={tenants} />
     </>
   );
 }
