@@ -5,6 +5,7 @@ import { expoEvents, participantBusinesses, participants } from "@repo/db/schema
 import { invoices, waRotatorAgents } from "@repo/db/schema/tenant";
 import { sendWhatsApp } from "@/lib/whatsapp";
 import { renderWaTemplate, WA_KEYS } from "@/lib/whatsapp-template";
+import { expireOverdueInvoices } from "@/actions/finance";
 
 const TENANT_SCHEMA = process.env.TENANT_SCHEMA ?? "expo_forbis2026";
 const EXPO_URL = process.env.NEXT_PUBLIC_EXPO_URL ?? "https://expo.forbis.id";
@@ -31,6 +32,9 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    // ── 0. Expire overdue invoices & transition dp_paid → balance_overdue ───
+    await expireOverdueInvoices();
+
     const tenantDb = await createTenantDb(TENANT_SCHEMA);
     const now = new Date();
 

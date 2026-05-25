@@ -189,10 +189,12 @@ export async function expireOverdueInvoices(): Promise<void> {
       columns: { id: true },
     });
 
+    // nextReminderAt set to past so the payment-reminders cron picks it up immediately
+    const pastDate = new Date(now.getTime() - 1000);
     for (const invoice of balanceOverdueRows) {
       await tenantDb
         .update(invoices)
-        .set({ status: "balance_overdue", updatedAt: new Date() })
+        .set({ status: "balance_overdue", nextReminderAt: pastDate, updatedAt: new Date() })
         .where(eq(invoices.id, invoice.id));
     }
 
@@ -1678,6 +1680,9 @@ export async function verifyPaymentConfirmation(paymentId: string) {
       const dpPaidAt = payment.paidAt;
       const balanceDueDate = new Date(dpPaidAt.getTime() + 7 * 24 * 60 * 60 * 1000);
 
+      // Set nextReminderAt 2 days from now so dp_reminder cron fires on schedule
+      const dpNextReminder = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+
       await tenantDb
         .update(invoices)
         .set({
@@ -1688,6 +1693,7 @@ export async function verifyPaymentConfirmation(paymentId: string) {
           paymentChannelId: payment.paymentChannelId,
           paymentChannelLabel: payment.paymentChannelLabel,
           paymentChannelType: payment.paymentChannelType,
+          nextReminderAt: dpNextReminder,
           updatedAt: new Date(),
         })
         .where(eq(invoices.id, invoice.id));
