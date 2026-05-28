@@ -440,6 +440,8 @@ async function provisionPublicSchema() {
 
     // Asset ID columns on existing tables (backward compatible)
     await sql.unsafe(`ALTER TABLE public.participant_businesses ADD COLUMN IF NOT EXISTS logo_asset_id uuid REFERENCES public.media_assets(id) ON DELETE SET NULL`);
+    await sql.unsafe(`ALTER TABLE public.participant_businesses ADD COLUMN IF NOT EXISTS team_male_count integer`);
+    await sql.unsafe(`ALTER TABLE public.participant_businesses ADD COLUMN IF NOT EXISTS team_female_count integer`);
     await sql.unsafe(`ALTER TABLE public.expo_events ADD COLUMN IF NOT EXISTS logo_asset_id uuid REFERENCES public.media_assets(id) ON DELETE SET NULL`);
     await sql.unsafe(`ALTER TABLE public.payment_channels ADD COLUMN IF NOT EXISTS qris_image_asset_id uuid REFERENCES public.media_assets(id) ON DELETE SET NULL`);
     await sql.unsafe(`ALTER TABLE public.qris_configs ADD COLUMN IF NOT EXISTS image_asset_id uuid REFERENCES public.media_assets(id) ON DELETE SET NULL`);

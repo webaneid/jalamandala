@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
+import { integer, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
 import { participants } from './participants';
 
 export const participantBusinesses = pgTable('participant_businesses', {
@@ -35,7 +35,10 @@ export const participantBusinesses = pgTable('participant_businesses', {
   partnershipConcepts: text('partnership_concepts').array(),
   
   logoAssetId: uuid('logo_asset_id'),
-  
+
+  teamMaleCount: integer('team_male_count'),
+  teamFemaleCount: integer('team_female_count'),
+
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow()
 });

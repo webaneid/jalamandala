@@ -27,6 +27,8 @@ type Tenant = {
   businessCategory: string | null;
   businessSector: string | null;
   requestedBoothCategoryName: string | null;
+  teamMaleCount: number | null;
+  teamFemaleCount: number | null;
   logoUrl: string | null;
 };
 

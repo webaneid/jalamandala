@@ -95,23 +95,31 @@ export async function updatePublicBusiness(
   eventSlug: string,
   data: BusinessPayload
 ): Promise<{ success: boolean; error?: string }> {
-  const session = await import("@/lib/participant-session").then(m => m.getCurrentParticipantSession())
-  if (!session) {
-    return { success: false, error: "Sesi tidak valid. Silakan login kembali." }
+  try {
+    const session = await import("@/lib/participant-session").then(m => m.getCurrentParticipantSession())
+    if (!session) {
+      return { success: false, error: "Sesi tidak valid. Silakan login kembali." }
+    }
+
+    const business = await db.query.participantBusinesses.findFirst({
+      where: eq(participantBusinesses.id, businessId),
+      columns: { participantId: true },
+    })
+    if (!business || business.participantId !== session.participantId) {
+      return { success: false, error: "Usaha tidak ditemukan atau bukan milik Anda." }
+    }
+
+    const result = await updateBusiness(businessId, data)
+    if (!result.success) return { success: false, error: result.error }
+
+    revalidatePath(`/${eventSlug}/usaha`)
+    revalidatePath(`/${eventSlug}/dashboard`)
+    return { success: true }
+  } catch (err) {
+    console.error("updatePublicBusiness error:", err)
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Gagal menyimpan data usaha.",
+    }
   }
-
-  const business = await db.query.participantBusinesses.findFirst({
-    where: eq(participantBusinesses.id, businessId),
-    columns: { participantId: true },
-  })
-  if (!business || business.participantId !== session.participantId) {
-    return { success: false, error: "Usaha tidak ditemukan atau bukan milik Anda." }
-  }
-
-  const result = await updateBusiness(businessId, data)
-  if (!result.success) return { success: false, error: result.error }
-
-  revalidatePath(`/${eventSlug}/usaha`)
-  revalidatePath(`/${eventSlug}/dashboard`)
-  return { success: true }
 }

@@ -45,6 +45,8 @@ type Props = {
     businessSector: string
     productTags: string[]
     partnershipConcepts: string[]
+    teamMaleCount?: number | null
+    teamFemaleCount?: number | null
   }
   eventSlug: string
   redirectTo?: string
@@ -292,6 +294,8 @@ export function CompleteBusinessForm({ boothCategories, businessId, currentLogoA
 
   const [productTags, setProductTags] = React.useState<string[]>(defaultValues.productTags)
   const [partnershipConcepts, setPartnershipConcepts] = React.useState<string[]>(defaultValues.partnershipConcepts)
+  const [teamMaleCount, setTeamMaleCount] = React.useState<number | null>(defaultValues.teamMaleCount ?? null)
+  const [teamFemaleCount, setTeamFemaleCount] = React.useState<number | null>(defaultValues.teamFemaleCount ?? null)
 
   const wordCount = description.trim() ? description.trim().split(/\s+/).filter(Boolean).length : 0
 
@@ -356,6 +360,8 @@ export function CompleteBusinessForm({ boothCategories, businessId, currentLogoA
         legalEntity,
         partnershipConcepts,
         productTags,
+        teamMaleCount,
+        teamFemaleCount,
         logoUpload: newLogo
           ? { dataUrl: newLogo.dataUrl, contentType: newLogo.contentType, fileName: newLogo.fileName }
           : undefined,
@@ -376,42 +382,6 @@ export function CompleteBusinessForm({ boothCategories, businessId, currentLogoA
 
   return (
     <form className="space-y-8" onSubmit={handleSubmit}>
-      {/* Logo */}
-      <div className="flex items-center gap-4">
-        <button
-          className="relative size-16 shrink-0 overflow-hidden rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 transition hover:border-primary/40 focus:outline-none"
-          disabled={isSubmitting}
-          onClick={() => logoFileRef.current?.click()}
-          type="button"
-        >
-          {newLogo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img alt="logo baru" className="h-full w-full object-cover" src={newLogo.previewUrl} />
-          ) : currentLogoAssetId ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img alt="logo" className="h-full w-full object-cover" src={`/api/media/${currentLogoAssetId}`} />
-          ) : (
-            <svg className="size-6 text-slate-300" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-              <path d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5M12 3.75v8.25M8.25 8.25L12 4.5l3.75 3.75" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          )}
-        </button>
-        <div className="text-sm">
-          <p className="font-medium text-slate-700">Logo Perusahaan</p>
-          <p className="text-slate-400">Opsional · Maks 5 MB (JPG/PNG)</p>
-          {newLogo && (
-            <button
-              className="mt-0.5 text-xs text-red-500 hover:underline"
-              onClick={() => { setNewLogo(null); if (logoFileRef.current) logoFileRef.current.value = "" }}
-              type="button"
-            >
-              Hapus logo baru
-            </button>
-          )}
-        </div>
-        <input accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleLogoChange} ref={logoFileRef} type="file" />
-      </div>
-
       {/* Identitas Usaha */}
       <section className="space-y-4">
         <p className="text-sm font-semibold uppercase tracking-[0.15em] text-primary-600">
@@ -428,6 +398,49 @@ export function CompleteBusinessForm({ boothCategories, businessId, currentLogoA
             value={companyName}
           />
         </FieldShell>
+      </section>
+
+      {/* Branding */}
+      <section className="space-y-4">
+        <p className="text-sm font-semibold uppercase tracking-[0.15em] text-primary-600">
+          Branding
+        </p>
+
+        {/* Logo */}
+        <div className="flex items-center gap-4">
+          <button
+            className="relative size-20 shrink-0 overflow-hidden rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 transition hover:border-primary/40 focus:outline-none"
+            disabled={isSubmitting}
+            onClick={() => logoFileRef.current?.click()}
+            type="button"
+          >
+            {newLogo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img alt="logo baru" className="h-full w-full object-cover" src={newLogo.previewUrl} />
+            ) : currentLogoAssetId ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img alt="logo" className="h-full w-full object-cover" src={`/api/media/${currentLogoAssetId}`} />
+            ) : (
+              <svg className="size-7 text-slate-300" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                <path d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5M12 3.75v8.25M8.25 8.25L12 4.5l3.75 3.75" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
+          </button>
+          <div className="text-sm">
+            <p className="font-medium text-slate-700">Logo Perusahaan</p>
+            <p className="text-slate-400">Opsional · Maks 5 MB (JPG/PNG)</p>
+            {newLogo && (
+              <button
+                className="mt-0.5 text-xs text-red-500 hover:underline"
+                onClick={() => { setNewLogo(null); if (logoFileRef.current) logoFileRef.current.value = "" }}
+                type="button"
+              >
+                Hapus logo baru
+              </button>
+            )}
+          </div>
+          <input accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleLogoChange} ref={logoFileRef} type="file" />
+        </div>
 
         <FieldShell id="brandName" label="Nama Brand / Merek" required>
           <Input
@@ -439,6 +452,44 @@ export function CompleteBusinessForm({ boothCategories, businessId, currentLogoA
             value={brandName}
           />
         </FieldShell>
+
+        <div>
+          <p className="mb-1 text-sm font-medium text-slate-800">Jumlah Tim yang Hadir</p>
+          <p className="mb-3 text-xs text-slate-400">Estimasi personil yang akan hadir di booth saat pameran.</p>
+          <div className="grid grid-cols-2 gap-3">
+            <FieldShell id="teamMaleCount" label="Laki-laki">
+              <Input
+                className="h-11 rounded-2xl"
+                disabled={isSubmitting}
+                id="teamMaleCount"
+                min={0}
+                onChange={(e) => setTeamMaleCount(e.target.value === "" ? null : Number(e.target.value))}
+                placeholder="0"
+                type="number"
+                value={teamMaleCount ?? ""}
+              />
+            </FieldShell>
+            <FieldShell id="teamFemaleCount" label="Perempuan">
+              <Input
+                className="h-11 rounded-2xl"
+                disabled={isSubmitting}
+                id="teamFemaleCount"
+                min={0}
+                onChange={(e) => setTeamFemaleCount(e.target.value === "" ? null : Number(e.target.value))}
+                placeholder="0"
+                type="number"
+                value={teamFemaleCount ?? ""}
+              />
+            </FieldShell>
+          </div>
+        </div>
+      </section>
+
+      {/* Identitas Usaha lanjutan */}
+      <section className="space-y-4">
+        <p className="text-sm font-semibold uppercase tracking-[0.15em] text-primary-600">
+          Detail Usaha
+        </p>
 
         <FieldShell id="boothName" label="Nama di Booth" required hint="Nama yang tampil di papan booth saat pameran.">
           <Input

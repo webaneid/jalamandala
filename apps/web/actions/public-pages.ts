@@ -345,6 +345,8 @@ export async function getPaidTenantDirectory() {
       businessCategory: participantBusinesses.businessCategory,
       businessSector: participantBusinesses.businessSector,
       requestedBoothCategoryName: participantBusinesses.requestedBoothCategoryName,
+      teamMaleCount: participantBusinesses.teamMaleCount,
+      teamFemaleCount: participantBusinesses.teamFemaleCount,
       logoAssetId: participantBusinesses.logoAssetId,
       logoPublicUrl: mediaAssets.publicUrl,
       logoObjectKey: mediaAssets.objectKey,
@@ -369,6 +371,8 @@ export async function getPaidTenantDirectory() {
     businessCategory: r.businessCategory ?? null,
     businessSector: r.businessSector ?? null,
     requestedBoothCategoryName: r.requestedBoothCategoryName ?? null,
+    teamMaleCount: r.teamMaleCount ?? null,
+    teamFemaleCount: r.teamFemaleCount ?? null,
     logoUrl: r.logoPublicUrl
       ?? (r.logoObjectKey ? generatePresignedGetUrl(r.logoObjectKey, 3600 * 6) : null)
       ?? null,

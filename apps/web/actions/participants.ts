@@ -50,6 +50,8 @@ export type BusinessPayload = {
   logoAssetId?: string | null;
   partnershipConcepts: string[];
   productTags: string[];
+  teamMaleCount?: number | null;
+  teamFemaleCount?: number | null;
 }
 
 const TENANT_SCHEMA = process.env.TENANT_SCHEMA ?? "expo_forbis2026";
@@ -491,6 +493,8 @@ export async function updateBusiness(
         logoAssetId,
         partnershipConcepts: data.partnershipConcepts || [],
         productTags: data.productTags || [],
+        teamMaleCount: data.teamMaleCount ?? null,
+        teamFemaleCount: data.teamFemaleCount ?? null,
         updatedAt: new Date(),
       })
       .where(eq(participantBusinesses.id, businessId))

@@ -213,6 +213,8 @@ export function BusinessForm({
       partnershipConcepts: [],
       logoFile: null,
       requestedBoothCategorySlug: "",
+      teamMaleCount: null,
+      teamFemaleCount: null,
       ...defaultValues,
     },
   });
@@ -220,7 +222,7 @@ export function BusinessForm({
   const [isPending, setIsPending] = React.useState(false);
   const [logoAsset, setLogoAsset] = React.useState<MediaPickerValue>(
     existingLogoAssetId
-      ? { id: existingLogoAssetId, url: `/api/media/${existingLogoAssetId}`, objectKey: "", fileName: "logo", mimeType: "image/*" }
+      ? { id: existingLogoAssetId, url: existingLogoUrl ?? `/api/media/${existingLogoAssetId}`, objectKey: "", fileName: "logo", mimeType: "image/*" }
       : null
   );
   const watchCompanyName = form.watch("companyName");
@@ -344,20 +346,6 @@ export function BusinessForm({
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormItem>
-              <FormLabel>Logo Usaha</FormLabel>
-              <FormControl>
-                <MediaPicker
-                  value={logoAsset}
-                  onChange={setLogoAsset}
-                  accept="image"
-                  folder="public/participant-logos"
-                  visibility="public"
-                  placeholder="Pilih atau upload logo usaha..."
-                />
-              </FormControl>
-            </FormItem>
-
             <FormField control={form.control} name="companyName" render={({ field }) => (
               <FormItem>
                 <FormLabel>Nama Perusahaan / Usaha *</FormLabel>
@@ -365,6 +353,81 @@ export function BusinessForm({
                 <FormMessage />
               </FormItem>
             )} />
+
+            {/* Branding */}
+            <div className="rounded-2xl border border-border/60 bg-muted/20 p-5 space-y-5">
+              <p className="text-sm font-semibold text-foreground">Branding</p>
+
+              <FormItem>
+                <FormLabel>Logo Usaha</FormLabel>
+                <FormControl>
+                  <MediaPicker
+                    value={logoAsset}
+                    onChange={setLogoAsset}
+                    accept="image"
+                    folder="public/participant-logos"
+                    visibility="public"
+                    placeholder="Pilih atau upload logo usaha..."
+                  />
+                </FormControl>
+              </FormItem>
+
+              <FormField control={form.control} name="brandName" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nama Brand / Merek *</FormLabel>
+                  <FormControl>
+                    <AutocompleteInput
+                      placeholder="Nama brand yang dikenal publik"
+                      value={field.value}
+                      options={brandCatalog.options}
+                      onBlur={field.onBlur}
+                      onCommitOption={brandCatalog.registerOption}
+                      onValueChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">Jumlah Tim yang Hadir</p>
+                <p className="text-xs text-muted-foreground">Estimasi jumlah personil yang akan hadir di booth saat pameran.</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField control={form.control} name="teamMaleCount" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">Laki-laki</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          placeholder="0"
+                          {...field}
+                          value={field.value ?? ""}
+                          onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="teamFemaleCount" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">Perempuan</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          placeholder="0"
+                          {...field}
+                          value={field.value ?? ""}
+                          onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </div>
+              </div>
+            </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-3">
@@ -624,23 +687,6 @@ export function BusinessForm({
                       field.onChange(nextValues);
                       productCatalog.registerOptions(nextValues);
                     }}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-
-            <FormField control={form.control} name="brandName" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Merk atau brand produk *</FormLabel>
-                <FormControl>
-                  <AutocompleteInput
-                    placeholder="Pilih atau ketik merk/brand"
-                    value={field.value}
-                    options={brandCatalog.options}
-                    onBlur={field.onBlur}
-                    onCommitOption={brandCatalog.registerOption}
-                    onValueChange={field.onChange}
                   />
                 </FormControl>
                 <FormMessage />

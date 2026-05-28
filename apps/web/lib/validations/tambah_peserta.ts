@@ -55,6 +55,8 @@ export const businessSchema = z.object({
   productTags: z.array(z.string()).min(1, "Minimal satu produk harus dicantumkan"),
   partnershipConcepts: z.array(z.string()).min(1, "Pilih minimal satu konsep kemitraan"),
   logoFile: z.any().optional(), // File upload handled in component
+  teamMaleCount: z.number().int().min(0).nullable().optional(),
+  teamFemaleCount: z.number().int().min(0).nullable().optional(),
 });
 
 // Full type for the multi-step form state (if still needed as a combined type)

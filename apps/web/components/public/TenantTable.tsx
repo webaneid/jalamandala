@@ -14,6 +14,8 @@ type Tenant = {
   companyDescription: string | null;
   companyAddress: string | null;
   partnershipConcepts: string[] | null;
+  teamMaleCount: number | null;
+  teamFemaleCount: number | null;
 };
 
 function isComplete(t: Tenant) {
@@ -81,7 +83,15 @@ export function TenantTable({ tenants }: { tenants: Tenant[] }) {
                       <span className="text-white/25 italic text-[11px]">Belum diisi</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-center text-white/25 italic text-xs">—</td>
+                  <td className="px-4 py-3 text-center text-white/60 text-xs">
+                    {(t.teamMaleCount != null || t.teamFemaleCount != null) ? (
+                      <span>
+                        {t.teamMaleCount ?? 0}L / {t.teamFemaleCount ?? 0}P
+                      </span>
+                    ) : (
+                      <span className="text-white/25 italic">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-center">
                     {done ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-1 text-[11px] font-semibold text-emerald-400">

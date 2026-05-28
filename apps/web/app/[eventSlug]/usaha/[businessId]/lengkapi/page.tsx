@@ -71,6 +71,8 @@ export default async function LengkapiUsahaPage({ params, searchParams }: Props)
             businessSector: business.businessSector ?? "",
             productTags: business.productTags ?? [],
             partnershipConcepts: business.partnershipConcepts ?? [],
+            teamMaleCount: business.teamMaleCount ?? null,
+            teamFemaleCount: business.teamFemaleCount ?? null,
           }}
           eventSlug={eventSlug}
           redirectTo={next ?? `/${eventSlug}/dashboard/usaha`}

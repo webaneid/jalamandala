@@ -1,7 +1,8 @@
 import { db } from "@repo/db";
-import { participantBusinesses } from "@repo/db/schema/public";
+import { mediaAssets, participantBusinesses } from "@repo/db/schema/public";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import { generatePresignedGetUrl } from "@/lib/minio-storage";
 
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { BusinessForm } from "@/components/forms/BusinessForm";
@@ -21,9 +22,7 @@ export default async function ParticipantBusinessEditPage({
 
   const business = await db.query.participantBusinesses.findFirst({
     where: eq(participantBusinesses.id, businessId),
-    with: {
-      participant: true,
-    },
+    with: { participant: true },
   });
 
   if (!business || business.participantId !== id) {
@@ -32,6 +31,15 @@ export default async function ParticipantBusinessEditPage({
 
   const { boothCategories } = await getBoothFormOptions();
   const boothName = business.boothName || business.companyName;
+
+  let existingLogoUrl: string | null = null;
+  if (business.logoAssetId) {
+    const asset = await db.query.mediaAssets.findFirst({
+      where: eq(mediaAssets.id, business.logoAssetId),
+      columns: { publicUrl: true, objectKey: true },
+    });
+    existingLogoUrl = asset?.publicUrl ?? (asset?.objectKey ? generatePresignedGetUrl(asset.objectKey, 3600 * 6) : null);
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 pb-20">
@@ -46,6 +54,7 @@ export default async function ParticipantBusinessEditPage({
         boothCategoryOptions={boothCategories}
         businessId={business.id}
         existingLogoAssetId={business.logoAssetId}
+        existingLogoUrl={existingLogoUrl}
         participantId={business.participantId}
         participantName={business.participant?.name}
         defaultValues={{
@@ -71,6 +80,8 @@ export default async function ParticipantBusinessEditPage({
           partnershipConcepts: business.partnershipConcepts ?? [],
           productTags: business.productTags ?? [],
           requestedBoothCategorySlug: business.requestedBoothCategorySlug ?? "",
+          teamMaleCount: business.teamMaleCount ?? null,
+          teamFemaleCount: business.teamFemaleCount ?? null,
         }}
       />
     </div>
