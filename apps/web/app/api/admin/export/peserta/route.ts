@@ -1,10 +1,17 @@
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 
 import { createTenantDb, db } from "@repo/db";
 import { participants, participantBusinesses } from "@repo/db/schema/public";
-import { zones as zonesSchema, booths, boothGroups, boothBookings, invoices } from "@repo/db/schema/tenant";
+import {
+  zones as zonesSchema,
+  booths,
+  boothGroups,
+  boothBookings,
+  invoices,
+  invoiceItems,
+} from "@repo/db/schema/tenant";
 import { getAdminSession } from "@/lib/admin-auth";
 
 const TENANT_SCHEMA = process.env.TENANT_SCHEMA ?? "expo_forbis2026";
@@ -48,13 +55,26 @@ function naturalSort(a: string, b: string): number {
   return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
 }
 
-// Kelompok label: dari booth group, kecuali "general" → pakai org peserta
-function resolveKelompok(boothGroupSlug: string | null, boothGroupName: string | null, orgGroupName: string | null | undefined): string {
-  if (!boothGroupSlug || boothGroupSlug === "general") {
-    return orgGroupName ?? "Umum";
-  }
+function resolveKelompok(
+  boothGroupSlug: string | null,
+  boothGroupName: string | null,
+  orgGroupName: string | null | undefined,
+): string {
+  if (!boothGroupSlug || boothGroupSlug === "general") return orgGroupName ?? "Umum";
   return boothGroupName ?? boothGroupSlug;
 }
+
+type ActiveBooking = {
+  participantId: string | null;
+  businessId: string | null;
+  bookingId: string;
+  invoiceStatus: string;
+  invoiceGrandTotal: number;
+  invoiceDpAmount: number;
+  invoiceBalanceDueDate: Date | null | undefined;
+  boothItemSubtotal: number | null;
+  boothFinalPrice: number;
+};
 
 export async function GET() {
   try {
@@ -65,7 +85,7 @@ export async function GET() {
 
     const tenantDb = await createTenantDb(TENANT_SCHEMA);
 
-    // 1. ALL active booths with zone + group info (untuk zona tabs termasuk yang kosong)
+    // ── 1. All active booths ──────────────────────────────────────────────────
     const allBooths = await tenantDb
       .select({
         boothId: booths.id,
@@ -82,28 +102,101 @@ export async function GET() {
       .where(eq(zonesSchema.isActive, true))
       .orderBy(zonesSchema.sortOrder);
 
-    // 2. Active bookings with valid invoice status
-    const activeBookings = await tenantDb
-      .select({
-        boothId: boothBookings.boothId,
-        businessId: boothBookings.businessId,
-        participantId: boothBookings.participantId,
-        boothFinalPrice: boothBookings.finalPrice,
-        invoiceStatus: invoices.status,
-        invoiceGrandTotal: invoices.grandTotal,
-        invoiceDpAmount: invoices.dpAmount,
-        invoiceBalanceDueDate: invoices.balanceDueDate,
-      })
-      .from(boothBookings)
-      .innerJoin(invoices, sql`${invoices.id} = ${boothBookings.invoiceId}::uuid`)
-      .where(inArray(invoices.status, [...VALID_STATUSES]));
+    const allBoothIds = allBooths.map(b => b.boothId);
 
-    // Map: boothId → booking
-    const bookingByBooth = new Map(activeBookings.map(b => [b.boothId, b]));
+    // ── 2. All boothBookings for active booths (no invoice join) ──────────────
+    // Separate query so null invoiceId doesn't drop valid bookings from the map.
+    const allBookingRows = allBoothIds.length > 0
+      ? await tenantDb
+        .select({
+          id: boothBookings.id,
+          boothId: boothBookings.boothId,
+          participantId: boothBookings.participantId,
+          businessId: boothBookings.businessId,
+          invoiceId: boothBookings.invoiceId, // TEXT column (uuid stored as text)
+          finalPrice: boothBookings.finalPrice, // fallback if no invoice item
+        })
+        .from(boothBookings)
+        .where(inArray(boothBookings.boothId, allBoothIds))
+      : [];
 
-    // 3. Fetch participants + businesses for active bookings only
-    const participantIds = [...new Set(activeBookings.map(b => b.participantId).filter((id): id is string => !!id))];
-    const businessIds = [...new Set(activeBookings.map(b => b.businessId).filter((id): id is string => !!id))];
+    // ── 3. Fetch invoices for these bookings (uuid::text for safe comparison) ─
+    const textInvoiceIds = [...new Set(
+      allBookingRows.map(b => b.invoiceId).filter((id): id is string => !!id),
+    )];
+
+    const invoiceRows = textInvoiceIds.length > 0
+      ? await tenantDb
+        .select({
+          id: sql<string>`${invoices.id}::text`.as("id"),
+          status: invoices.status,
+          grandTotal: invoices.grandTotal,
+          dpAmount: invoices.dpAmount,
+          balanceDueDate: invoices.balanceDueDate,
+        })
+        .from(invoices)
+        .where(inArray(sql<string>`${invoices.id}::text`, textInvoiceIds))
+      : [];
+
+    // Keep only invoices whose status is reportable
+    const invoiceMap = new Map(
+      invoiceRows
+        .filter(i => (VALID_STATUSES as readonly string[]).includes(i.status))
+        .map(i => [i.id, i]),
+    );
+
+    // ── 4. Invoice items for per-booth actual price ───────────────────────────
+    // invoiceItems.referenceId = boothBookings.id (stored as text UUID)
+    const validInvoiceIdTexts = [...invoiceMap.keys()];
+
+    const invoiceItemRows = validInvoiceIdTexts.length > 0
+      ? await tenantDb
+        .select({
+          referenceId: invoiceItems.referenceId, // text = boothBookings.id
+          subtotal: invoiceItems.subtotal,
+        })
+        .from(invoiceItems)
+        .where(
+          and(
+            eq(invoiceItems.itemType, "booth_booking"),
+            inArray(sql<string>`${invoiceItems.invoiceId}::text`, validInvoiceIdTexts),
+          ),
+        )
+      : [];
+
+    // boothBookingId (text UUID) → actual invoiced price
+    const itemSubtotalByBookingId = new Map(
+      invoiceItemRows
+        .filter(i => i.referenceId !== null)
+        .map(i => [i.referenceId!, i.subtotal]),
+    );
+
+    // ── 5. Build booking-by-booth map (only booths with a valid invoice) ──────
+    const bookingByBooth = new Map<string, ActiveBooking>();
+    for (const b of allBookingRows) {
+      if (!b.invoiceId) continue;
+      const inv = invoiceMap.get(b.invoiceId);
+      if (!inv) continue;
+      bookingByBooth.set(b.boothId, {
+        participantId: b.participantId ?? null,
+        businessId: b.businessId ?? null,
+        bookingId: b.id,
+        invoiceStatus: inv.status,
+        invoiceGrandTotal: inv.grandTotal,
+        invoiceDpAmount: inv.dpAmount,
+        invoiceBalanceDueDate: inv.balanceDueDate,
+        boothItemSubtotal: itemSubtotalByBookingId.get(b.id) ?? null,
+        boothFinalPrice: b.finalPrice,
+      });
+    }
+
+    // ── 6. Participants + businesses ──────────────────────────────────────────
+    const participantIds = [...new Set(
+      [...bookingByBooth.values()].map(b => b.participantId).filter((id): id is string => !!id),
+    )];
+    const businessIds = [...new Set(
+      [...bookingByBooth.values()].map(b => b.businessId).filter((id): id is string => !!id),
+    )];
 
     const [participantRows, businessRows] = await Promise.all([
       participantIds.length > 0
@@ -132,7 +225,7 @@ export async function GET() {
     const participantMap = new Map(participantRows.map(p => [p.id, p]));
     const businessMap = new Map(businessRows.map(b => [b.id, b]));
 
-    // All active zones sorted
+    // ── Zone metadata ─────────────────────────────────────────────────────────
     const zoneOrder = new Map<string, number>();
     const zoneMeta = new Map<string, { name: string; sortOrder: number }>();
     for (const booth of allBooths) {
@@ -147,7 +240,7 @@ export async function GET() {
 
     const wb = XLSX.utils.book_new();
 
-    // ===== TAB 1: Semua Peserta (hanya yang ada booking valid) =====
+    // ── TAB 1: Semua Peserta ──────────────────────────────────────────────────
     const bookedBooths = allBooths
       .filter(b => bookingByBooth.has(b.boothId))
       .sort((a, b) => {
@@ -188,7 +281,7 @@ export async function GET() {
     ];
     XLSX.utils.book_append_sheet(wb, ws1, "Semua Peserta");
 
-    // ===== TAB per Zona (SEMUA booth, termasuk kosong) =====
+    // ── TAB per Zona (ALL booths, termasuk kosong) ────────────────────────────
     for (const zoneId of sortedZoneIds) {
       const meta = zoneMeta.get(zoneId)!;
 
@@ -209,7 +302,6 @@ export async function GET() {
         );
 
         if (!booking) {
-          // Booth kosong — tetap tampil dengan info booth group
           return {
             "No": idx + 1,
             "Nomor Booth": booth.boothCode,
@@ -225,12 +317,20 @@ export async function GET() {
           };
         }
 
-        const boothPrice = booking.boothFinalPrice;
-        const invoicePaid = calcSudahBayar(booking.invoiceStatus, booking.invoiceGrandTotal, booking.invoiceDpAmount);
-        // Prorate per-booth: paid portion = invoice paid * (boothPrice / invoiceTotal)
-        const ratio = booking.invoiceGrandTotal > 0 ? boothPrice / booking.invoiceGrandTotal : 0;
-        const paid = Math.round(invoicePaid * ratio);
+        // Use actual invoice item subtotal as the authoritative per-booth price.
+        // Fall back to boothBookings.finalPrice only if invoice item is missing.
+        const boothPrice = booking.boothItemSubtotal ?? booking.boothFinalPrice;
+
+        // Prorate paid amount: invoice-level paid × (this booth's price / invoice total)
+        const invoiceLevelPaid = calcSudahBayar(
+          booking.invoiceStatus,
+          booking.invoiceGrandTotal,
+          booking.invoiceDpAmount,
+        );
+        const ratio = booking.invoiceGrandTotal > 0 ? boothPrice / booking.invoiceGrandTotal : 1;
+        const paid = Math.round(invoiceLevelPaid * ratio);
         const sisa = boothPrice - paid;
+
         return {
           "No": idx + 1,
           "Nomor Booth": booth.boothCode,
