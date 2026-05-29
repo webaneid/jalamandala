@@ -88,6 +88,7 @@ export async function GET() {
         boothId: boothBookings.boothId,
         businessId: boothBookings.businessId,
         participantId: boothBookings.participantId,
+        boothFinalPrice: boothBookings.finalPrice,
         invoiceStatus: invoices.status,
         invoiceGrandTotal: invoices.grandTotal,
         invoiceDpAmount: invoices.dpAmount,
@@ -224,8 +225,12 @@ export async function GET() {
           };
         }
 
-        const paid = calcSudahBayar(booking.invoiceStatus, booking.invoiceGrandTotal, booking.invoiceDpAmount);
-        const sisa = booking.invoiceGrandTotal - paid;
+        const boothPrice = booking.boothFinalPrice;
+        const invoicePaid = calcSudahBayar(booking.invoiceStatus, booking.invoiceGrandTotal, booking.invoiceDpAmount);
+        // Prorate per-booth: paid portion = invoice paid * (boothPrice / invoiceTotal)
+        const ratio = booking.invoiceGrandTotal > 0 ? boothPrice / booking.invoiceGrandTotal : 0;
+        const paid = Math.round(invoicePaid * ratio);
+        const sisa = boothPrice - paid;
         return {
           "No": idx + 1,
           "Nomor Booth": booth.boothCode,
@@ -234,7 +239,7 @@ export async function GET() {
           "Nama Usaha": business?.companyName ?? "-",
           "WhatsApp": participant?.whatsapp ?? "-",
           "Status Pembayaran": STATUS_LABELS[booking.invoiceStatus] ?? booking.invoiceStatus,
-          "Grand Total": fmtRupiah(booking.invoiceGrandTotal),
+          "Grand Total": fmtRupiah(boothPrice),
           "Sudah Bayar": fmtRupiah(paid),
           "Sisa Bayar": fmtRupiah(sisa),
           "Jatuh Tempo Pelunasan": fmtDate(booking.invoiceBalanceDueDate),
