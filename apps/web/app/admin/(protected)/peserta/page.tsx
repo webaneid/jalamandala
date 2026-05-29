@@ -15,7 +15,8 @@ export const metadata = {
 };
 
 export default async function PesertaPage() {
-  await requireRoles(["admin", "finance"]);
+  const adminAccess = await requireRoles(["admin", "finance"]);
+  const canExport = adminAccess.isSuperAdmin || adminAccess.can("finance");
   const participants = await getParticipantsWithBookings();
 
   const confirmedCount = participants.filter((p) => ["paid", "dp_paid"].includes(p.bookingStatus)).length;
@@ -34,14 +35,16 @@ export default async function PesertaPage() {
               <UserPlus className="size-4" />
               Tambah Peserta
             </Link>
-            <a
-              href="/api/admin/export/peserta"
-              download
-              className={buttonVariants({ variant: "outline", className: "rounded-2xl bg-white/90 px-4" })}
-            >
-              <FileDown className="size-4" />
-              Export Excel
-            </a>
+            {canExport && (
+              <a
+                href="/api/admin/export/peserta"
+                download
+                className={buttonVariants({ variant: "outline", className: "rounded-2xl bg-white/90 px-4" })}
+              >
+                <FileDown className="size-4" />
+                Export Laporan
+              </a>
+            )}
           </>
         }
       />
