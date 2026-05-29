@@ -204,14 +204,7 @@ export default async function DashboardHomePage({
         {/* Quick access grid */}
         <p className="pt-2 text-xs font-semibold uppercase tracking-widest text-slate-400">Akses Cepat</p>
         <div className="grid grid-cols-2 gap-3 pb-4">
-          <QuickCard
-            href={`/${eventSlug}/booking`}
-            icon="🏪"
-            label="Booking Booth"
-            sub="Pesan booth baru"
-            color="bg-primary/5 border-primary/20"
-          />
-          {latestBooking?.businessId ? (
+          {latestBooking?.businessId && (
             <QuickCard
               href={`/${eventSlug}/usaha/${latestBooking.businessId}/epass`}
               icon="🎫"
@@ -219,15 +212,21 @@ export default async function DashboardHomePage({
               sub="Kartu peserta digital"
               color="bg-blue-50 border-blue-100"
             />
-          ) : (
-            <QuickCard
-              href={`/${eventSlug}/dashboard/usaha`}
-              icon="🏢"
-              label="Usaha Saya"
-              sub="Kelola data usaha"
-              color="bg-blue-50 border-blue-100"
-            />
           )}
+          <QuickCard
+            href={`/${eventSlug}/booking`}
+            icon="🏪"
+            label="Booking Booth"
+            sub="Pesan booth baru"
+            color="bg-primary/5 border-primary/20"
+          />
+          <QuickCard
+            href={`/${eventSlug}/dashboard/usaha`}
+            icon="🏢"
+            label="Usaha Saya"
+            sub="Kelola data usaha"
+            color="bg-blue-50 border-blue-100"
+          />
           <QuickCard
             href={`/${eventSlug}/dashboard/invoice`}
             icon="🧾"
