@@ -42,7 +42,7 @@ export default async function DashboardHomePage({
       : Promise.resolve(null),
     tenantDb.query.invoices.findFirst({
       where: eq(invoices.participantId, session!.participantId),
-      columns: { status: true, grandTotal: true, publicToken: true, invoiceNumber: true },
+      columns: { status: true, grandTotal: true, dpAmount: true, publicToken: true, invoiceNumber: true, balanceDueDate: true },
       orderBy: (t, { desc }) => [desc(t.createdAt)],
     }),
   ])
@@ -67,6 +67,16 @@ export default async function DashboardHomePage({
     cta = { href: `/${eventSlug}/usaha/baru`, label: "Daftar Usaha Sekarang →", color: "bg-primary" }
   } else if (!hasBooking) {
     cta = { href: `/${eventSlug}/booking`, label: "Booking Booth →", color: "bg-primary" }
+  } else if (latestInvoice && latestInvoice.status === "dp_paid") {
+    const sisaBayar = latestInvoice.grandTotal - (latestInvoice.dpAmount ?? 0)
+    const jatuhTempo = latestInvoice.balanceDueDate
+      ? new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date(latestInvoice.balanceDueDate))
+      : null
+    cta = {
+      href: `/invoice/${latestInvoice.publicToken}`,
+      label: `DP diterima · Lunasi sisa ${fmt(sisaBayar)}${jatuhTempo ? ` sebelum ${jatuhTempo}` : ""}`,
+      color: "bg-emerald-600",
+    }
   } else if (latestInvoice && !isPaid) {
     cta = {
       href: `/invoice/${latestInvoice.publicToken}`,
