@@ -4,7 +4,7 @@ import { eq, inArray, sql } from "drizzle-orm";
 
 import { createTenantDb, db } from "@repo/db";
 import { participants, participantBusinesses } from "@repo/db/schema/public";
-import { zones as zonesSchema, booths, boothBookings, invoices } from "@repo/db/schema/tenant";
+import { zones as zonesSchema, booths, boothGroups, boothBookings, invoices } from "@repo/db/schema/tenant";
 import { getAdminSession } from "@/lib/admin-auth";
 
 const TENANT_SCHEMA = process.env.TENANT_SCHEMA ?? "expo_forbis2026";
@@ -64,7 +64,7 @@ export async function GET() {
       .where(eq(zonesSchema.isActive, true))
       .orderBy(zonesSchema.sortOrder);
 
-    // 2. All valid bookings joined with invoice + booth + zone in one query
+    // 2. All valid bookings joined with invoice + booth + zone + boothGroup
     const bookingRows = await tenantDb
       .select({
         bookingId: boothBookings.id,
@@ -73,6 +73,8 @@ export async function GET() {
         boothCode: booths.code,
         zoneId: zonesSchema.id,
         zoneName: zonesSchema.name,
+        boothGroupSlug: boothGroups.slug,
+        boothGroupName: boothGroups.name,
         invoiceStatus: invoices.status,
         invoiceGrandTotal: invoices.grandTotal,
         invoiceDpAmount: invoices.dpAmount,
@@ -81,6 +83,7 @@ export async function GET() {
       .from(boothBookings)
       .innerJoin(booths, eq(booths.id, boothBookings.boothId))
       .innerJoin(zonesSchema, eq(zonesSchema.id, booths.zoneId))
+      .leftJoin(boothGroups, eq(boothGroups.id, booths.boothGroupId))
       .innerJoin(invoices, sql`${invoices.id} = ${boothBookings.invoiceId}::uuid`)
       .where(inArray(invoices.status, [...VALID_STATUSES]));
 
@@ -132,6 +135,8 @@ export async function GET() {
       boothCode: string;
       zoneId: string;
       zoneName: string;
+      boothGroupSlug: string | null;
+      boothGroupName: string | null;
       participant: typeof participantRows[0] | undefined;
       business: typeof businessRows[0] | undefined;
       invoiceStatus: string;
@@ -144,6 +149,8 @@ export async function GET() {
       boothCode: r.boothCode,
       zoneId: r.zoneId,
       zoneName: r.zoneName,
+      boothGroupSlug: r.boothGroupSlug,
+      boothGroupName: r.boothGroupName,
       participant: r.participantId ? participantMap.get(r.participantId) : undefined,
       business: r.businessId ? businessMap.get(r.businessId) : undefined,
       invoiceStatus: r.invoiceStatus,
@@ -152,10 +159,15 @@ export async function GET() {
       invoiceBalanceDueDate: r.invoiceBalanceDueDate,
     }));
 
-    // All distinct organization groups (across all valid bookings, for zone tab headers)
-    const allGroups = [
-      ...new Set(participantRows.map(p => p.organizationGroupName).filter((g): g is string => !!g)),
-    ].sort();
+    // Helper: resolve display group label per row
+    function resolveKelompok(row: EnrichedRow): string {
+      const slug = row.boothGroupSlug ?? "general";
+      // For general/umum booths, use participant's org group
+      if (slug === "general") {
+        return row.participant?.organizationGroupName ?? "Umum";
+      }
+      return row.boothGroupName ?? slug;
+    }
 
     const wb = XLSX.utils.book_new();
 
@@ -202,83 +214,29 @@ export async function GET() {
         .filter(r => r.zoneId === zone.id)
         .sort((a, b) => naturalSort(a.boothCode, b.boothCode));
 
-      // Build groups map — always include all groups, even if empty in this zone
-      const groupedRows = new Map<string, EnrichedRow[]>();
-      for (const group of allGroups) {
-        groupedRows.set(group, []);
-      }
-
-      const ungroupedKey = "Lainnya";
-      for (const row of zoneRows) {
-        const group = row.participant?.organizationGroupName;
-        if (group && groupedRows.has(group)) {
-          groupedRows.get(group)!.push(row);
-        } else {
-          if (!groupedRows.has(ungroupedKey)) groupedRows.set(ungroupedKey, []);
-          groupedRows.get(ungroupedKey)!.push(row);
-        }
-      }
-
       type SheetRow = Record<string, string | number>;
-      const sheetData: SheetRow[] = [];
-      let rowNum = 0;
-
-      for (const [groupName, rows] of groupedRows) {
-        // Skip "Lainnya" if empty
-        if (groupName === ungroupedKey && rows.length === 0) continue;
-
-        // Group header row
-        sheetData.push({
-          "No": `=== ${groupName.toUpperCase()} ===`,
-          "Nama Lengkap": "",
-          "Nama Usaha": "",
-          "WhatsApp": "",
-          "Nomor Booth": "",
-          "Status Pembayaran": "",
-          "Grand Total": "",
-          "Sudah Bayar": "",
-          "Sisa Bayar": "",
-          "Jatuh Tempo Pelunasan": "",
-        });
-
-        if (rows.length === 0) {
-          sheetData.push({
-            "No": "",
-            "Nama Lengkap": "(tidak ada peserta di zona ini)",
-            "Nama Usaha": "",
-            "WhatsApp": "",
-            "Nomor Booth": "",
-            "Status Pembayaran": "",
-            "Grand Total": "",
-            "Sudah Bayar": "",
-            "Sisa Bayar": "",
-            "Jatuh Tempo Pelunasan": "",
-          });
-        } else {
-          for (const row of rows) {
-            rowNum++;
-            const paid = calcSudahBayar(row.invoiceStatus, row.invoiceGrandTotal, row.invoiceDpAmount);
-            const sisa = row.invoiceGrandTotal - paid;
-            sheetData.push({
-              "No": rowNum,
-              "Nama Lengkap": row.participant?.name ?? "-",
-              "Nama Usaha": row.business?.companyName ?? "-",
-              "WhatsApp": row.participant?.whatsapp ?? "-",
-              "Nomor Booth": row.boothCode,
-              "Status Pembayaran": STATUS_LABELS[row.invoiceStatus] ?? row.invoiceStatus,
-              "Grand Total": fmtRupiah(row.invoiceGrandTotal),
-              "Sudah Bayar": fmtRupiah(paid),
-              "Sisa Bayar": fmtRupiah(sisa),
-              "Jatuh Tempo Pelunasan": fmtDate(row.invoiceBalanceDueDate),
-            });
-          }
-        }
-      }
+      const sheetData: SheetRow[] = zoneRows.map((row, idx) => {
+        const paid = calcSudahBayar(row.invoiceStatus, row.invoiceGrandTotal, row.invoiceDpAmount);
+        const sisa = row.invoiceGrandTotal - paid;
+        return {
+          "No": idx + 1,
+          "Nomor Booth": row.boothCode,
+          "Kelompok": resolveKelompok(row),
+          "Nama Lengkap": row.participant?.name ?? "-",
+          "Nama Usaha": row.business?.companyName ?? "-",
+          "WhatsApp": row.participant?.whatsapp ?? "-",
+          "Status Pembayaran": STATUS_LABELS[row.invoiceStatus] ?? row.invoiceStatus,
+          "Grand Total": fmtRupiah(row.invoiceGrandTotal),
+          "Sudah Bayar": fmtRupiah(paid),
+          "Sisa Bayar": fmtRupiah(sisa),
+          "Jatuh Tempo Pelunasan": fmtDate(row.invoiceBalanceDueDate),
+        };
+      });
 
       const ws = XLSX.utils.json_to_sheet(sheetData);
       ws["!cols"] = [
-        { wch: 28 }, { wch: 28 }, { wch: 30 }, { wch: 18 }, { wch: 12 },
-        { wch: 32 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 22 },
+        { wch: 5 }, { wch: 12 }, { wch: 18 }, { wch: 28 }, { wch: 30 },
+        { wch: 18 }, { wch: 32 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 22 },
       ];
       XLSX.utils.book_append_sheet(wb, ws, zone.name.slice(0, 31));
     }
