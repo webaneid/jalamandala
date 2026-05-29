@@ -48,6 +48,14 @@ function naturalSort(a: string, b: string): number {
   return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
 }
 
+// Kelompok label: dari booth group, kecuali "general" → pakai org peserta
+function resolveKelompok(boothGroupSlug: string | null, boothGroupName: string | null, orgGroupName: string | null | undefined): string {
+  if (!boothGroupSlug || boothGroupSlug === "general") {
+    return orgGroupName ?? "Umum";
+  }
+  return boothGroupName ?? boothGroupSlug;
+}
+
 export async function GET() {
   try {
     const session = await getAdminSession();
@@ -57,52 +65,44 @@ export async function GET() {
 
     const tenantDb = await createTenantDb(TENANT_SCHEMA);
 
-    // 1. All active zones (sorted for tab order)
-    const allZones = await tenantDb
-      .select({ id: zonesSchema.id, name: zonesSchema.name, slug: zonesSchema.slug, sortOrder: zonesSchema.sortOrder })
-      .from(zonesSchema)
+    // 1. ALL active booths with zone + group info (untuk zona tabs termasuk yang kosong)
+    const allBooths = await tenantDb
+      .select({
+        boothId: booths.id,
+        boothCode: booths.code,
+        boothGroupSlug: boothGroups.slug,
+        boothGroupName: boothGroups.name,
+        zoneId: zonesSchema.id,
+        zoneName: zonesSchema.name,
+        zoneSortOrder: zonesSchema.sortOrder,
+      })
+      .from(booths)
+      .innerJoin(zonesSchema, eq(zonesSchema.id, booths.zoneId))
+      .leftJoin(boothGroups, eq(boothGroups.id, booths.boothGroupId))
       .where(eq(zonesSchema.isActive, true))
       .orderBy(zonesSchema.sortOrder);
 
-    // 2. All valid bookings joined with invoice + booth + zone + boothGroup
-    const bookingRows = await tenantDb
+    // 2. Active bookings with valid invoice status
+    const activeBookings = await tenantDb
       .select({
-        bookingId: boothBookings.id,
+        boothId: boothBookings.boothId,
         businessId: boothBookings.businessId,
         participantId: boothBookings.participantId,
-        boothCode: booths.code,
-        zoneId: zonesSchema.id,
-        zoneName: zonesSchema.name,
-        boothGroupSlug: boothGroups.slug,
-        boothGroupName: boothGroups.name,
         invoiceStatus: invoices.status,
         invoiceGrandTotal: invoices.grandTotal,
         invoiceDpAmount: invoices.dpAmount,
         invoiceBalanceDueDate: invoices.balanceDueDate,
       })
       .from(boothBookings)
-      .innerJoin(booths, eq(booths.id, boothBookings.boothId))
-      .innerJoin(zonesSchema, eq(zonesSchema.id, booths.zoneId))
-      .leftJoin(boothGroups, eq(boothGroups.id, booths.boothGroupId))
       .innerJoin(invoices, sql`${invoices.id} = ${boothBookings.invoiceId}::uuid`)
       .where(inArray(invoices.status, [...VALID_STATUSES]));
 
-    if (bookingRows.length === 0) {
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet([{ "Keterangan": "Belum ada data yang memenuhi kriteria." }]);
-      XLSX.utils.book_append_sheet(wb, ws, "Semua Peserta");
-      const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
-      return new NextResponse(buf, {
-        headers: {
-          "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          "Content-Disposition": `attachment; filename="laporan-forbis.xlsx"`,
-        },
-      });
-    }
+    // Map: boothId → booking
+    const bookingByBooth = new Map(activeBookings.map(b => [b.boothId, b]));
 
-    // 3. Fetch participants + businesses in parallel
-    const participantIds = [...new Set(bookingRows.map(r => r.participantId).filter((id): id is string => !!id))];
-    const businessIds = [...new Set(bookingRows.map(r => r.businessId).filter((id): id is string => !!id))];
+    // 3. Fetch participants + businesses for active bookings only
+    const participantIds = [...new Set(activeBookings.map(b => b.participantId).filter((id): id is string => !!id))];
+    const businessIds = [...new Set(activeBookings.map(b => b.businessId).filter((id): id is string => !!id))];
 
     const [participantRows, businessRows] = await Promise.all([
       participantIds.length > 0
@@ -131,76 +131,55 @@ export async function GET() {
     const participantMap = new Map(participantRows.map(p => [p.id, p]));
     const businessMap = new Map(businessRows.map(b => [b.id, b]));
 
-    type EnrichedRow = {
-      boothCode: string;
-      zoneId: string;
-      zoneName: string;
-      boothGroupSlug: string | null;
-      boothGroupName: string | null;
-      participant: typeof participantRows[0] | undefined;
-      business: typeof businessRows[0] | undefined;
-      invoiceStatus: string;
-      invoiceGrandTotal: number;
-      invoiceDpAmount: number;
-      invoiceBalanceDueDate: Date | null;
-    };
-
-    const enrichedRows: EnrichedRow[] = bookingRows.map(r => ({
-      boothCode: r.boothCode,
-      zoneId: r.zoneId,
-      zoneName: r.zoneName,
-      boothGroupSlug: r.boothGroupSlug,
-      boothGroupName: r.boothGroupName,
-      participant: r.participantId ? participantMap.get(r.participantId) : undefined,
-      business: r.businessId ? businessMap.get(r.businessId) : undefined,
-      invoiceStatus: r.invoiceStatus,
-      invoiceGrandTotal: r.invoiceGrandTotal,
-      invoiceDpAmount: r.invoiceDpAmount,
-      invoiceBalanceDueDate: r.invoiceBalanceDueDate,
-    }));
-
-    // Helper: resolve display group label per row
-    function resolveKelompok(row: EnrichedRow): string {
-      const slug = row.boothGroupSlug ?? "general";
-      // For general/umum booths, use participant's org group
-      if (slug === "general") {
-        return row.participant?.organizationGroupName ?? "Umum";
+    // All active zones sorted
+    const zoneOrder = new Map<string, number>();
+    const zoneMeta = new Map<string, { name: string; sortOrder: number }>();
+    for (const booth of allBooths) {
+      if (!zoneOrder.has(booth.zoneId)) {
+        zoneOrder.set(booth.zoneId, booth.zoneSortOrder);
+        zoneMeta.set(booth.zoneId, { name: booth.zoneName, sortOrder: booth.zoneSortOrder });
       }
-      return row.boothGroupName ?? slug;
     }
+    const sortedZoneIds = [...zoneMeta.entries()]
+      .sort((a, b) => a[1].sortOrder - b[1].sortOrder)
+      .map(([id]) => id);
 
     const wb = XLSX.utils.book_new();
 
-    // ===== TAB 1: Semua Peserta =====
-    const zoneOrder = new Map(allZones.map((z, i) => [z.id, i]));
-    const sortedAll = [...enrichedRows].sort((a, b) => {
-      const za = zoneOrder.get(a.zoneId) ?? 99;
-      const zb = zoneOrder.get(b.zoneId) ?? 99;
-      if (za !== zb) return za - zb;
-      return naturalSort(a.boothCode, b.boothCode);
-    });
+    // ===== TAB 1: Semua Peserta (hanya yang ada booking valid) =====
+    const bookedBooths = allBooths
+      .filter(b => bookingByBooth.has(b.boothId))
+      .sort((a, b) => {
+        const za = zoneOrder.get(a.zoneId) ?? 99;
+        const zb = zoneOrder.get(b.zoneId) ?? 99;
+        if (za !== zb) return za - zb;
+        return naturalSort(a.boothCode, b.boothCode);
+      });
 
-    const tab1Data = sortedAll.map((row, idx) => {
-      const teamL = row.business?.teamMaleCount ?? 0;
-      const teamP = row.business?.teamFemaleCount ?? 0;
+    const tab1Data = bookedBooths.map((booth, idx) => {
+      const booking = bookingByBooth.get(booth.boothId)!;
+      const participant = booking.participantId ? participantMap.get(booking.participantId) : undefined;
+      const business = booking.businessId ? businessMap.get(booking.businessId) : undefined;
+      const teamL = business?.teamMaleCount ?? 0;
+      const teamP = business?.teamFemaleCount ?? 0;
       return {
         "No": idx + 1,
-        "Nama Peserta": row.participant?.name ?? "-",
-        "Nama Usaha": row.business?.companyName ?? "-",
-        "Kategori Usaha": row.business?.businessCategory ?? "-",
-        "Bidang Usaha": row.business?.businessSector ?? "-",
-        "Brand": row.business?.brandName ?? "-",
-        "Nama di Booth": row.business?.boothName ?? "-",
-        "Zona": row.zoneName,
-        "Nomor Booth": row.boothCode,
-        "Produk": (row.business?.productTags ?? []).join(", ") || "-",
+        "Nama Peserta": participant?.name ?? "-",
+        "Nama Usaha": business?.companyName ?? "-",
+        "Kategori Usaha": business?.businessCategory ?? "-",
+        "Bidang Usaha": business?.businessSector ?? "-",
+        "Brand": business?.brandName ?? "-",
+        "Nama di Booth": business?.boothName ?? "-",
+        "Zona": booth.zoneName,
+        "Nomor Booth": booth.boothCode,
+        "Produk": (business?.productTags ?? []).join(", ") || "-",
         "Tim Laki-laki": teamL,
         "Tim Perempuan": teamP,
         "Total Tim": teamL + teamP,
       };
     });
 
-    const ws1 = XLSX.utils.json_to_sheet(tab1Data);
+    const ws1 = XLSX.utils.json_to_sheet(tab1Data.length > 0 ? tab1Data : [{ "Keterangan": "Belum ada data." }]);
     ws1["!cols"] = [
       { wch: 5 }, { wch: 28 }, { wch: 30 }, { wch: 22 }, { wch: 22 },
       { wch: 20 }, { wch: 25 }, { wch: 16 }, { wch: 12 }, { wch: 40 },
@@ -208,37 +187,66 @@ export async function GET() {
     ];
     XLSX.utils.book_append_sheet(wb, ws1, "Semua Peserta");
 
-    // ===== TAB per Zona =====
-    for (const zone of allZones) {
-      const zoneRows = enrichedRows
-        .filter(r => r.zoneId === zone.id)
+    // ===== TAB per Zona (SEMUA booth, termasuk kosong) =====
+    for (const zoneId of sortedZoneIds) {
+      const meta = zoneMeta.get(zoneId)!;
+
+      const zoneBooths = allBooths
+        .filter(b => b.zoneId === zoneId)
         .sort((a, b) => naturalSort(a.boothCode, b.boothCode));
 
       type SheetRow = Record<string, string | number>;
-      const sheetData: SheetRow[] = zoneRows.map((row, idx) => {
-        const paid = calcSudahBayar(row.invoiceStatus, row.invoiceGrandTotal, row.invoiceDpAmount);
-        const sisa = row.invoiceGrandTotal - paid;
+      const sheetData: SheetRow[] = zoneBooths.map((booth, idx) => {
+        const booking = bookingByBooth.get(booth.boothId);
+        const participant = booking?.participantId ? participantMap.get(booking.participantId) : undefined;
+        const business = booking?.businessId ? businessMap.get(booking.businessId) : undefined;
+
+        const kelompok = resolveKelompok(
+          booth.boothGroupSlug,
+          booth.boothGroupName,
+          participant?.organizationGroupName,
+        );
+
+        if (!booking) {
+          // Booth kosong — tetap tampil dengan info booth group
+          return {
+            "No": idx + 1,
+            "Nomor Booth": booth.boothCode,
+            "Kelompok": kelompok,
+            "Nama Lengkap": "",
+            "Nama Usaha": "",
+            "WhatsApp": "",
+            "Status Pembayaran": "Kosong",
+            "Grand Total": "",
+            "Sudah Bayar": "",
+            "Sisa Bayar": "",
+            "Jatuh Tempo Pelunasan": "",
+          };
+        }
+
+        const paid = calcSudahBayar(booking.invoiceStatus, booking.invoiceGrandTotal, booking.invoiceDpAmount);
+        const sisa = booking.invoiceGrandTotal - paid;
         return {
           "No": idx + 1,
-          "Nomor Booth": row.boothCode,
-          "Kelompok": resolveKelompok(row),
-          "Nama Lengkap": row.participant?.name ?? "-",
-          "Nama Usaha": row.business?.companyName ?? "-",
-          "WhatsApp": row.participant?.whatsapp ?? "-",
-          "Status Pembayaran": STATUS_LABELS[row.invoiceStatus] ?? row.invoiceStatus,
-          "Grand Total": fmtRupiah(row.invoiceGrandTotal),
+          "Nomor Booth": booth.boothCode,
+          "Kelompok": kelompok,
+          "Nama Lengkap": participant?.name ?? "-",
+          "Nama Usaha": business?.companyName ?? "-",
+          "WhatsApp": participant?.whatsapp ?? "-",
+          "Status Pembayaran": STATUS_LABELS[booking.invoiceStatus] ?? booking.invoiceStatus,
+          "Grand Total": fmtRupiah(booking.invoiceGrandTotal),
           "Sudah Bayar": fmtRupiah(paid),
           "Sisa Bayar": fmtRupiah(sisa),
-          "Jatuh Tempo Pelunasan": fmtDate(row.invoiceBalanceDueDate),
+          "Jatuh Tempo Pelunasan": fmtDate(booking.invoiceBalanceDueDate),
         };
       });
 
-      const ws = XLSX.utils.json_to_sheet(sheetData);
+      const ws = XLSX.utils.json_to_sheet(sheetData.length > 0 ? sheetData : [{ "Keterangan": "Belum ada data." }]);
       ws["!cols"] = [
         { wch: 5 }, { wch: 12 }, { wch: 18 }, { wch: 28 }, { wch: 30 },
         { wch: 18 }, { wch: 32 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 22 },
       ];
-      XLSX.utils.book_append_sheet(wb, ws, zone.name.slice(0, 31));
+      XLSX.utils.book_append_sheet(wb, ws, meta.name.slice(0, 31));
     }
 
     const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
