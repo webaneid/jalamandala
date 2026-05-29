@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 
 import { createTenantDb, db } from "@repo/db";
 import { participants, participantBusinesses } from "@repo/db/schema/public";
@@ -81,7 +81,7 @@ export async function GET() {
       .from(boothBookings)
       .innerJoin(booths, eq(booths.id, boothBookings.boothId))
       .innerJoin(zonesSchema, eq(zonesSchema.id, booths.zoneId))
-      .innerJoin(invoices, eq(invoices.id, boothBookings.invoiceId))
+      .innerJoin(invoices, sql`${invoices.id} = ${boothBookings.invoiceId}::uuid`)
       .where(inArray(invoices.status, [...VALID_STATUSES]));
 
     if (bookingRows.length === 0) {
