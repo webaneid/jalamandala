@@ -118,9 +118,12 @@ export async function getParticipantsWithBookings() {
       createTenantDb(TENANT_SCHEMA),
     ]);
 
-    // Ambil semua invoice aktif (semua status kecuali expired/cancelled)
+    // Ambil invoice aktif saja (exclude terminal statuses), terbaru dulu
+    const EXCLUDED_STATUSES = ["expired", "cancelled", "refunding", "refunded"];
     const allInvoices = await tenantDb.query.invoices.findMany({
       columns: { id: true, businessId: true, status: true, grandTotal: true, invoiceNumber: true },
+      where: (t, { notInArray }) => notInArray(t.status, EXCLUDED_STATUSES),
+      orderBy: (t, { desc }) => [desc(t.createdAt)],
     });
 
     // Ambil semua booth bookings + nama booth + zona
@@ -131,7 +134,7 @@ export async function getParticipantsWithBookings() {
       },
     });
 
-    // Index: businessId → invoice
+    // Index: businessId → invoice paling baru yang aktif
     const invoiceByBusiness = new Map<string, typeof allInvoices[number]>();
     for (const inv of allInvoices) {
       if (inv.businessId && !invoiceByBusiness.has(inv.businessId)) {
