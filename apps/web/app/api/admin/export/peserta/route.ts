@@ -216,6 +216,9 @@ export async function GET() {
             businessCategory: participantBusinesses.businessCategory,
             businessSector: participantBusinesses.businessSector,
             productTags: participantBusinesses.productTags,
+            partnershipConcepts: participantBusinesses.partnershipConcepts,
+            companyDescription: participantBusinesses.companyDescription,
+            requestedBoothCategoryName: participantBusinesses.requestedBoothCategoryName,
             teamMaleCount: participantBusinesses.teamMaleCount,
             teamFemaleCount: participantBusinesses.teamFemaleCount,
           }).from(participantBusinesses).where(inArray(participantBusinesses.id, businessIds))
@@ -259,14 +262,18 @@ export async function GET() {
       return {
         "No": idx + 1,
         "Nama Peserta": participant?.name ?? "-",
+        "WA": participant?.whatsapp ?? "-",
         "Nama Usaha": business?.companyName ?? "-",
-        "Kategori Usaha": business?.businessCategory ?? "-",
-        "Bidang Usaha": business?.businessSector ?? "-",
         "Brand": business?.brandName ?? "-",
         "Nama di Booth": business?.boothName ?? "-",
+        "Jenis Produk Pameran": business?.requestedBoothCategoryName ?? "-",
+        "Kategori Usaha": business?.businessCategory ?? "-",
+        "Bidang Usaha": business?.businessSector ?? "-",
+        "Tentang Perusahaan": business?.companyDescription ?? "-",
+        "Produk / Jasa": (business?.productTags ?? []).join(", ") || "-",
+        "Konsep Kemitraan": (business?.partnershipConcepts ?? []).join(", ") || "-",
         "Zona": booth.zoneName,
         "Nomor Booth": booth.boothCode,
-        "Produk": (business?.productTags ?? []).join(", ") || "-",
         "Tim Laki-laki": teamL,
         "Tim Perempuan": teamP,
         "Total Tim": teamL + teamP,
@@ -275,9 +282,23 @@ export async function GET() {
 
     const ws1 = XLSX.utils.json_to_sheet(tab1Data.length > 0 ? tab1Data : [{ "Keterangan": "Belum ada data." }]);
     ws1["!cols"] = [
-      { wch: 5 }, { wch: 28 }, { wch: 30 }, { wch: 22 }, { wch: 22 },
-      { wch: 20 }, { wch: 25 }, { wch: 16 }, { wch: 12 }, { wch: 40 },
-      { wch: 12 }, { wch: 14 }, { wch: 10 },
+      { wch: 5 },  // No
+      { wch: 28 }, // Nama Peserta
+      { wch: 16 }, // WA
+      { wch: 30 }, // Nama Usaha
+      { wch: 22 }, // Brand
+      { wch: 25 }, // Nama di Booth
+      { wch: 22 }, // Jenis Produk Pameran
+      { wch: 22 }, // Kategori Usaha
+      { wch: 22 }, // Bidang Usaha
+      { wch: 40 }, // Tentang Perusahaan
+      { wch: 40 }, // Produk / Jasa
+      { wch: 40 }, // Konsep Kemitraan
+      { wch: 16 }, // Zona
+      { wch: 12 }, // Nomor Booth
+      { wch: 12 }, // Tim L
+      { wch: 14 }, // Tim P
+      { wch: 10 }, // Total
     ];
     XLSX.utils.book_append_sheet(wb, ws1, "Semua Peserta");
 
