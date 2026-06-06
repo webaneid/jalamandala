@@ -21,11 +21,15 @@ export function OverpaymentBanner({
   invoiceNumber,
   overpaymentAmount,
   participantName,
+  hasRefundDisbursement = false,
+  refundDisbursementStatus = null,
 }: {
   invoiceId: string;
   invoiceNumber: string;
   overpaymentAmount: number;
   participantName: string;
+  hasRefundDisbursement?: boolean;
+  refundDisbursementStatus?: string | null;
 }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
@@ -62,10 +66,20 @@ export function OverpaymentBanner({
     });
   }
 
-  if (done) {
+  if (done || hasRefundDisbursement) {
+    const statusLabel: Record<string, string> = {
+      submitted: "menunggu persetujuan",
+      approved: "sudah disetujui",
+      transferred: "sudah ditransfer",
+      rejected: "ditolak",
+    };
+    const statusText = refundDisbursementStatus
+      ? statusLabel[refundDisbursementStatus] ?? refundDisbursementStatus
+      : "sudah dibuat";
     return (
       <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-800">
-        Permohonan pengembalian <strong>{formatCurrency(overpaymentAmount)}</strong> sudah dibuat dan dikirim ke halaman Pencairan Dana untuk diproses.
+        Permohonan pengembalian <strong>{formatCurrency(overpaymentAmount)}</strong> {statusText} — lihat di halaman{" "}
+        <a href="/admin/keuangan/pencairan" className="underline font-medium">Pencairan Dana</a>.
       </div>
     );
   }

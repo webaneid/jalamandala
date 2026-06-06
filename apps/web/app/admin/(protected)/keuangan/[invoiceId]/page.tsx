@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { createTenantDb, db } from "@repo/db";
 import {
   boothBookings,
+  disbursementRequests,
   eventAddons,
   invoiceItems,
   invoicePayments,
@@ -202,6 +203,17 @@ async function getInvoiceDetail(invoiceId: string) {
       : []),
   ];
 
+  // Check if a refund disbursement already exists for this invoice
+  const existingRefundDisbursement = invoice.overpaymentAmount && invoice.overpaymentAmount > 0
+    ? await tenantDb.query.disbursementRequests.findFirst({
+        where: and(
+          eq(disbursementRequests.purposeType, "refund"),
+          eq(disbursementRequests.referenceInvoiceId, invoice.id),
+        ),
+        columns: { id: true, status: true },
+      })
+    : null;
+
   return {
     invoice: {
       id: invoice.id,
@@ -214,6 +226,8 @@ async function getInvoiceDetail(invoiceId: string) {
       grandTotal: invoice.grandTotal,
       paidAt: invoice.paidAt,
       overpaymentAmount: invoice.overpaymentAmount ?? 0,
+      hasRefundDisbursement: !!existingRefundDisbursement,
+      refundDisbursementStatus: existingRefundDisbursement?.status ?? null,
       dpAmount: invoice.dpAmount ?? 0,
       dpPaidAt: invoice.dpPaidAt ?? null,
       balanceDueDate: invoice.balanceDueDate?.toISOString() ?? null,
@@ -459,6 +473,8 @@ export default async function InvoiceDetailPage({
           invoiceNumber={invoice.invoiceNumber}
           overpaymentAmount={invoice.overpaymentAmount}
           participantName={participant?.name ?? ""}
+          hasRefundDisbursement={invoice.hasRefundDisbursement}
+          refundDisbursementStatus={invoice.refundDisbursementStatus}
         />
       )}
 
