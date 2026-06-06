@@ -2262,6 +2262,7 @@ export async function createOverpaymentDisbursement(payload: {
         notes: payload.notes?.trim() || null,
         status: "submitted",
         eventId,
+        referenceInvoiceId: payload.invoiceId,
       })
       .returning({ id: disbursementRequests.id });
 

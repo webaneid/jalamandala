@@ -393,12 +393,12 @@ export async function confirmTransfer(
         referenceDisbursementId: requestId,
       });
 
-      // Jika refund untuk invoice, update invoice ke 'refunded'
+      // Jika refund overpayment: clear overpaymentAmount di invoice
       if (req.purposeType === "refund" && req.referenceInvoiceId) {
         await tx
           .update(invoices)
-          .set({ status: "refunded", updatedAt: new Date() })
-          .where(and(eq(invoices.id, req.referenceInvoiceId), eq(invoices.status, "refunding")));
+          .set({ overpaymentAmount: 0, updatedAt: new Date() })
+          .where(eq(invoices.id, req.referenceInvoiceId));
       }
     });
 
