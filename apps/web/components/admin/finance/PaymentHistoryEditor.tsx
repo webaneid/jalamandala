@@ -22,6 +22,13 @@ type Payment = {
   proofAssetId: string | null
 }
 
+type RefundDisbursement = {
+  id: string
+  requestedAmount: number
+  status: string
+  createdAt: string
+}
+
 type PaymentMethod = { key: string; label: string; type: string }
 
 function formatCurrency(n: number) {
@@ -43,16 +50,27 @@ function toWibDateTimeLocal(date: string) {
   return `${y}-${mo}-${day}T${h}:${mi}`
 }
 
+const REFUND_STATUS_LABEL: Record<string, string> = {
+  submitted: "Menunggu Persetujuan",
+  approved: "Disetujui",
+  transferred: "Sudah Ditransfer",
+  rejected: "Ditolak",
+  cancelled: "Dibatalkan",
+  draft: "Draft",
+}
+
 export function PaymentHistoryEditor({
   payments,
   paymentMethods,
   totalVerified,
   balanceDue,
+  refundDisbursements = [],
 }: {
   payments: Payment[]
   paymentMethods: PaymentMethod[]
   totalVerified: number
   balanceDue: number
+  refundDisbursements?: RefundDisbursement[]
 }) {
   const router = useRouter()
   const [editingId, setEditingId] = React.useState<string | null>(null)
@@ -141,6 +159,20 @@ export function PaymentHistoryEditor({
           </tr>
         </thead>
         <tbody className="divide-y">
+          {refundDisbursements.map((d) => (
+            <tr key={`refund-${d.id}`} className="bg-red-50/40">
+              <td className="px-5 py-3 text-muted-foreground">{formatDate(d.createdAt)}</td>
+              <td className="px-5 py-3 text-red-700 font-medium" colSpan={2}>Pengembalian Kelebihan Bayar</td>
+              <td className="px-5 py-3">—</td>
+              <td className="px-5 py-3 text-right font-medium text-red-600">−{formatCurrency(d.requestedAmount)}</td>
+              <td className="px-5 py-3">
+                <Badge className="bg-red-50 text-red-600 ring-1 ring-red-200 text-xs">
+                  {REFUND_STATUS_LABEL[d.status] ?? d.status}
+                </Badge>
+              </td>
+              <td className="px-3 py-3" />
+            </tr>
+          ))}
           {payments.map((p) =>
             editingId === p.id ? (
               <tr key={p.id} className="bg-blue-50/40">
@@ -255,11 +287,35 @@ export function PaymentHistoryEditor({
           )}
         </tbody>
         <tfoot className="border-t bg-neutral-50/50">
-          <tr>
-            <td colSpan={4} className="px-5 py-3 text-right font-semibold">Total Terbayar</td>
-            <td className="px-5 py-3 text-right font-bold text-emerald-700">{formatCurrency(totalVerified)}</td>
-            <td colSpan={2} />
-          </tr>
+          {refundDisbursements.length > 0 ? (
+            <>
+              <tr>
+                <td colSpan={4} className="px-5 py-2 text-right text-sm text-muted-foreground">Total Diterima</td>
+                <td className="px-5 py-2 text-right font-semibold text-emerald-700">{formatCurrency(totalVerified)}</td>
+                <td colSpan={2} />
+              </tr>
+              <tr>
+                <td colSpan={4} className="px-5 py-2 text-right text-sm text-muted-foreground">Dikembalikan</td>
+                <td className="px-5 py-2 text-right font-semibold text-red-600">
+                  −{formatCurrency(refundDisbursements.filter(d => ["submitted","approved","transferred"].includes(d.status)).reduce((s,d) => s + d.requestedAmount, 0))}
+                </td>
+                <td colSpan={2} />
+              </tr>
+              <tr className="border-t">
+                <td colSpan={4} className="px-5 py-3 text-right font-semibold">Total Efektif</td>
+                <td className="px-5 py-3 text-right font-bold text-emerald-700">
+                  {formatCurrency(totalVerified - refundDisbursements.filter(d => ["submitted","approved","transferred"].includes(d.status)).reduce((s,d) => s + d.requestedAmount, 0))}
+                </td>
+                <td colSpan={2} />
+              </tr>
+            </>
+          ) : (
+            <tr>
+              <td colSpan={4} className="px-5 py-3 text-right font-semibold">Total Terbayar</td>
+              <td className="px-5 py-3 text-right font-bold text-emerald-700">{formatCurrency(totalVerified)}</td>
+              <td colSpan={2} />
+            </tr>
+          )}
           {balanceDue > 0 && (
             <tr>
               <td colSpan={4} className="px-5 py-2 text-right text-sm text-muted-foreground">Sisa Tagihan</td>

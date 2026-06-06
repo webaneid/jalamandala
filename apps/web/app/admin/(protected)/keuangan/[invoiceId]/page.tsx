@@ -203,16 +203,20 @@ async function getInvoiceDetail(invoiceId: string) {
       : []),
   ];
 
-  // Check if a refund disbursement already exists for this invoice
-  const existingRefundDisbursement = invoice.overpaymentAmount && invoice.overpaymentAmount > 0
-    ? await tenantDb.query.disbursementRequests.findFirst({
-        where: and(
-          eq(disbursementRequests.purposeType, "refund"),
-          eq(disbursementRequests.referenceInvoiceId, invoice.id),
-        ),
-        columns: { id: true, status: true },
-      })
-    : null;
+  // Fetch all refund disbursements for this invoice
+  const refundDisbursementRows = await tenantDb.query.disbursementRequests.findMany({
+    where: and(
+      eq(disbursementRequests.purposeType, "refund"),
+      eq(disbursementRequests.referenceInvoiceId, invoice.id),
+    ),
+    columns: { id: true, status: true, requestedAmount: true, createdAt: true },
+    orderBy: (t, { asc }) => [asc(t.createdAt)],
+  });
+
+  // For OverpaymentBanner: is there any active (not rejected/cancelled) refund disbursement?
+  const activeRefundDisbursement = refundDisbursementRows.find(
+    (d) => !["rejected", "cancelled"].includes(d.status)
+  ) ?? null;
 
   return {
     invoice: {
@@ -226,8 +230,8 @@ async function getInvoiceDetail(invoiceId: string) {
       grandTotal: invoice.grandTotal,
       paidAt: invoice.paidAt,
       overpaymentAmount: invoice.overpaymentAmount ?? 0,
-      hasRefundDisbursement: !!existingRefundDisbursement,
-      refundDisbursementStatus: existingRefundDisbursement?.status ?? null,
+      hasRefundDisbursement: !!activeRefundDisbursement,
+      refundDisbursementStatus: activeRefundDisbursement?.status ?? null,
       dpAmount: invoice.dpAmount ?? 0,
       dpPaidAt: invoice.dpPaidAt ?? null,
       balanceDueDate: invoice.balanceDueDate?.toISOString() ?? null,
@@ -264,6 +268,12 @@ async function getInvoiceDetail(invoiceId: string) {
       proofAssetId: p.proofAssetId ?? proofAssetMap.get(p.id) ?? null,
     })),
     paymentMethods,
+    refundDisbursements: refundDisbursementRows.map((d) => ({
+      id: d.id,
+      requestedAmount: d.requestedAmount,
+      status: d.status,
+      createdAt: d.createdAt.toISOString(),
+    })),
   };
 }
 
@@ -431,9 +441,13 @@ export default async function InvoiceDetailPage({
   const data = await getInvoiceDetail(invoiceId);
   if (!data) notFound();
 
-  const { invoice, participant, business, items, payments, paymentMethods } = data;
+  const { invoice, participant, business, items, payments, paymentMethods, refundDisbursements } = data;
 
   const totalVerified = payments.filter((p) => p.status === "verified").reduce((s, p) => s + p.amount, 0);
+  const totalRefunded = refundDisbursements
+    .filter((d) => ["submitted", "approved", "transferred"].includes(d.status))
+    .reduce((s, d) => s + d.requestedAmount, 0);
+  const netTotalPaid = totalVerified - totalRefunded;
   const balanceDue = invoice.grandTotal - totalVerified;
   const pendingPayments = payments.filter((p) => p.status === "pending_verification");
   const verifiedPayments = payments.filter((p) => p.status === "verified");
@@ -498,7 +512,7 @@ export default async function InvoiceDetailPage({
           invoiceId={invoice.id}
           invoiceNumber={invoice.invoiceNumber}
           grandTotal={invoice.grandTotal}
-          totalPaid={totalVerified}
+          totalPaid={netTotalPaid}
           participantName={participant?.name ?? ""}
         />
       )}
@@ -600,7 +614,7 @@ export default async function InvoiceDetailPage({
           )}
 
           {/* Histori pembayaran */}
-          {verifiedPayments.length > 0 && (
+          {(verifiedPayments.length > 0 || refundDisbursements.length > 0) && (
             <Card>
               <CardHeader className="border-b pb-4">
                 <CardTitle className="text-base">Histori Pembayaran</CardTitle>
@@ -611,6 +625,7 @@ export default async function InvoiceDetailPage({
                   paymentMethods={paymentMethods}
                   totalVerified={totalVerified}
                   balanceDue={balanceDue}
+                  refundDisbursements={refundDisbursements}
                 />
               </CardContent>
             </Card>
