@@ -2,7 +2,7 @@
 
 import { createTenantDb, db } from "@repo/db";
 import { eventPages, expoEvents, eventAgendas, eventNavMenus, mediaAssets, participantBusinesses } from "@repo/db/schema/public";
-import { invoices } from "@repo/db/schema/tenant";
+import { boothBookings, invoices } from "@repo/db/schema/tenant";
 import { boothCategories, booths, zonePriceRules, zones } from "@repo/db/schema/tenant";
 import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { PRICE_PHASE_LABELS, resolveCurrentPricePhase, type PricePhase } from "@/lib/price-phase";
@@ -327,6 +327,28 @@ export async function getPaidTenantDirectory() {
 
   if (businessIds.length === 0) return [];
 
+  // Ambil booth codes per businessId (hanya bookingStatus = "booked")
+  const bookingRows = await tenantDb
+    .select({ businessId: boothBookings.businessId, code: booths.code })
+    .from(boothBookings)
+    .innerJoin(booths, eq(booths.id, boothBookings.boothId))
+    .where(and(
+      inArray(boothBookings.businessId, businessIds),
+      eq(boothBookings.bookingStatus, "booked"),
+    ));
+
+  // Group booth codes per businessId dengan natural sort
+  function naturalSort(a: string, b: string) {
+    return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
+  }
+  const boothCodeMap = new Map<string, string[]>();
+  for (const row of bookingRows) {
+    if (!row.businessId) continue;
+    const codes = boothCodeMap.get(row.businessId) ?? [];
+    codes.push(row.code);
+    boothCodeMap.set(row.businessId, codes);
+  }
+
   const rows = await db
     .select({
       id: participantBusinesses.id,
@@ -375,5 +397,6 @@ export async function getPaidTenantDirectory() {
     logoUrl: r.logoPublicUrl
       ?? (r.logoObjectKey ? generatePresignedGetUrl(r.logoObjectKey, 3600 * 6) : null)
       ?? null,
+    boothCodes: (boothCodeMap.get(r.id) ?? []).sort(naturalSort),
   }));
 }

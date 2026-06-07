@@ -16,6 +16,7 @@ type Tenant = {
   partnershipConcepts: string[] | null;
   teamMaleCount: number | null;
   teamFemaleCount: number | null;
+  boothCodes: string[];
 };
 
 function isComplete(t: Tenant) {
@@ -45,8 +46,8 @@ export function TenantTable({ tenants }: { tenants: Tenant[] }) {
         <table className="w-full min-w-[600px] text-sm">
           <thead>
             <tr className="border-b border-white/8">
-              <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-white/35">Nama Usaha</th>
-              <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-white/35">Brand</th>
+              <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-white/35">Nama Tenant</th>
+              <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-white/35">Nomor Booth</th>
               <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-white/35">Produk</th>
               <th className="px-4 py-3 text-center text-[10px] font-bold uppercase tracking-widest text-white/35">Jumlah Tim</th>
               <th className="px-4 py-3 text-center text-[10px] font-bold uppercase tracking-widest text-white/35">Status Data</th>
@@ -56,11 +57,22 @@ export function TenantTable({ tenants }: { tenants: Tenant[] }) {
             {tenants.map((t) => {
               const tags = t.productTags?.filter(Boolean) ?? [];
               const done = isComplete(t);
+              const tenantName = t.brandName || t.companyName;
               return (
                 <tr key={t.id} className="transition hover:bg-white/5">
-                  <td className="px-4 py-3 font-medium text-white/80">{t.companyName}</td>
-                  <td className="px-4 py-3 text-white/60">
-                    {t.brandName && t.brandName !== t.companyName ? t.brandName : <span className="text-white/25 italic">—</span>}
+                  <td className="px-4 py-3 font-medium text-white/80">{tenantName}</td>
+                  <td className="px-4 py-3">
+                    {t.boothCodes.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {t.boothCodes.map((code) => (
+                          <span key={code} className="rounded-md bg-[#00adee]/15 px-2 py-0.5 text-[10px] font-bold text-[#00adee]">
+                            {code}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-white/25 italic text-[11px]">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     {tags.length > 0 ? (

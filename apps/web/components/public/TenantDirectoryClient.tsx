@@ -30,6 +30,7 @@ type Tenant = {
   teamMaleCount: number | null;
   teamFemaleCount: number | null;
   logoUrl: string | null;
+  boothCodes: string[];
 };
 
 function formatWaNumber(raw: string) {
