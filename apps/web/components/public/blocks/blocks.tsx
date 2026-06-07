@@ -1,5 +1,6 @@
 import { ZonePreviewButton } from "@/components/public/ZonePreviewModal";
 import { GalleryGridClient } from "./GalleryGridClient";
+import { FaqBlockClient } from "./FaqBlockClient";
 import Link from "next/link";
 import { getBoothStats, getPaidParticipantBusinessLogos, getPublishedEventAgendas, getPublicTenantZones } from "@/actions/public-pages";
 import { PublicContainer } from "@/components/public/ui/PublicContainer";
@@ -784,22 +785,7 @@ export function FaqBlock({ payload }: { payload: any }) {
       : [];
   if (faqs.length === 0) return null;
 
-  return (
-    <Section>
-      <div className="mb-8 space-y-2">
-        {eyebrow && <Chip>{eyebrow}</Chip>}
-        <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">{title}</h2>
-      </div>
-      <div className="space-y-3">
-        {faqs.map((faq: any, idx: number) => (
-          <DarkCard key={idx}>
-            <h3 className="text-sm font-semibold text-white">{faq.question}</h3>
-            <p className="mt-2 text-sm leading-6 text-white/55">{faq.answer}</p>
-          </DarkCard>
-        ))}
-      </div>
-    </Section>
-  );
+  return <FaqBlockClient faqs={faqs} eyebrow={eyebrow} title={title} />;
 }
 
 // ─────────────────────────────────────────────
