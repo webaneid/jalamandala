@@ -4,6 +4,7 @@ import { getPublishedEventPageBySlug } from "@/actions/public-pages";
 import { generateHTML } from "@tiptap/html";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
+import { LandingRenderer } from "@/components/public/blocks/LandingRenderer";
 
 export async function generateMetadata({
   params,
@@ -39,26 +40,29 @@ export default async function DefaultHalamanPage({
     notFound();
   }
 
-  // Render konten mentah / string JSON untuk v1 sebelum full Tiptap renderer dibuat
+  // page_blocks — render dengan LandingRenderer (block editor content)
+  if (pageData.contentFormat === "page_blocks") {
+    const content = pageData.content as any;
+    const blocks = Array.isArray(content?.blocks) ? content.blocks : [];
+    return <LandingRenderer blocks={blocks} event={pageData.event} />;
+  }
+
+  // tiptap_json — render dengan Tiptap HTML generator
   let htmlString = "";
-  if (pageData.contentFormat === "tiptap_json" && pageData.content) {
+  if (pageData.content) {
     let contentObj = pageData.content;
     if (typeof contentObj === "string") {
       try { contentObj = JSON.parse(contentObj); } catch {}
     }
     if (typeof contentObj === "object" && contentObj !== null) {
       try {
-        htmlString = generateHTML(contentObj, [StarterKit, Image]);
+        htmlString = generateHTML(contentObj as any, [StarterKit, Image]);
       } catch (e) {
         console.error("Failed to generate HTML:", e);
       }
     } else {
       htmlString = String(contentObj);
     }
-  } else {
-    htmlString = typeof pageData.content === "string" 
-      ? pageData.content 
-      : JSON.stringify(pageData.content, null, 2);
   }
 
   return (

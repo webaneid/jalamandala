@@ -139,7 +139,6 @@ export async function getPublishedEventPageBySlug(eventSlug: string, slug: strin
     where: and(
       eq(eventPages.eventId, event.id),
       eq(eventPages.slug, slug),
-      eq(eventPages.pageType, "default"),
       eq(eventPages.status, "published"),
       isNull(eventPages.deletedAt)
     ),
