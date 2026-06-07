@@ -43,12 +43,11 @@ export async function upsertEventPage(payload: {
   featuredImageAssetId?: string | null;
   seoTitle?: string | null;
   seoDescription?: string | null;
-}) {
+}): Promise<{ success: boolean; id?: string; error?: string }> {
   const isNew = !payload.id;
 
-  // Singleton Check
+  // Singleton Check — hanya untuk halaman legal (bukan landing, boleh lebih dari 1)
   if (
-    payload.pageType === "landing" ||
     payload.pageType === "legal_tnc" ||
     payload.pageType === "legal_privacy"
   ) {
@@ -61,7 +60,7 @@ export async function upsertEventPage(payload: {
     });
 
     if (existing && existing.id !== payload.id) {
-      throw new Error(`Halaman ${payload.pageType} sudah ada untuk event ini.`);
+      return { success: false, error: `Halaman ${payload.pageType} sudah ada untuk event ini.` };
     }
   }
 

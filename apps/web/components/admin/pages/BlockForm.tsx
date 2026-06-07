@@ -442,6 +442,7 @@ export function BlockForm({ type, payload, eventSlug, onChange }: Props) {
                   />
                 </div>
                 <Button
+                  type="button"
                   variant="ghost"
                   size="icon"
                   className="text-destructive self-start"
