@@ -15,6 +15,7 @@ type Tenant = {
   id: string;
   companyName: string;
   brandName: string;
+  boothName: string | null;
   companyDescription: string | null;
   companyAddress: string | null;
   companyRegencyName: string | null;

@@ -7,6 +7,7 @@ type Tenant = {
   id: string;
   companyName: string;
   brandName: string;
+  boothName: string | null;
   productTags: string[] | null;
   legalEntity: string | null;
   businessCategory: string | null;
@@ -57,7 +58,7 @@ export function TenantTable({ tenants }: { tenants: Tenant[] }) {
             {tenants.map((t) => {
               const tags = t.productTags?.filter(Boolean) ?? [];
               const done = isComplete(t);
-              const tenantName = t.brandName || t.companyName;
+              const tenantName = t.boothName || t.brandName || t.companyName;
               return (
                 <tr key={t.id} className="transition hover:bg-white/5">
                   <td className="px-4 py-3 font-medium text-white/80">{tenantName}</td>
