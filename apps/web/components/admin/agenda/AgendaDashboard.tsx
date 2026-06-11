@@ -140,12 +140,9 @@ function toDatetimeLocalInput(value: string | null) {
   }
 
   const date = new Date(value);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
+  if (Number.isNaN(date.getTime())) return "";
+  // Use WIB so the pre-filled value matches what the admin entered originally
+  return date.toLocaleString("sv", { timeZone: "Asia/Jakarta" }).slice(0, 16).replace(" ", "T");
 }
 
 function agendaToForm(agenda: AgendaRecord): AgendaPayload {

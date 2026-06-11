@@ -43,6 +43,15 @@ function parseOptionalDateTime(value: string) {
     return null;
   }
 
+  // datetime-local input gives "YYYY-MM-DDTHH:MM" or "YYYY-MM-DDTHH:MM:SS" without
+  // timezone. Admin users are always in WIB (UTC+7), so we append +07:00 to avoid
+  // the server treating it as UTC and introducing a 7-hour offset.
+  const match = trimmed.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})(:\d{2})?$/);
+  if (match) {
+    const parsed = new Date(`${match[1]}${match[2] ?? ":00"}+07:00`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
   const parsed = new Date(trimmed);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
@@ -109,7 +118,7 @@ export async function createAgenda(eventId: string, payload: AgendaPayload) {
   }
 
   try {
-    const startAt = new Date(payload.startAt);
+    const startAt = parseOptionalDateTime(payload.startAt)!;
     const endAt = parseOptionalDateTime(payload.endAt);
     const slug = await createUniqueSlug(eventId, payload.title);
 
@@ -145,7 +154,7 @@ export async function updateAgenda(agendaId: string, eventId: string, payload: A
   }
 
   try {
-    const startAt = new Date(payload.startAt);
+    const startAt = parseOptionalDateTime(payload.startAt)!;
     const endAt = parseOptionalDateTime(payload.endAt);
     const slug = await createUniqueSlug(eventId, payload.title, agendaId);
 
